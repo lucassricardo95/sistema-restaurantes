@@ -74,6 +74,7 @@
   window.NOME_UP_ = () => String(window.NOME_RESTAURANTE_ || '').toUpperCase();
   window.NOME_H_ = () => escH_(window.NOME_RESTAURANTE_);
   window.NOME_UP_H_ = () => escH_(window.NOME_UP_());
+  window.marcaLimpar_ = function(){ try{ localStorage.removeItem(CHAVE_CACHE); }catch(e){} return aplicar(); };
   window.marcaPaleta_ = paleta;
   window.kickerPadrao_ = function(){ const m = window.MARCA || {}; return m.slogan ? 'DELIVERY · ' + String(m.slogan).toUpperCase() : 'DELIVERY'; };
   aplicar();

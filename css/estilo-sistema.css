@@ -242,3 +242,18 @@ tr.sug-linha td{padding-top:0 !important;padding-bottom:10px;}
 .bs-previa .box{border:2px solid #000;padding:6px;margin-top:8px;}
 .bs-previa .big{font-size:1.4em;}
 .bs-previa .rod{font-size:.75em;font-weight:400;}
+
+/* ---------- Aparência (v1.27) ---------- */
+.ap-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin:6px 0;}
+.ap-tema{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:2px solid var(--line);color:#fff;font-size:12px;font-weight:700;cursor:pointer;min-height:64px;}
+.ap-tema i{display:inline-block;width:20px;height:20px;border-radius:50%;margin:0 2px;border:1px solid rgba(0,0,0,.4);}
+.ap-tema.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(var(--gold-rgb),.35);}
+.ap-cores{display:flex;gap:14px;flex-wrap:wrap;margin:6px 0;}
+.ap-cor{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted);font-weight:700;margin:0;}
+.ap-cor input[type=color]{width:64px;height:48px;padding:2px;border-radius:12px;border:2px solid var(--line);background:none;cursor:pointer;}
+.ap-previa{border-radius:14px;padding:14px;margin:10px 0;border:1px solid var(--line);}
+.ap-bt{display:inline-block;padding:9px 16px;border-radius:999px;font-weight:800;color:#fff;}
+.ap-bt2{display:inline-block;padding:7px 14px;border-radius:999px;font-weight:800;border:2px solid;}
+.ap-logo{display:flex;gap:12px;align-items:center;margin:10px 0;}
+.ap-logo-img{width:84px;height:70px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border-radius:10px;flex:0 0 auto;}
+.ap-logo-img img{max-width:100%;max-height:100%;object-fit:contain;}

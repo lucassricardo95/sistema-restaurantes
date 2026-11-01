@@ -72,7 +72,7 @@ const ADMIN_GRUPOS = [
   { nome:'Produtos',           ico:'catalogo',   subs:['produtos', 'estoque', 'compras', 'custosprecificacao'] },
   { nome:'Vendas e cardápio',  ico:'campanhas',  subs:['raiox', 'cardapiodigital', 'cardapioperiodo', 'pagamentos', 'promocoes', 'eventos'] },
   { nome:'Loja e equipe',      ico:'operacao',   subs:['ponto', 'escala', 'equipe', 'taxasentregas', 'restaurante', 'usuarios', 'notifadmin'] },
-  { nome:'Sistema',            ico:'sistema',    subs:['contas', 'auditoria', 'integridade'] }
+  { nome:'Sistema',            ico:'sistema',    subs:['aparencia', 'contas', 'auditoria', 'integridade'] }
 ];
 const ADMIN_SUBABAS = ADMIN_GRUPOS.reduce((a,g)=>a.concat(g.subs), []);
 /* a barra do Administrador existia copiada em 13 telas. Agora há UMA definição, desenhada em todas. */
@@ -82,7 +82,7 @@ const ADMIN_SUBABAS_ROTULOS = {
   produtos:'Produtos, combos e adicionais', estoque:'Estoque', compras:'Compras e fornecedores', custosprecificacao:'Custos e precificação',
   raiox:'Raio-X do negócio', cardapiodigital:'Cardápio Digital', cardapioperiodo:'Cardápio: funil e mapa', pagamentos:'Formas de pagamento', promocoes:'Promoções e cupons', eventos:'Eventos',
   restaurante:'Mesas e QR Codes', taxasentregas:'Entregadores e taxas', equipe:'Equipe e pagamentos', escala:'Escala da equipe', ponto:'Ponto', usuarios:'Usuários e permissões', notifadmin:'Configurar avisos',
-  contas:'Integrações e contas', integridade:'Backup e espaço', auditoria:'Auditoria'
+  aparencia:'Aparência', contas:'Integrações e contas', integridade:'Backup e espaço', auditoria:'Auditoria'
 };
 const ADMIN_GRUPOS_OPERADOR_ = [ { nome:'Atendimento', ico:'atendimento', subs:['ocorrencias', 'feedbacks'] } ];
 function gruposAdmin_(){ return (currentUser && currentUser.nivel==='Operador') ? ADMIN_GRUPOS_OPERADOR_ : ADMIN_GRUPOS; }
@@ -93,7 +93,7 @@ const ADMIN_SUBABAS_DESCRICOES = {
   produtos:'Cadastro de produtos, combos e adicionais', estoque:'Ingredientes, bebidas e movimentações', compras:'Registrar compras e fornecedores', custosprecificacao:'Simular custo e preço de venda',
   raiox:'Quando vende mais, iFood × seu cardápio, tempos, cancelamentos, custos e perdas', cardapiodigital:'O que o cliente vê no cardápio: dados, visual, ordem e destaques', cardapioperiodo:'Acessos, onde o cliente desiste e mapa das entregas por período', pagamentos:'Taxas, prazos, troco e o que aparece no cardápio', promocoes:'Cupons, preço por dia, compre e ganhe, bilhete na sacola e avisos', eventos:'Custos e recebimentos por evento',
   restaurante:'Mesas do salão e QR Codes', taxasentregas:'Taxa, ajuda diária e fechamento dos entregadores', equipe:'Funcionários, salários, pagamentos, encargos e recibos', escala:'Quem trabalha em cada dia e horário', ponto:'Entradas e saídas, horas feitas e horas extras', usuarios:'Quem acessa o sistema, o que pode fazer e a privacidade (LGPD) das contas', notifadmin:'Quais avisos ligam, para quem, e os alertas automáticos',
-  contas:'iFood, Nota fiscal, Mercado Pago, chaves das IAs e contas do sistema', integridade:'Uso do espaço, backup, cópia na planilha e contingência', auditoria:'Ações sensíveis registradas'
+  aparencia:'Nome, cores e logos do restaurante', contas:'iFood, Nota fiscal, Mercado Pago, chaves das IAs e contas do sistema', integridade:'Uso do espaço, backup, cópia na planilha e contingência', auditoria:'Ações sensíveis registradas'
 };
 function adminBtnTxt_(id){
   const d = ADMIN_SUBABAS_DESCRICOES[id];
@@ -101,6 +101,7 @@ function adminBtnTxt_(id){
 }
 /* Campo "Ir para…": filtra as telas pelo nome, pelo grupo e por palavras parecidas (ADMIN_BUSCA_PALAVRAS_). Não redesenha o menu enquanto se digita. */
 const ADMIN_BUSCA_PALAVRAS_ = {
+  aparencia:'cor cores logo logotipo marca nome slogan tema paleta visual icone identidade assistente',
   visaogeral:'resumo painel inicio hoje vendas dia saude', ocorrencias:'problema reclamacao erro incidente', feedbacks:'avaliacao opiniao elogio cliente responder',
   financeiro:'despesa conta pagar boleto aluguel mensal gasto', historico:'vendas passadas caixa sessoes arquivo', ajustes:'reembolso estorno devolucao credito cortesia desconto pos venda',
   analise:'meta previsto fluxo categoria', ifoodfin:'ifood financeiro repasse liquidacao antecipacao comissao taxa conciliacao arquivo csv boleto recebiveis lancamento venda', relatorios:'dre imposto lucro excel mercado pago resumo mensal produtos mais vendidos',
@@ -205,6 +206,7 @@ function abrirAdministrador(sub){
   if((alvo==='visaogeral' || alvo==='relatorios') && apiConfigurada()) sincronizarEmSegundoPlano(); // ITEM 92: atualiza ao entrar, sem refresh periódico
   if(alvo==='taxasentregas'){ renderEntregasFinanceiro(); if(apiConfigurada()) atualizarAoEntrar_(); }
   if(alvo==='promocoes'){ renderCuponsUI(); if(typeof carregarPromoAviso_ === 'function') carregarPromoAviso_(); if(typeof carregarPromosDono_ === 'function') carregarPromosDono_(); }
+  if(alvo==='aparencia' && typeof carregarAparencia_ === 'function') carregarAparencia_();
   if(alvo==='raiox' && typeof abrirRaioX_ === 'function') abrirRaioX_();
   if(alvo==='cardapioperiodo' && typeof abrirCardapioPeriodo_ === 'function') abrirCardapioPeriodo_();
   if(alvo==='usuarios' || alvo==='cardapiodigital'){ lgpdCarregarUI_(); }
