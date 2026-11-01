@@ -6,55 +6,56 @@
    - BACKEND: NADA de Apps Script (script.google.com) nem de Supabase (*.supabase.co) é guardado aqui.
      Dados, pedidos, login e RPCs nunca passam pelo cache do service worker — sempre vão direto para a rede.
    - O único cache de dados é o de fotos (FOTOS) e o da casca/ícones (SHELL/ASSETS). Não adicionar outros. */
-const SHELL = 'texas-shell-v147';
-const ASSETS = 'texas-assets-v8';   // trocou ícone/logo/manifest/leaflet? suba para v5
-const FOTOS = 'texas-fotos-v1';
+const SHELL = 'shell-v1';
+const ASSETS = 'assets-v1';   // trocou ícone/logo/manifest/leaflet? suba para v5
+const FOTOS = 'fotos-v1';
 /* Código do app dividido em arquivos (app-*.js e estilo-*.css). Cada arquivo tem ?v=<impressão digital> na página; o cache guarda
    pela endereço COMPLETO, então uma página antiga sempre acha os arquivos antigos dela e a nova acha os novos (nunca mistura versões).
    A lista abaixo é gerada pelo script de selagem (selar.py) a cada entrega. */
-const CODIGO = 'texas-codigo-v5';   // trocou o nome = todo aparelho descarta o cache de código antigo (inclusive cópia vazia)
+const CODIGO = 'codigo-v1';   // trocou o nome = todo aparelho descarta o cache de código antigo (inclusive cópia vazia)
 const LISTA = [/*LISTA-INICIO*/
-  'css/estilo-base.css?v=a7ff2762',
-  'js/app-01-base-e-api.js?v=97d9f1c3',
+  'js/app-00-marca.js?v=2b414212',
+  'css/estilo-base.css?v=ecf263bb',
+  'js/app-01-base-e-api.js?v=f8403f78',
   'js/app-02-abas.js?v=d5e37eda',
   'js/app-03-cadastros.js?v=3c5db50a',
-  'js/app-04-pedidos-entrega.js?v=99782e13',
-  'js/app-05-avisos-push.js?v=98079090',
-  'js/app-06-caixa.js?v=d8657313',
-  'js/app-07-impressao.js?v=5c9f0484',
+  'js/app-04-pedidos-entrega.js?v=a2d478eb',
+  'js/app-05-avisos-push.js?v=fe880382',
+  'js/app-06-caixa.js?v=1a2541c4',
+  'js/app-07-impressao.js?v=791aa527',
   'js/app-08-vendas-despesas.js?v=0b8d9a34',
-  'js/app-09-ajuda.js?v=46c2771e',
+  'js/app-09-ajuda.js?v=b3482298',
   'js/app-10-backup-financeiro.js?v=f3d08c92',
-  'js/app-11-admin-integracoes.js?v=df7ba2d9',
-  'js/app-12-gestao-ia.js?v=fed5faf4',
-  'js/app-13-conexao-sync.js?v=fc0dccb7',
+  'js/app-11-admin-integracoes.js?v=ac6dea84',
+  'js/app-12-gestao-ia.js?v=34b9cbd4',
+  'js/app-13-conexao-sync.js?v=b38413c9',
   'js/app-14-relatorios.js?v=89a1208a',
-  'js/app-15-cardapio-cliente.js?v=5a90be59',
-  'js/app-16-sessao-final.js?v=ef1da8ab',
+  'js/app-15-cardapio-cliente.js?v=3fda68f9',
+  'js/app-16-sessao-final.js?v=54ce10c2',
   'js/app-17-sessao-supabase.js?v=5a30d71b',
   'js/app-18-queda-supabase.js?v=c3cdfe49',
-  'css/estilo-ia-cardapio.css?v=fb33ce83',
-  'js/app-19-ia.js?v=37d36dbd',
-  'js/app-20-balao-interno.js?v=ed4510d2',
+  'css/estilo-ia-cardapio.css?v=ffe00c8f',
+  'js/app-19-ia.js?v=a1107f1f',
+  'js/app-20-balao-interno.js?v=b9af974b',
   'js/app-21-localizacao.js?v=cd8592e7',
-  'css/estilo-equipe.css?v=bdf2d104',
+  'css/estilo-equipe.css?v=36b0117e',
   'js/app-22-navegacao-inferior.js?v=9c0835e7',
   'js/app-23-janelas-popup.js?v=6f031891',
   'js/app-24-acessibilidade.js?v=1567f2c1',
   'js/app-25-cadastro-facil.js?v=b041c52e',
   'js/app-26-visual.js?v=3c963d27',
-  'css/estilo-conta-pagamento.css?v=a8a0c5cb',
+  'css/estilo-conta-pagamento.css?v=d22e4d74',
   'js/app-28-dialogos.js?v=5e2e43b5',
-  'js/app-27-conta-cliente.js?v=452c28ed',
+  'js/app-27-conta-cliente.js?v=c3c2401c',
   'js/app-29-usabilidade.js?v=69a7af9b',
   'js/app-30-teclado-pc.js?v=f205bac9',
   'js/app-31-alertas.js?v=819a321b',
-  'js/app-33-escala.js?v=345a54d7',
-  'js/app-34-eventos.js?v=69bb2d23',
+  'js/app-33-escala.js?v=ab6dd220',
+  'js/app-34-eventos.js?v=6d38b1b2',
   'js/app-35-equipe-extras.js?v=650e4df1',
-  'js/app-36-gestao.js?v=bb125f4f',
+  'js/app-36-gestao.js?v=bc402363',
   'js/app-37-ponto-rapido.js?v=2ea0dbba',
-  'js/app-38-ponto-rosto.js?v=eb22fd84',
+  'js/app-38-ponto-rosto.js?v=45e597db',
   'js/app-39-fotos-registros.js?v=7786e7f0',
   'js/app-40-etiquetas.js?v=5ac4487f',
   'js/app-41-ifood-extras.js?v=e6801644',
@@ -64,7 +65,7 @@ const LISTA = [/*LISTA-INICIO*/
   'js/app-45-ver-cardapio.js?v=a75737b8',
   'js/app-46-cardapio-hoje.js?v=bca844d0',
   'js/app-47-cardapio-facil.js?v=27ecb254',
-  'js/app-51-infinitepay.js?v=a3fdd917',
+  'js/app-51-infinitepay.js?v=af7923ee',
   'js/app-52-ifood-financeiro.js?v=bf3223c9',
   'js/app-53-ifood-entregador.js?v=b0e6ddfa',
   'js/app-54-ifood-indicadores.js?v=144d8d09',
@@ -72,20 +73,20 @@ const LISTA = [/*LISTA-INICIO*/
   'js/app-55-ifood-roteiro.js?v=7de45218',
   'js/app-57-ponto-meus-registros.js?v=9ac01cfd',
   'js/app-50-ifood-homologacao.js?v=72eb9915',
-  'js/app-49-jogos.js?v=792e66dd',
+  'js/app-49-jogos.js?v=f8ad224a',
   'js/jogo-burger.js?v=d67a1a42',
   'js/jogo-chuva.js?v=c0a88274',
   'js/jogo-memoria.js?v=5246b144',
   'js/jogo-cobra.js?v=651a89f6',
   'js/app-58-drive-direto.js?v=9e4d8a06',
   'js/app-48-armazenamento.js?v=c4160c65',
-  'js/app-32-equipe.js?v=5f1d4bd8',
-  'css/estilo-sistema.css?v=ac6245c8',
+  'js/app-32-equipe.js?v=15e8d37a',
+  'css/estilo-sistema.css?v=e60448b6',
   'js/app-59-layout.js?v=5aa543db',
   'js/app-61-custos-gerais.js?v=856d2e6d',
   'js/app-62-raio-x.js?v=a9a70e0e',
   'js/app-64-promocoes-dono.js?v=fb820c1a',
-  'js/app-63-promocoes-aviso.js?v=cdad1c46',
+  'js/app-63-promocoes-aviso.js?v=7eb16304',
   'js/app-60-navegador-app.js?v=51ce21da',
 /*LISTA-FIM*/];
 const FOTOS_MAX = 150;
@@ -102,7 +103,7 @@ self.addEventListener('install', e => e.waitUntil((async () => {
 self.addEventListener('activate', e => e.waitUntil((async () => {
   let trocou = false;   // v117: se um aparelho tinha cache de versão antiga, a página abre de novo sozinha com o código novo (uma vez)
   for (const k of await caches.keys()) {
-    if ((k.indexOf('texas-shell') === 0 && k !== SHELL) || (k.indexOf('texas-assets') === 0 && k !== ASSETS) || (k.indexOf('texas-codigo') === 0 && k !== CODIGO)) { await caches.delete(k); trocou = true; }
+    if ((k.indexOf('shell-') === 0 && k !== SHELL) || (k.indexOf('assets-') === 0 && k !== ASSETS) || (k.indexOf('codigo-') === 0 && k !== CODIGO)) { await caches.delete(k); trocou = true; }
   }
   try {   /* limpa do cache de código o que não está na lista atual */
     const cc = await caches.open(CODIGO);

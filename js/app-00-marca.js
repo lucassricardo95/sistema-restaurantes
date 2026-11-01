@@ -40,7 +40,7 @@
     let st = document.getElementById('marcaCss');
     if(!st){ st = document.createElement('style'); st.id = 'marcaCss'; (document.head || document.documentElement).appendChild(st); }
     const p = paleta(m.cores);
-    st.textContent = ':root{' + Object.keys(p).map(k => k + ':' + p[k] + ';').join('') + '}';
+    st.textContent = 'html:root{' + Object.keys(p).map(k => k + ':' + p[k] + ';').join('') + '}';
   }
   /* ---------- manifesto do app (nome, cor e ícone do restaurante) ---------- */
   function absoluta(u){ try{ return new URL(u, location.href).href; }catch(e){ return u; } }

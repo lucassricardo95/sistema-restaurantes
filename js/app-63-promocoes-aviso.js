@@ -2,7 +2,7 @@
    PROMOÇÕES POR AVISO NO CELULAR (v1.25)
    Os clientes aceitaram receber "avisos dos pedidos". Promoção é outra coisa: só vai para quem aceitar À PARTE.
    CARDÁPIO
-   • Aparelho com os avisos ligados vê UMA vez uma faixa: "🎁 Quer receber as promoções do Texas por aqui?" (Quero / Agora não).
+   • Aparelho com os avisos ligados vê UMA vez uma faixa: "🎁 Quer receber as promoções de (nome do restaurante) por aqui?" (Quero / Agora não).
    • Toque num aviso de promoção abre ./?promo=1: faixa "Você recebe as promoções neste aparelho · Não quero mais".
    • Liga/desliga no banco: api_push_cliente_promo (pelo endereço da inscrição do navegador; sem nome nem telefone).
    ADMIN (Vendas e cardápio → Promoções e cupons)
@@ -51,7 +51,7 @@
         return;
       }
       gravar(K_PERG, '1'); gravar(K_ON, ligar ? '1' : '0');
-      faixa_('<span style="flex:1 1 200px;">' + (ligar ? '<b>✅ Pronto!</b> Você vai receber as promoções do Texas por aqui. Para parar, toque num aviso de promoção e escolha "Não quero mais".' : '<b>Tudo bem.</b> Você não vai mais receber promoções. Os avisos dos seus pedidos continuam normalmente.') + '</span>');
+      faixa_('<span style="flex:1 1 200px;">' + (ligar ? '<b>✅ Pronto!</b> Você vai receber as promoções de ' + NOME_H_() + ' por aqui. Para parar, toque num aviso de promoção e escolha "Não quero mais".' : '<b>Tudo bem.</b> Você não vai mais receber promoções. Os avisos dos seus pedidos continuam normalmente.') + '</span>');
       setTimeout(fechar_, 6000);
     }catch(err){
       faixa_('<span style="flex:1 1 200px;color:#ffb4ab;">⚠️ Os avisos deste aparelho não estão ligados ou a internet caiu. Nada foi mudado.</span><button type="button" class="ghost" style="margin:0;padding:4px 10px;" onclick="cdPromoFechar_()">Fechar</button>');
@@ -64,14 +64,14 @@
 
   function perguntar_(){
     if(!podeAqui_() || ler(K_PERG) || $('cdPromoFaixa')) return;
-    faixa_('<span style="flex:1 1 200px;"><b>🎁 Quer receber as promoções do Texas por aqui?</b> No máximo algumas por semana. Dá para parar quando quiser.</span>'
+    faixa_('<span style="flex:1 1 200px;"><b>🎁 Quer receber as promoções de ' + NOME_H_() + ' por aqui?</b> No máximo algumas por semana. Dá para parar quando quiser.</span>'
       + '<button type="button" class="small-gold" style="margin:0;" onclick="cdPromoSim_()">Quero receber</button>'
       + '<button type="button" class="ghost" style="margin:0;padding:4px 10px;" onclick="cdPromoNao_()">Agora não</button>');
   }
   window.cdPromoPerguntar_ = perguntar_;
   function veioDePromo_(){
     if(equipe_()) return;
-    faixa_('<span style="flex:1 1 200px;">🎁 Você recebe as promoções do Texas neste aparelho.</span>'
+    faixa_('<span style="flex:1 1 200px;">🎁 Você recebe as promoções de ' + NOME_H_() + ' neste aparelho.</span>'
       + '<button type="button" class="ghost" style="margin:0;padding:4px 10px;" onclick="cdPromoSair_()">Não quero mais</button>'
       + '<button type="button" class="ghost" style="margin:0;padding:4px 8px;" aria-label="Fechar" onclick="cdPromoFechar_()">✕</button>');
   }

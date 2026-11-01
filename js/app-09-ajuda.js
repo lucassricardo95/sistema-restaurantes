@@ -156,7 +156,7 @@ Admin:{ nome:'Administrador', secoes:[
     'Escolha a mesa e toque em "🖨️ Imprimir esta mesa" (ou "Imprimir todas"). Também dá para "⬇️ Baixar PNG".',
     'Plastifique e deixe na mesa. O cliente pede pelo celular e você aceita o pedido em Pedidos.',
     'Se alguém espalhar o QR, use "🔄 Gerar novo código" e imprima o QR novo daquela mesa.' ],
-    comuns:['O endereço do site está fixo nos QR: https://texasburguer.github.io/apptexasburguer/ — se mudar, é preciso imprimir de novo.'] },
+    comuns:['O endereço do site (config-restaurante.js) está gravado nos QR; se mudar, é preciso imprimir de novo.'] },
 
   { t:'Menu de baixo (celular)', itens:[
     'No celular, o menu fica fixo na parte de baixo da tela: Início, Caixa, Pedidos e as outras telas do seu perfil. A aba aberta fica em dourado.',
@@ -243,7 +243,7 @@ Admin:{ nome:'Administrador', secoes:[
 
   { t:'📣 Promoção por aviso no celular', itens:[
     'Administrador → Vendas e cardápio → Promoções e cupons → cartão "📣 Promoção por aviso no celular".',
-    'Só recebe quem aceitou: no cardápio, o cliente com os avisos do pedido ligados vê uma vez "🎁 Quer receber as promoções do Texas por aqui?". A barra mostra quantos aparelhos aceitaram.',
+    'Só recebe quem aceitou: no cardápio, o cliente com os avisos do pedido ligados vê uma vez "🎁 Quer receber as promoções de ' + NOME_RESTAURANTE_ + ' por aqui?". A barra mostra quantos aparelhos aceitaram.',
     'Escreva o título (até 60 letras) e o texto (até 140), confira a prévia e toque em "📣 Enviar promoção". Não dá para desfazer, e a próxima só pode sair 6 horas depois, para o cliente não desligar os avisos.',
     'Na lista "Últimas enviadas" aparece para quantos foi entregue e quantos desligaram os avisos. Ao tocar no aviso, o cliente abre o cardápio com a opção "Não quero mais".',
     'Não escreva nome, telefone ou endereço de cliente no aviso: ele aparece na tela bloqueada do celular.' ] },
@@ -1085,6 +1085,7 @@ function fecharAjudaCliente(){
 /* Prints reais de "onde clicar": imagem do celular e do PC (WebP leve), carregadas só quando a seção é aberta (loading=lazy).
    Cada print traz legenda e texto alternativo; os números nas imagens são os do passo a passo. Roteiro para refazer: ajuda-prints/ROTEIRO_DE_CAPTURA.md (no pacote de auditoria). */
 function ajudaPrintsHtml_(lista){
+  return '';   // os prints de ajuda são de cada restaurante: este modelo ainda não traz imagens
   return '<div class="ajuda-prints">' + lista.map(p =>
     '<figure class="ajuda-print"><picture>' +
     '<source media="(min-width:900px)" srcset="ajuda-prints/' + escH(p.id) + '-pc.webp">' +

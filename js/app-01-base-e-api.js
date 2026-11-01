@@ -18,377 +18,68 @@ window.APP_VERSAO = APP_VERSAO;
      3. Não mexer nas entradas antigas — viram "Versões anteriores" sozinhas.
    A seção "🆕 O que mudou" do manual é gerada daqui. */
 const APP_NOVIDADES = {
-  Admin: [
-    { v:'1.26', em:'01/11/2026', itens:[
-      'Promoções e cupons · Cartão novo "🏷️ Preço por dia da semana": escolha um produto ou combo, os dias, o horário (opcional) e o preço fixo ou % de desconto; marque se aceita cupom. No cardápio aparece o preço antigo riscado e a etiqueta. Vale só no cardápio online (entrega e retirada), não em mesa, balcão nem iFood. Pedido entre 0h e 5h59 conta na noite anterior.',
-      'Promoções e cupons · Cartão novo "🎁 Compre e ganhe": a partir de R$ X em produtos (sem a taxa de entrega), o cliente ganha o brinde que você escolher. O carrinho mostra "Faltam R$ X para ganhar…" e o brinde entra no pedido a R$ 0, com custo e baixa no estoque.',
-      'Promoções e cupons · Cartão novo "🧾 Bilhete na sacola": sai impresso junto da comanda dos pedidos do iFood (ou de todas as entregas) com título, texto, QR Code do cardápio e um cupom. Você escreve tudo, vê a prévia, testa a impressão e liga ou desliga.',
-      'Tudo isso é configurado por você; excluir uma promoção pede a senha.' ] },
-    { v:'1.25', em:'01/11/2026', itens:[
-      'Tela nova · Administrador → Vendas e cardápio → "Raio-X do negócio": escolha o período e veja, com os dados que o sistema já guardava, quando vende mais (quadro dia × hora e média de pedidos por noite), iFood × seu cardápio (pedidos, valor médio, quem voltou, comissão e taxas), os clientes fiéis do iFood, os tempos de cada etapa (geral, por horário, por entregador e por turno), os cancelamentos por motivo (sem os testes), onde os pedidos ficam parados, os custos de fornecedor que mudaram nos últimos 90 dias e as perdas registradas comparadas com a estimativa.',
-      'Promoções e cupons · Cartão novo "📣 Promoção por aviso no celular": escreva título e texto, veja a prévia e envie para os clientes que aceitaram receber promoções. No cardápio, quem tem os avisos ligados é convidado uma vez a aceitar; cada aviso de promoção tem "Não quero mais". Uma promoção a cada 6 horas, no máximo.',
-      'Estoque · Botão novo "🗑️ Perdi um produto pronto": escolha o produto (lanche que caiu, voltou ou saiu errado), a quantidade e o motivo; todos os ingredientes da receita saem do estoque como perda e o valor aparece no Raio-X.',
-      'Aviso novo ao Admin: se na última hora a cozinha ficar bem mais lenta que o normal (3 pedidos ou mais), chega um aviso no celular.',
-      'Cupom de aniversário (ANIVERSARIO) foi ligado: quem tem conta com a data de nascimento ganha o cupom no dia. Quem tem conta sem a data vê um convite para informar. Para desligar, use Promoções e cupons → Cupons automáticos.' ] },
-    { v:'1.24', em:'01/11/2026', itens:[
-      'Cardápio hoje · Parte nova "🧾 No finalizar": de quem abriu a tela de finalizar, quantos tocaram em "Enviar pedido", quantos saíram sem tocar e o que segurou quem tocou (faltou o número da casa, rua, cidade, nome ou telefone, troco menor que o total, pagar pelo site pediu login, cardápio fechado ou erro ao enviar). Dá para ver o período atual ou os últimos 30 dias. Sem nome nem telefone do cliente, igual ao funil.',
-      'Tela nova · Administrador → Vendas e cardápio → "Cardápio: funil e mapa": o funil, o detalhe do finalizar e o mapa por PERÍODO (Hoje, 7 dias, 30 dias, Este mês, Mês passado ou datas à escolha), com as visitas por dia. O funil e as entregas aparecem desde o começo; os pontos de acesso passam a ser guardados a partir de hoje como contagem por região, sem identificar o aparelho.',
-      'Cupons · Novo campo "Vale só nestas formas de pagamento" (ex.: só Pix e Dinheiro). No cardápio o cliente vê em quais formas o cupom vale; se escolher outra, o desconto sai e aparece a mensagem com botões "Pagar com Pix"/"Pagar com Dinheiro", e ao voltar para uma forma que vale o cupom volta sozinho.',
-      'Cardápio do cliente · A forma de pagamento agora é escolhida em botões (no lugar da lista). A lista falhava em alguns celulares, principalmente no navegador do Instagram no iPhone, e o cliente não conseguia trocar a forma depois de aplicar o cupom. Trocar a forma também confere o cupom de novo.',
-      'Conta do cliente · O cardápio convida a entrar com o Google mostrando as vantagens que estão ligadas (cupom de boas-vindas, cartão fidelidade, endereços e repetir pedido), no topo, no carrinho e depois de enviar o pedido.',
-      'Cardápio do cliente · Tocar em qualquer parte do cartão do produto (nome, descrição, preço) já abre o item, não só o botão "+".',
-      'Cardápio do cliente · Faixa de promoção opcional logo abaixo do banner: escreva em Cardápio Digital → Personalizar → "Faixa de promoção" (em branco não aparece).',
-      'Cardápio do cliente · Quem abre o link pelo Instagram, Facebook ou TikTok vê um aviso para abrir no navegador do celular (lá o Google bloqueia o login). Ao tocar em "Continuar com o Google" dentro dessas redes, o cliente é avisado antes. Pedir sem conta continua funcionando ali mesmo.',
-      'Avisos · Cartão novo "📊 Resumo do turno" em Loja e equipe → Configurar avisos: ao fechar o caixa, todos os Admins recebem no celular o faturamento do turno (sem a taxa de entrega), pedidos, ticket médio, iFood, cancelados e se o caixa bateu. Vem ligado; tem botão de teste.',
-      'Custos · Todo lanche passou a ter no custo 2 sachês de ketchup, 2 de maionese e 2 de mostarda; todo produto preparado tem a embalagem (lanche, hot dog, porção, batata recheada) e o gás e a energia do preparo. Valores estimados: ajuste em Produtos → Estoque. Gás e energia aparecem com a etiqueta "só custo": entram no custo, mas não descontam estoque. A fritadeira é elétrica: porções (fritas) contam só energia, sem gás, e lanches com item frito (frango crocante, anel de cebola, mussarela empanada, batata frita) têm energia a mais.',
-      'Clientes · Filtro novo "iFood": mostra só os clientes que pediram pelo iFood. Corrigido: pedido do iFood criava um cadastro repetido "Nome (iFood)" com telefone 0800 (o 0800 é do iFood e é reaproveitado entre clientes) e dava carimbo de fidelidade. Os 9 repetidos foram escondidos e ligados ao cliente do iFood certo, e os carimbos deles voltaram a zero.',
-      'Custo real · Taxas das formas de pagamento preenchidas (estimadas: Débito 1,5%, Crédito 3,5%, Alelo 6,5%, iFood 15,2%; Pix e Dinheiro 0%) — confira com o contrato da maquininha em Formas de pagamento. Entraram no custo o óleo da fritadeira, a manteiga para chapear o pão e os temperos.',
-      'Custo real · Card novo "Custos gerais" em Custos e precificação: % de perdas e desperdício (padrão 4%, sobre os ingredientes) e custo por pedido (sacola/lacre: R$ 0,60 na entrega e R$ 0,40 na retirada), que entra no custo de cada venda nova.',
-      'Preço sugerido · Em cada produto e combo aparece, numa linha logo abaixo do item, o preço sugerido (ou "Preço atual ok"), o ideal e o preço para o iFood; no cadastro aparece a explicação e com botão "Usar" no cadastro e o preço sugerido para o iFood. Regra: custo ÷ custo-alvo (lanches 35%, porções 30%, bebidas 60%, combos 40%), terminando em ,90. Travas: nunca sugere baixar um preço que já está bom, sobe no máximo 25% de uma vez (mostra o ideal junto) e nunca fica abaixo do mínimo que cobre custo, imposto, taxa e 15% de lucro. Tudo ajustável em Custos e precificação → Custos gerais.',
-      'Cardápio hoje · O quadro do Início e o pop-up passaram a contar o mesmo período: o turno, desde o fechamento do caixa anterior (entra quem olhou o cardápio à tarde, antes de abrir). Antes o quadro contava desde a meia-noite e o pop-up desde a abertura do caixa, e os números não batiam.',
-      'Segurança e velocidade · Ajustes no banco: funções internas fechadas ao público, toda tabela nova já nasce com as permissões certas (mudança do Supabase de 30/10).' ] },
-    { v:'1.23', em:'29/10/2026', itens:[
-      'Visual · A área da equipe ficou com cara de sistema profissional: títulos em letra comum, cartões lisos, dourado só no que é ação principal ou destaque, ícones de linha no lugar dos emojis e três tipos de botão (principal dourado, secundário de contorno e perigo). O cardápio do cliente continua com a cara do Texas.',
-      'Celular · Topo compacto (logo pequena e ícones numa linha só), sobrando mais tela para o trabalho. A faixa "Sem conexão com o servidor principal" agora aparece no alto e não cobre mais a barra de baixo. O Tex fica menor e sai da frente quando você rola a página para baixo.',
-      'Computador · Uma barra única no topo com a marca, o menu e as ferramentas; o menu do Administrador na lateral virou uma lista limpa; a tela usa a largura toda.',
-      'Cliente · Em Minha conta → Meus dados voltaram os botões "Baixar uma cópia dos meus dados" e "Apagar minha conta", que o Aviso de Privacidade promete.',
-      'Limpeza · Código sem uso removido da página e do banco; a rotina que limpa o registro das integrações passou a rodar todo dia (antes o registro crescia sem parar).' ] },
-    { v:'1.22', em:'29/10/2026', itens:[
-      'Backup e espaço · A tela abre só com o essencial: Uso do espaço, Backup, Google Drive (status de cada Drive e a última limpeza automática) e Cópias de segurança. "Quanto tempo guardar" e "O que fica em cada Drive" foram para o Avançado, e as opções do Drive (abrir pastas, limpar fotos sem uso, reconectar, desconectar) ficam recolhidas em "Opções". Se um Drive tiver problema, o botão para resolver aparece na hora.',
-      'Backup e espaço · As barras dos dois Drives abrem mais rápido: o que ocupa cada Drive é guardado por 30 minutos (o espaço usado é sempre o atual) e é refeito logo depois de qualquer limpeza.' ] },
-    { v:'1.21', em:'29/10/2026', itens:[
-      'Google Drive · Os dois Drives agora somam espaço, em vez de guardar a mesma coisa: o principal fica com as fotos do cardápio, as notas de compra e os backups; a contingência fica com as fotos do ponto, de perdas, recebimentos, ocorrências e os atestados, mais uma cópia das fotos do cardápio e dos backups. Acabou o espelhamento de fotos entre os Drives.',
-      'Backup e espaço · Cartão novo "☁️ Google Drive": status de cada Drive, abrir pastas e "🧹 Limpar fotos sem uso" direto na linha do Drive (pede a senha, vai para a lixeira do Drive e dá para desfazer). Sai o bloco de fotos sem uso do Avançado. As barras do "Uso do espaço" mostram o que ocupa cada Drive.',
-      'Backup e espaço · A limpeza de fotos sem uso agora roda sozinha uma vez por mês; o resultado (ou o erro) aparece no cartão do Drive.',
-      'Backup e espaço · Cartão novo "🗓️ Quanto tempo guardar", com os dias editáveis (pede a senha). Novos padrões: fotos do ponto, perdas, recebimentos e ocorrências 90 dias; atestados 90 dias; backups automáticos 30 dias; notas de compra 13 meses (antes nunca eram apagadas).' ] },
-    { v:'1.20', em:'29/10/2026', itens:[
-      'Fotos · A foto do atestado (Meus registros) agora fica no Google Drive, nos dois (principal e contingência), e é apagada sozinha após 30 dias. Nenhuma foto vai mais para o banco. O Storage do Supabase fica só com os backups e os arquivos antigos do banco.' ] },
-    { v:'1.19', em:'29/10/2026', itens:[
-      'Google Drive · Tudo que lia ou gravava no Drive pela planilha agora vai primeiro direto pelo Supabase (mais rápido) e, se não der, pela planilha como segundo caminho: fotos do cardápio (enviar, trocar, remover, copiar para a contingência), comprovantes de nota, fotos do ponto e de perdas/recebimentos/ocorrências, e a leitura do Uso do espaço. Continuam só pela planilha: limpeza de fotos sem uso, meses arquivados e a fila da contingência. Na tela Uso do espaço, o tamanho de "Arquivos do sistema" é atualizado a cada 12 horas.' ] },
-    { v:'1.18', em:'29/10/2026', itens:[
-      'Backup e espaço · Novo cartão "☁️ Google Drive direto": conecte o Drive principal e o Drive da contingência (cada um com a sua conta Google, com senha) e acesse os dois sem passar pelo Apps Script: navegar nas pastas, baixar, enviar arquivos (senha) e criar pastas. O backup agora também é copiado por esse caminho: se o Apps Script falhar, a cópia no Drive sai mesmo assim, e o Drive da contingência recebe uma cópia independente. O Apps Script continua funcionando como antes.' ] },
-    { v:'1.17', em:'28/10/2026', itens:[
-      'Conexão e servidores · Tela mais curta e bonita: um resumo grande no topo (tudo certo ou o que pede atenção), servidores em uma linha cada, o que está com problema logo em cima, "Plano grátis do Supabase" em barras (X de Y · %), as outras verificações recolhidas e o botão Verificar agora sempre visível embaixo.' ] },
-    { v:'1.16', em:'25/10/2026', itens:[
-      'Ponto · Meus registros: o funcionário vê as batidas do período (do dia seguinte ao fechamento até o fechamento do mês seguinte), pede correção de ponto e envia atestado com foto. Você aprova ou recusa em Equipe → Ponto, com senha, e o funcionário recebe um aviso. O dia de fechamento (hoje 20) você muda no mesmo lugar. A foto do atestado é apagada sozinha após 30 dias.',
-      'Administrador → Sistema: "Backup e cópias" e "Espaço e arquivamento" viraram uma tela só, "Backup e espaço". No topo, "Uso do espaço" com cinco barras (banco, Storage, planilha, Drive principal e Drive da contingência); depois Backup, Cópia na planilha, Contingência e Conferência. Plano, arquivamento e fotos sem uso ficam em "Avançado", recolhido no fim. O botão "Saúde do sistema" saiu do menu (ela abre pela bolinha do topo) e os menus foram reordenados pelo uso.',
-      'iFood · Preço automático: ao salvar o preço da forma "iFood" de um produto ou combo ligado ao iFood, o novo preço vai sozinho para o iFood. Acima do limite de variação não envia e cria um aviso para você conferir.',
-      'Cardápio · A localização do cliente agora é guardada junto do pedido: se ele já permitiu a localização, ela é puxada sozinha e o botão "Usar minha localização" some; se não permitiu, o botão continua aparecendo. Mesmo sem GPS, o endereço digitado é localizado no mapa. A Melhor rota usa essa posição exata. A posição é apagada quando o pedido é entregue.',
-      'Entregas · Nova "🧭 Melhor rota": quando um entregador sai com 2 ou mais entregas, toque em "Ver melhor rota" e o sistema sugere a ordem mais rápida (saindo e voltando ao restaurante), com o tempo até cada entrega e botão para abrir no Google Maps. Vale para pedidos do sistema, do cardápio digital e do iFood. É só uma sugestão.',
-      'Clientes · O endereço do cliente se preenche sozinho com o endereço de entrega mais usado (já na 1ª entrega), só quando o campo está vazio.',
-      'Tela · Não amplia mais com o gesto de pinça nem com toque duplo.',
-      'Cardápio hoje · O mapa agora mostra as entregas feitas, com localização aproximada: verde = pedidos do sistema, vermelho = iFood.',
-      'iFood · Clientes unidos: cliente do iFood (sem telefone) se junta sozinho ao cadastro do sistema quando NOME e ENDEREÇO batem; o telefone passa a sair na comanda e a fidelidade vale. Endereço igual com nome diferente vira sugestão no perfil (botão Unir, com senha) e o nome do iFood fica sempre visível, com Desfazer.',
-      'iFood · Ligação automática: item do iFood com nome exatamente igual ao de um produto, combo ou adicional se liga sozinho e aparece marcado "🤖 ligado sozinho"; se estiver errado, toque em Desfazer.',
-      'iFood · Avisos: nova tela "Avisos" em Integrações › iFood. Junta o que o iFood mandou e pede atenção: pedido alterado pelo cliente, cancelamento recusado, troca de endereço, pedido devolvido, hora ideal de começar o preparo e prazo de avaliação. Cada aviso também chega como notificação. Tem "Marcar como visto".',
-      'iFood · Pedido completo: o sistema agora lê todos os eventos do iFood (alteração do pedido, cancelamento pedido pelo cliente, recusa do iFood, devolução, retirada em área) e mostra o motivo real do cancelamento em português (origem, código e motivo). Itens e valores vêm do pedido completo do iFood.',
-      'iFood · Cardápio no iFood: nome até 100 e descrição até 500 letras, combo, tipo de grupo de complementos, código separado por produto e envio em lote conferido até o fim. Novo "Diagnóstico": pergunta ao iFood por que um item NÃO aparece no app e diz o que fazer.',
-      'iFood · Avaliações: lista das últimas avaliações com nota, comentário, nome do cliente e prazo para responder; responder (10 a 300 letras) pede a senha e mostra se o iFood aceitou. Aviso para nota baixa e para prazo acabando.',
-      'iFood · Entregador do iFood (Sob Demanda), DESLIGADO por padrão (Integrações › iFood › Entregador do iFood). Pedido do iFood com entrega sua, ou pedido do cardápio/balcão/WhatsApp: peça a cotação (grátis), veja valor e tempo, chame o entregador (cobra; pede a senha), acompanhe, compartilhe o link de rastreio e o código de 4 dígitos, veja o nível de confiança, responda troca de endereço e cancele com os motivos do iFood. O custo da corrida vira despesa. Erros do iFood aparecem em português.',
-      'iFood · Indicadores (até ontem): faturamento, pedidos, ticket médio, cancelamento, canal, pagamento, quem entregou, dia, hora e tempos médios, por período. Os números do iFood chegam com 1 dia de atraso (D-1). Usa um segundo aplicativo (BI) do iFood: digite o Client ID e o Secret dele em Integrações › iFood.',
-      'iFood · Homologação: o painel de homologação agora tem o Roteiro por módulo, com o que fazer e mostrar ao iFood em cada módulo (pedidos, eventos, loja, cardápio, avaliações, financeiro, entrega e indicadores).' ] },
-    { v:'1.15', em:'25/10/2026', itens:[
-      'Ajuda (no Android): quando o app da equipe estiver publicado, aparece o cartão "📲 App da equipe" com o botão para baixar e instalar. Só a equipe vê; o cliente continua usando a página.',
-      'Administrador → Sistema reorganizado em 4 telas: Backup e cópias (backup, cópia na planilha, contingência e conferência), Espaço e arquivamento (abas Uso, Arquivamento e Drive e fotos), Integrações e contas e Auditoria. A Saúde do sistema virou um botão no topo do menu Sistema.',
-      'Compactação das 05:30: antes de agendar, confere se há espaço livre; tabela que não cabe fica de fora e aparece aviso em Armazenamento (e no celular).',
-      'Senha SEMPRE, inclusive do Admin, também ao excluir produto, combo, adicional, categoria, ingrediente, mesa e perfil fiscal, ao estornar nota, ao registrar ou cancelar ajuste pós-venda, ao cancelar evento ou pedido de compra e ao desfazer preço do iFood. O banco também recusa sem senha.',
-      'iFood: vendas e repasses (Administrador → Dinheiro): o financeiro oficial do iFood — vendas com comissão e taxas, lançamentos, repasses com status e banco, antecipações D+1/D+7, conferência da semana (lançamentos × repasse) e o arquivo mensal de conciliação em CSV. Funciona depois que o iFood liberar o módulo Financeiro (homologação).',
-      'Nova integração: InfinitePay (Sistema → Integrações e contas → InfinitePay). Pix e crédito pagos no site da InfinitePay, junto ou no lugar do Mercado Pago: cada forma escolhe quem recebe. Tem SIMULAÇÃO (Pagar/Recusar/Expirar sem cobrar), confere cada pagamento com a InfinitePay antes de aprovar e permite registrar o reembolso feito no app dela. Vem DESLIGADA.',
-      'iFood (preparação para a homologação): ao cancelar um pedido do iFood você escolhe o motivo oficial do iFood; aviso "🔐 O iFood precisa de um código" em Pedidos e Entregas para o código do entregador e o de entrega; a comanda mostra bandeira do cartão, quem pagou o cupom e retirada agendada; novo "🩺 Estado dos módulos" no cartão do iFood.',
-      'Nova tela em Sistema: "📦 Armazenamento". Mostra o banco, o Storage e as planilhas, quanto cresce por dia e quanto tempo falta para encher. Os pedidos antigos agora vão para o Storage (comprimidos e conferidos antes de sair do banco); se o Storage encher, o mais antigo vai para a planilha, num arquivo por ano. Cada arquivamento mostra quanto espaço liberou de verdade (medido às 06:00, depois da compactação das 05:30). Ações dessa tela pedem a senha.',
-      'Cardápio do cliente mais fácil: busca também no celular; o "+" de item simples já põe no carrinho; carrinho com − e + e resumo (subtotal, entrega, cupom, total); "Como quer receber?" em dois botões grandes com taxa e tempo; botão "📍 Usar minha localização"; foto do item no topo também no celular; taxa e tempo à vista no topo. A rolagem para o lado continua igual.',
-      'Início → "Cardápio hoje" agora abre o pop-up CARDÁPIO HOJE: o funil do turno (entraram no cardápio → abriram um item → puseram no carrinho → abriram o finalizar → enviaram o pedido, com quantos pararam em cada etapa) e um mapa de onde estão acessando (localização aproximada de quem permitiu, ~500 m) e dos pedidos com local de entrega. A localização é apagada ao fechar o caixa e sempre depois de 24 horas. Aparelho da equipe não conta.',
-      'Backup e espaço → Google Drive → "🧹 Fotos sem uso": analisa o Drive principal e o da contingência e lista as fotos que nenhum produto ou combo usa (e as duplicadas), com quanto espaço libera. Marque e mande para a lixeira do Drive (pede a senha). "Desfazer a última limpeza" tira tudo da lixeira. Fotos com menos de 7 dias nunca entram.',
-      'Novo botão "🛒 Cardápio" no topo: mostra o cardápio digital como o cliente vê, SEM sair da área de funcionários. Faixa no topo: "Voltar à área de funcionários" (sem senha), com aviso se chegar pedido novo. Pedidos, som e vinheta continuam funcionando por trás.',
-      'Cupons: botão "🗑️ Excluir" (pede a senha). Cupom nunca usado é apagado de vez; cupom já usado é ARQUIVADO (some da lista, da conta dos clientes e do cardápio, e os pedidos antigos continuam certos) e o código fica livre. "Cupons excluídos" lista os arquivados, com Restaurar. Quem estiver com ele no carrinho vê "Esse cupom não está mais disponível".',
-      'Fechar o caixa: o fechamento automático do entregador agora pega TODAS as entregas do caixa, inclusive as concluídas depois da meia-noite (antes ficavam de fora). E o selo "iFood" nos pedidos voltou a aparecer.',
-      'iFood → Itens do iFood: "➕ Cadastrar no sistema" cria o produto como RASCUNHO (fora do cardápio), já ligado, com o nome e o preço do iFood; a lista "Pré-cadastros do iFood" mostra o que falta (ficha técnica, preço, foto, categoria). "🗑️ Excluir de vez" (pede a senha) tira itens de TESTE: param de gerar alerta e não voltam. Também dá para marcar um pedido do iFood como teste.',
-      'iFood: pedido do iFood esperando aceite toca a VINHETA DO iFOOD (Admin, Operador e Cozinha), de 30 em 30 segundos até alguém aceitar, por até 10 minutos. Aparece uma faixa vermelha com "Ver" e "🔇 Silenciar". Teste em Alertas de pedido → "🛵 Testar som do iFood".',
-      'iFood: cada cliente do iFood vira cadastro em Clientes (selo "iFood"), separado pelo ID do iFood — nunca pelo 0800, que é igual para todos. Os pedidos antigos do iFood já foram ligados aos clientes. Histórico, Perfil 360 e Novo/Fiel/VIP funcionam para eles.',
-      'iFood: o pedido mostra o telefone 0800 do iFood junto com o CÓDIGO LOCALIZADOR do cliente (e até que horas ele vale). O código também sai na comanda e na mensagem para o entregador.',
-      'Novo: Conexão e servidores → "🐞 Erros do sistema". Mostra tudo o que deu errado para a equipe E para os clientes do cardápio (antes, só a equipe logada), quantas vezes e em qual tela. Toque em "Resolvido" depois de corrigir; se acontecer de novo, volta para a lista.',
-      'Nenhum erro fica escondido: quando algo dá errado (sem internet, servidor com problema, botão que travou, foto que não subiu), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Mensagens de erro ficam 15 segundos na tela e, se estiverem fora da vista, a tela rola até elas.'
-    ]},
-    { v:'1.14', em:'21/10/2026', itens:[
-      'Combo com escolha: no cadastro do combo (Editar), marque em cada produto "opção de escolha do cliente" e diga quantos itens o cliente escolhe (ex.: 3 Smash entre Cheddar, Tasty e Catupiry, podendo repetir). No cardápio e no Caixa o cliente/atendente escolhe os sabores antes de adicionar; o preço do combo continua fixo e o estoque baixa conforme o que foi escolhido. O combo "3 Smash + Guaraná 1L" já está assim.'
-    ]},
-    { v:'1.13', em:'21/10/2026', itens:[
-      'Preço promocional: em Produtos e em Combos (Editar) há a caixinha "Preço promocional: não aceita desconto nem cupom". Item marcado fica de fora de cupom do cardápio e de desconto do Caixa: o desconto vale só para os outros itens do pedido (o frete grátis de cupom continua valendo). Se o pedido só tem itens marcados, o cupom e o desconto são recusados. Na lista aparece "🏷️ sem desconto/cupom".'
-    ]},
-    { v:'1.12', em:'19/10/2026', itens:[
-      'Senha sempre: recusar pedido, excluir cliente, cancelar pagamento de funcionário, cancelar movimento de evento, dar desconto no Caixa e editar venda agora pedem a sua senha também para o Admin.',
-      'Login: nova caixinha "Lembrar login e senha neste aparelho" — marcando, o celular oferece salvar a senha no próprio cofre de senhas (o sistema não guarda). Só vale no aparelho em que você marcar.',
-      'iFood → produto novo: ao cadastrar um produto que tem preço do iFood, ele é enviado ao iFood já PAUSADO (com a categoria, se faltar) e você recebe um aviso para revisar a foto e ativar em Cardápio no iFood. Os pedidos desse item já chegam ligados ao produto.',
-      'Queda do sistema com iFood ligado: a faixa laranja agora avisa que os pedidos do iFood NÃO entram enquanto o sistema estiver fora (fique de olho no tablet/portal do iFood). Na volta o sistema varre sozinho os pedidos do período, avisa Admin e Operador e mostra quantos chegaram e quantos o iFood já cancelou.',
-      'iFood → Cardápio no iFood: crie e edite categorias, itens (nome, descrição, preço, foto, pausa), grupos de complementos e complementos direto no iFood, e mude preço e status em massa. Pedido do iFood para a homologação do Catalog.',
-      'Cancelar venda ou despesa agora pede a sua senha sempre, também para o Admin.',
-      'iFood → Horário da loja: edite o horário de funcionamento de cada dia, envie ao iFood e leia de volta o que está lá.',
-      'iFood → Itens do iFood: novo botão "Ligar todos os itens com nome igual". Liga de uma vez os itens do iFood que têm um único produto, adicional ou combo de mesmo nome no sistema; o resto fica para você tratar (Usar sugestão, Escolher ou Ignorar).',
-      'iFood: o botão de fechar/abrir o cardápio também fecha/abre a loja no iFood (dá para fechar um pouco antes de fechar o caixa). Ao abrir o caixa com o cardápio fechado à mão, a loja do iFood continua fechada. Precisa da integração do iFood ligada e do módulo Merchant liberado pelo iFood.',
-      'Novo tipo de cupom em Promoções: "Combo por preço fixo" (ex.: 3 Smash + 1 Guaraná 1L por R$ 65). Só vale se o carrinho tiver os produtos do combo; o desconto é a diferença para o preço normal deles e a taxa de entrega nunca entra na conta. O cupom SMASH65 já está assim.',
-      'iFood, pedido AGENDADO: o "despachar" só segue para o iFood quando a janela de entrega abre (antes saía na hora e o iFood reprovou na homologação). O pedido continua com o aviso "AGENDADO para dia/hora".',
-      'Pedidos: novo botão "✖ Cancelar pedido" nos pedidos já aceitos (em preparo ou pronto, ao lado de Suspender; antes do aceite use Rejeitar). Abre a mesma janela de cancelamento do Histórico, com motivo e a pergunta da mercadoria perdida. Em pedido do iFood, o cancelamento segue para o iFood sozinho.',
-      'As avaliações do iFood aparecem em Feedbacks com o selo "iFood". Responder por ali envia a resposta ao iFood (só o Administrador, integração ligada, até 600 letras); responder pela aba iFood também marca o feedback como respondido. O selo do iFood também aparece na busca de pedidos e nas ocorrências, e a IA do sistema passa a contar o iFood como origem própria.',
-      'iFood, 4 recursos EXTRAS, todos DESLIGADOS (em Integrações › iFood › Ajustes, os marcados com EXTRA): conferir repasses com as vendas, avisar também avaliação nota 3, botão "Sugerir resposta" nas avaliações e mostrar no pedido a etapa da entrega feita pelo iFood (e um modo homologação, só para os testes). Cada um explica o que faz; ligue só o que quiser.',
-      'Pedidos do iFood agora aparecem com um selo discreto "iFood" no número do pedido (Pedidos, Entregas, Cozinha, comanda e linha do tempo). Quando o iFood faz a entrega, o pedido não vai para o entregador, não entra no acerto e não gera aviso de "pronta sem sair". Pedido novo do iFood conta como aguardando aceite. A integração continua desligada até você ligar.',
-      'Visitas ao cardápio: o aparelho de quem entra no sistema não conta mais como visita de cliente.',
-    ]},
-    { v:'1.11', em:'18/10/2026', itens:[
-      'Novo: etiqueta de validade para a vigilância sanitária. O botão da etiqueta no topo (Admin, Operador de caixa e Cozinha) imprime na térmica (58 ou 80 mm) com nome, tipo (aberto, manipulado, descongelado ou fechado), data e hora, validade, conservação, lote e responsável. Em "Itens e validades" você cadastra os dias de cada item; o sistema mostra uma sugestão só como dica e nunca preenche sozinho.',
-      'Novo: fotos opcionais (guardadas por 45 dias nos dois Drives) ao lançar uma perda de estoque, receber uma compra ou registrar uma ocorrência. Depois de lançar, o sistema pergunta se você quer tirar até 3 fotos; é só tocar em Pular se não quiser. Depois, o botão 📷 no próprio lançamento mostra a foto.',
-      'Novo: botão de relógio no topo com a escala e a batida do ponto. O ponto agora confere a localização (só vale perto do restaurante), o rosto do funcionário (cadastrado na primeira batida) e guarda a foto por 45 dias nos dois Drives. Se o rosto não conferir, a batida fica para você aprovar em Loja e equipe → Ponto.',
-      'Tudo segue o turno do caixa: os relatórios "Vendas por dia", o gráfico diário e o acerto do entregador agora agrupam pelo dia em que o caixa abriu, mesmo quando o turno passa da meia-noite.',
-      'Novo em Sistema → Backup e espaço: você informa o tamanho do banco do seu plano do Supabase (grátis, Pro ou outro) e pode deixar o arquivamento por idade em Automático ou Só manual, com prazo livre em dias. A proteção dos 95% continua sempre ligada (não dá para desligar): ela arquiva aos poucos, devolve o espaço ao Supabase e avisa aos 70% e 85%.',
-      'Novo: em Produtos há "Margem baixa" (produtos abaixo da margem mínima, geral ou por categoria, com o preço sugerido; dá para ignorar um produto; o celular só avisa quando entra um produto novo abaixo do mínimo) e "Histórico de preços" (todo preço que mudou, quem mudou e quando). Em Estoque, "Compra sugerida" monta a lista do que está no mínimo, por fornecedor, pronta para o WhatsApp. Em Eventos: "Rendimento por hora", "Contrato (PDF)" e, em Relatórios, "Fechamento do mês (PDF)". O celular do dono agora também avisa das contas a pagar na véspera, no dia e vencidas.',
-      'Novo: Eventos ganhou Calendário (botão ao lado de Lista), Orçamento (PDF) para mandar ao contratante e o cartão "Eventos a receber" em Contas a pagar. Na Equipe: troca de turno com aprovação do dono, aviso no celular quando a escala muda, Ponto com horas extras, reserva de 13º e férias e o peso da mão de obra nas vendas. Em Backup e espaço: gráfico de crescimento do banco com previsão. Também arrumei o "Ajustar preços" (nomes das categorias e botões).',
-      'Novo: a Central de Eventos ficou mais simples. Em Administrador → Vendas e cardápio → Eventos, a lista vem separada em Próximos, Em andamento e Concluídos, cada um com A receber, Recebido e Resultado. Toque no evento para ver as abas Dados, Custos e Recebimentos (dá para cancelar um lançamento errado), mandar WhatsApp ao contratante, duplicar o evento e imprimir o resumo.',
-      'Novo: Administrador → Loja e equipe → Escala da equipe. Monte a escala de todos (turnos, folgas, férias), use o padrão semanal, copie semanas, imprima ou mande por WhatsApp. Cada pessoa vê a própria escala em Início → Minha escala.',
-      'Novo: Administrador → Loja e equipe → Equipe e pagamentos. Cadastre funcionários (salário, dia de pagamento, encargos), toque em Pagar para lançar o salário em Despesas, imprima o recibo e receba aviso quando o pagamento do mês passar do dia.',
-      'Novo produto: se você sair no meio, o sistema guarda o rascunho e pergunta se quer continuar. Em Produtos há também "% Ajustar preços" (reajuste de uma categoria de uma vez) e "👁 Mostrar/esconder" (vários produtos do cardápio de uma vez). O rascunho guarda também receita, adicionais e preços.',
-      'Cadastro de produto: aviso "falta algo para ficar completo", sugestão de preço quando o lucro está baixo e o novo "📄 Duplicar" no menu ⋯ do produto.',
-      'Os botões do topo ficaram mais fáceis de acertar com o dedo (a aparência continua a mesma). O campo de busca da Ajuda ficou na largura certa.',
-      'A Ajuda ganhou prints de Abrir e Fechar caixa, Clientes, Cadastro de produto e Mesas do Garçom.',
-      'Os avisos de falha do sistema (planilha parada, backup, caixa vencido…) agora se repetem a cada 30 minutos até o problema ser resolvido (muda em Loja e equipe → Configurar avisos, onde o cartão de alertas passou a ficar). Com o app aberto o Admin também vê a faixa e ouve o som.',
-      'Histórico de vendas: dias antigos, cujos pedidos já foram para a planilha, agora aparecem na própria tela (com reimpressão do comprovante). Pedidos com chat, ocorrência ou nota fiscal não são mais arquivados, ficam no sistema.'
-    ]},
-    { v:'1.10', em:'18/10/2026', itens:[
-      'Novo: aviso de pedido parado. Aparece a faixa "⏰ Pedidos parados" (com som) quando um pedido do seu perfil fica sem avançar. Toque em Ver pedido, Adiar 10 min ou Silenciar este pedido. Os tempos e as regras ficam em Loja e equipe → Configurar avisos → ⏰ Alertas automáticos. Avisos de falha do sistema (backup, planilha parada, caixa vencido…) agora se repetem a cada 30 minutos até o problema ser resolvido.',
-      'O "hoje" dos pedidos agora segue o turno do caixa (do abrir ao fechar, mesmo passando da meia-noite). Em Relatórios há o período novo "Uso real (desde 17/10/2026)".',
-      '"Marcar como recebido" agora pergunta em que forma o cliente pagou.',
-      'O comprovante da nota de compra é guardado no Google Drive (você escolhe qual dos dois), não mais no Supabase.',
-      'A Ajuda ganhou campo de busca e prints reais com a marcação de onde clicar, em versão para celular e para computador.'
-    ]},
-    { v:'1.7', em:'17/10/2026', itens:[
-      'Adicionais e receitas de produto agora pedem a quantidade em gramas (ou ml) do jeito que você pensa: o campo mostra a unidade (g), tem atalhos (10, 20, 30, 50, 100 g) e, embaixo, um resumo ao vivo com quanto baixa do estoque (ex.: 30 g = 0,03 kg) e o custo. A lista de adicionais mostra o que cada um baixa do estoque. Quantidade zerada ou pequena demais agora avisa em vez de gravar 1.'
-    ]},
-    { v:'1.6', em:'16/10/2026', itens:[
-      'Ajuda atualizada: novas seções “Caixa vencido”, “Entregadores: taxa e fechamento” e “Mercado Pago (pagamento online)”, e “No computador” e “Onde fica cada coisa” reescritas com o menu atual (6 grupos e campo “Ir para…”).'
-    ]},
-    { v:'1.5', em:'16/10/2026', itens:[
-      'Novo em Clientes › perfil: \"Preferências fixas\" (ex.: sem cebola, alergias). Cada pedido novo do cliente guarda uma cópia, para a comanda mostrar. As preferências aparecem na tela da cozinha, na comanda impressa e nos detalhes do pedido. O cliente com conta também edita as suas em Minha conta › Meus dados e as vê no checkout antes de pedir. Quem está em Em risco ou VIP agora também recebe um aviso (push) junto com o cupom automático, se tiver o aviso ligado no aparelho.'
-    ]},
-    { v:'1.4', em:'16/10/2026', itens:[
-      'Novo em Promoções › Cupons automáticos: "Sentimos sua falta" (cliente em risco, mais de 45 dias sem pedir) e "Cliente VIP". Já vêm DESLIGADOS: ajuste o valor e ligue. Só recebe quem tem conta Google e aceitou promoções; o cupom aparece em Minha conta.'
-    ]},
-    { v:'1.3', em:'16/10/2026', itens:[
-      'Novo em Clientes: Perfil 360 no topo do perfil (segmento Novo, Fiel, VIP ou Em risco, gasto total, ticket médio, frequência, itens favoritos e se tem conta Google) e selo do segmento na lista, com filtros Em risco, VIP, Fiéis e Novos. Os pedidos antigos arquivados entram na conta, pelo telefone do cliente.',
-      'Novo em Backup e espaço: botão "Simular" no arquivamento. Mostra quantos pedidos e caixas sairiam do Supabase, quantos ficam e se o resumo guardado confere com o que há na planilha, sem mover nada. Ao anonimizar um cliente (LGPD), os pedidos dele arquivados na planilha também são limpos, de madrugada.'
-    ]},
-    { v:'1.2', em:'16/10/2026', itens:[
-      'Menu do Administrador reorganizado em 6 grupos: Hoje, Dinheiro, Produtos, Vendas e cardápio, Loja e equipe e Sistema. Nenhuma tela foi retirada; só mudaram de grupo ou de nome (por exemplo, \"Contas e acessos\" agora é \"Integrações e contas\" e \"Ajustes pós-venda\" é \"Reembolsos e ajustes\").',
-      'Novo no menu do Administrador: campo \"Ir para…\". Digite uma palavra (cupom, estoque, iFood, reembolso) e toque na tela que aparece.',
-      'Cada tela do menu do Administrador agora traz uma linha explicando o que ela faz.',
-      'Formas de pagamento agora fica numa tela só, com duas abas: \"Taxas e prazos\" e \"No cardápio\" (antes estava também em Cardápio Digital → Pagamentos).',
-      'No Cardápio Digital, as abas agora dizem \"... no cardápio\" (o que o cliente vê) e cada uma tem o botão \"Editar cadastro\", que abre Produtos já na aba certa.',
-      'Em Backup e espaço e em Sincronização e contingência há o botão \"Ver saúde do sistema\", que abre o painel de conexão e servidores.'
-    ]},
-    { v:'1.1', em:'13/10/2026', itens:[
-      'Mercado Pago — preparação do checkout e da operação: Pix/cartão online, painel de pagamentos que precisam de decisão, resumo mensal de recebimentos e taxas. A integração continua desligada até ser configurada e testada. SQL e Edge Functions ainda precisam ser aplicados/implantados pelo responsável.',
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'Novo: feedback ligado à conta do cliente e com resposta. Em Painel → Feedbacks cada feedback mostra "👤 com conta" ou "sem conta" e tem o botão "💬 Responder": o cliente com conta vê a sua resposta em Minha conta › Pedidos. Sem conta, o botão "WhatsApp" abre a conversa com o telefone dele. O botão de feedback do rodapé do cardápio continua igual e aceita anônimos.',
-      'Novo: brindes na conta do cliente. Os produtos marcados como prêmio de fidelidade ou de indicação (Editar produto › Mais opções) viram brindes: o cliente escolhe o prêmio na Minha conta ou no carrinho, junto com um pedido ou sozinho. O brinde vai a R$ 0,00 (aparece nos relatórios com o custo e baixa o estoque) e a entrega continua sendo cobrada. Quem indica ganha o produto-prêmio e/ou o cupom "quem indicou" quando o amigo conclui o 1º pedido: cada um vale se estiver marcado/ligado, e dá para ter os dois (o do indicado continua). Pedido cancelado devolve o brinde.',
-      'Novo: conta do cliente com login Google (opcional). O cliente vê pedidos e repete com um toque, guarda endereços, recebe cupons e vê o cartão fidelidade e o link do "indique e ganhe". Tem Aviso de Privacidade (LGPD), "baixar meus dados" e "apagar conta". Sem conta, tudo continua igual.',
-      'Novo em Promoções: botão Editar em todo cupom, cupom "só para quem tem conta", "só para um cliente", texto para o cliente e 4 cupons automáticos (boas-vindas, aniversário, indique e ganhe) que já vêm desligados — ajuste e ligue. Cupom de pedido cancelado volta para o cliente. Cartão "Privacidade" para razão social/CNPJ, prazo de anonimização e nova versão do Aviso.',
-      'Corrigido: ao abrir o sistema já logado, o cardápio do cliente não aparece mais por um instante antes da tela do sistema (aparece só a logo).',
-      'Novo: no Início, "Cardápio hoje" mostra quantos clientes abriram o cardápio eletrônico hoje (cada aparelho conta 1 vez por dia; aparelhos da equipe não contam). O alerta virou uma faixa fina no topo e a conta das mesas foi para dentro do cartão Mesas.',
-      'No computador: o topo ficou numa linha só e as abas ficam sempre à vista; o Administrador ganhou um menu ao lado com todas as telas (um clique); os pedidos ficam lado a lado; o Caixa mostra carrinho e pagamento à direita; nos relatórios, os títulos das colunas ficam em cima dos números e o gráfico do DRE ficou do tamanho certo. No celular nada muda.',
-      'Valores com ponto de milhar e o sinal de negativo na frente: R$ 1.475,90 e −R$ 3.691,11.',
-      'Novo: imposto sobre vendas estimado, com ou sem nota fiscal. Em Painel → Relatórios, no cartão DRE, informe a alíquota do mês que o contador passar (vale para os meses seguintes até mudar). O imposto aparece no DRE, na Visão Geral, nos relatórios e na margem do produto, do combo e da Calculadora; o custo do produto não muda. Nova categoria de despesa "Imposto das vendas (DAS)": com alíquota cadastrada, o DAS não conta duas vezes. O DRE também mostra a taxa de entrega cobrada e corrige os eventos do mês.',
-      'iFood (ainda desligado) revisado: a venda grava o que fica para a loja (cupom pago pelo iFood, taxa de serviço do iFood e entrega feita pelo iFood ficam fora), a comissão entra nas taxas (estimada pela taxa % da forma "iFood" em Pagamentos e trocada pela real no repasse), "a receber do iFood" já vem sem a comissão, pedido cancelado não cria reembolso e "Saiu para entrega" só avisa o iFood quando a loja entrega.',
-      'Mais simples: entrada, perda e inventário do estoque, suspender e recusar pedido, receber e cancelar compra, meta de vendas, fechar o cardápio e marcar reembolso agora abrem uma janela só, com motivos prontos para tocar. Ao receber uma compra, escolha "Já paguei" ou "Vou pagar depois" (com calendário).',
-      'Novo: produto novo já vem com os adicionais que os outros produtos da mesma categoria têm. Bebida e item comprado pronto vêm sem adicionais.',
-      'Mudou: em Sistema, "Backup" e "Espaço e fotos" viraram uma tela só, "Backup e espaço". Saíram o botão "Importar cardápio inicial", a escolha de onde salvar a foto (agora vai sempre para os dois Drives) e a caixinha do espelho das 3h (o espelho já se atualiza sozinho a cada 10 minutos). "Fazer backup agora" começa sem pergunta.',
-      'Por dentro: a planilha principal e a contingência ficaram enxutas (só o que o sistema usa hoje). A planilha recebe só o cardápio, os clientes e as vendas; as abas que não são mais usadas podem ser apagadas.',
-      'Visual: as listas de Estoque, Produtos, Combos e Usuários ficaram compactas. Toque na linha (ou no ⋯) para ver as ações. O botão do Assistente virou só o rosto do Tex, para não cobrir botões, e a página ganhou espaço no fim. A Visão Geral avisa quando falta custo nos produtos (lucro e margem ficariam maiores que a realidade).',
-      'Novo: cadastro de produto mais fácil. Em "Como é feito?" escolha Preparado aqui (receita), Comprado pronto (bebidas) ou Sem controle. Na receita você digita o ingrediente, cria um novo ali mesmo e pode copiar a receita de outro produto. Ingrediente por kg/litro pede gramas/ml.',
-      'Novo: o custo dos produtos e combos se atualiza sozinho quando o preço de um ingrediente muda (edição, "💲 Preços em lote" ou compra recebida). Ingrediente: "Paguei R$ __ por __" calcula o custo. Aviso "Cadastro incompleto" mostra o que falta.',
-      'Novo: o Estoque tem as abas Ingredientes e Bebidas e itens prontos. Na compra, digite o item e toque nele na lista; se não for da lista, aparece aviso de que não entra no estoque. Bebida em fardo: "Embalagens" × "Unidades em cada".',
-      'Novo: reembolso de venda cancelada. Quando uma venda já paga é cancelada, o sistema cria sozinho um reembolso pendente (valor, forma de pagamento, motivo e quem cancelou). Em Administrador → Financeiro → Ajustes pós-venda aparece a lista "Reembolsos de vendas canceladas"; depois de devolver o dinheiro ao cliente, o Administrador toca em "marcar devolvido".',
-      'Novo: o Assistente (chat) agora também registra despesa, pagamento de conta, entrada/perda/contagem de estoque, ingrediente, cliente, ocorrência, sangria, ajuste pós-venda, brinde e recebimento/cancelamento de compra. Ele nunca grava sozinho: mostra um cartão e só grava ao tocar em "Confirmar e gravar". Cancelar despesa e ajuste pós-venda pedem a sua senha de administrador. Excluir, mexer em venda/caixa/usuários/preços ele não faz.',
-      'Novo: conheça o Tex, o mascote do Assistente. Ele aparece no botão, no título e nas respostas do chat da equipe.',
-      'Novo: a Saúde do sistema agora mostra o uso do plano gratuito do Supabase (tamanho do banco, arquivos, usuários ativos e chamadas às funções, esta última estimada). Fica verde até 70%, amarela a partir de 70% e rosa a partir de 90%. Banda e mensagens em tempo real só aparecem no painel do Supabase (Settings → Usage).',
-      'Melhorado: os botões de Nota fiscal e de iFood (Dados fiscais, Perfis fiscais, Conferência, Pedidos do iFood etc.) agora abrem em janela (pop-up) com botão de fechar, em vez de alongar a página. Salvar e conferir funcionam igual.',
-      'Novo: botão "Testar" em cada IA (Gemini, Gemini 2, Groq, Groq 2, NVIDIA, Cloudflare), em Contas e acessos e na tela "Assistente de IA" (toque na bolinha das estrelas). Mostra se a chave responde e, se não, o motivo em português. Não gasta as consultas do dia.',
-      'Novo: a bolinha do topo agora também avisa a Saúde do sistema — fica amarela quando algo pede atenção e rosa quando precisa de cuidado (a conexão com problema continua vermelha/laranja). Toque nela para ver o que é.',
-      'Mudou: a "Saúde do sistema" saiu do Painel e agora fica só dentro de "Conexão e servidores" (toque na bolinha colorida do topo), junto com os servidores.',
-      'Novo: o cliente pode receber no celular os avisos do pedido (confirmado, pronto, saiu para entrega, entregue) e, 30 min depois da entrega, "Como foi seu pedido?". Saem sozinhos quando a equipe muda o status. Em Feedbacks aparece se veio pelo aviso ou pelo chat.',
-      'Nada abre sozinho: a Ajuda e os avisos do Assistente vêm fechados (toque no título para abrir) e, ao entrar no Admin, aparecem só os grupos — toque no grupo e depois na tela.',
-      'Cardápio do cliente: no fim da página aparecem nome, cidade, telefone e Instagram (edite em Cardápio Digital → Dados do restaurante) e o versículo 1 Coríntios 10:31.',
-      'Novo: preço próprio por produto para o iFood. Em Pagamentos, a forma iFood está marcada como "preço próprio por produto"; em cada produto e combo aparece o campo "Preço no iFood" (em branco = preço base). Os preços do iFood de antes foram recolocados. No Caixa, ao escolher iFood, os itens usam o preço do iFood.',
-      'Novo: nota fiscal — cancelamento automático da nota (até 30 min), conferência Vendas × Notas, numeração pulada (inutilizar), pacote do contador por mês e aviso do limite de 500 notas do plano (tudo ainda desligado).',
-      'Novo: emissão da nota fiscal (NFC-e) pela Focus NFe (ainda desligada): a nota sai sozinha após a venda, com lista de notas, reemissão, DANFE, CPF na nota e treino para o Desenvolvedor.',
-      'Novo: cadastro da Nota fiscal (ainda desligada): dados fiscais da empresa, perfis fiscais (NCM/CFOP/CSOSN) por produto ou categoria e planilha para o contador preencher. Com a nota ligada, o Resultado (DRE) mostra o imposto estimado.',
-      'Novo: preços do iFood (importar/enviar), pausa por estoque, financeiro, avaliações e relatório por canal, ainda desligados.',
-      'Novo: negociação de cancelamento e controle da loja no iFood (pausar, abrir, fechar), ainda desligados.',
-      'Novo: integração com o iFood pronta no sistema (desligada): pedidos entram como venda, itens ligados aos produtos, status avisado ao iFood. Só funciona depois de ligada em Contas e acessos → Integrações.',
-      'Novo em Contas e acessos: campos das IAs de reserva (NVIDIA e Cloudflare) e o cartão "Integrações" (iFood e Nota fiscal), ainda desligados.',
-      'Contas e acessos agora mostra também as chaves das IAs (Gemini e Groq): ver e trocar pedem a senha de administrador.',
-      'Novo: Administrador → Sistema → Contas e acessos, com e-mails, links e senhas das contas do sistema. A senha fica no cofre e só aparece com a sua senha de administrador.',
-      'Primeira versão estável do sistema. O servidor principal é o Supabase; a planilha principal é a reserva e a planilha de contingência é o último recurso.',
-      'Toque na bolinha colorida do topo para ver o estado de cada servidor.',
-      'Impressão: não pergunta mais "Saiu no papel?". Fica um botão "🔁 Não saiu? Reimprimir" por 10 minutos.',
-      'Com só um entregador ativo, toda entrega já fica no nome dele.',
-      'O Assistente guarda a conversa; "Nova conversa" começa do zero.',
-      'Acréscimo por forma de pagamento: em Pagamentos, cada forma pode cobrar % ou valor fixo a mais (ex.: iFood). O preço do produto agora é um só. O cliente é avisado no cardápio, e o Caixa e o fechamento de mesa somam o acréscimo sozinhos.',
-      'Novo: Compras e fornecedores (Catálogo): registre compras, atualize estoque e custo e gere a despesa. No Assistente, "comprei 30kg de picanha por R$ 900" vira um cartão para você confirmar; a IA nunca grava sozinha.',
-      'Novo: no cardápio, número da casa e cidade em campos separados e obrigatórios na entrega; a cidade chega junto com o endereço do pedido.',
-      'Correções: pop-ups não ficam mais cortados no fim da tela nem atrás do menu de baixo. Preço base único: todo produto e combo tem um só preço; iFood/Alelo cobram a mais pelo acréscimo da forma em Pagamentos. A senha de administrador agora é conferida de verdade ao criar, excluir ou mudar perfil/senha de usuário. Corrigidos: mensagem de erro falsa ao registrar ajuste pós-venda, cortesia fora do lucro, ordem dos feedbacks, exclusão de ingrediente e status da contingência. O cliente do cardápio não vê mais a faixa interna do modo reserva nem tem a página recarregada quando a internet oscila; o chat do cliente não trava sem internet; toque repetido em sangria, estoque e prêmios não grava duas vezes.',
-      'Novo: menu fixo embaixo no celular (Início, Caixa, Pedidos e "Mais"), com bolinha vermelha nos avisos. No computador continua no topo.',
-      'Novo visual do cardápio do cliente: cabeçalho menor com a situação (aberto/fechado), produtos rolando para o lado com botão "+", fotos mais baixas e Atendimento como ícone redondo. Pop-ups sem corte no fim da tela.',
-      'Novo: botão discreto "🌐 Cardápio aberto" em Início e no Caixa para fechar e reabrir o cardápio dos clientes em um toque. Correção: o cardápio podia aparecer "fechado" com o caixa aberto.',
-      'Novo: modo reserva mais claro (a faixa laranja diz o que funciona e o que espera) e cartão "Saúde do sistema" em Visão geral, com backup, conferência diária de vendas e tarefas automáticas.',
-      'Novo: avisos com o app fechado. No 🔔 do topo, toque em "Ligar avisos com o app fechado": o celular passa a avisar "Novo pedido" do cardápio e "Cliente no atendimento", mesmo com o app fechado. No iPhone, instale o app na tela inicial antes.',
-      'Novo: Auditoria com IP de origem (apagado após 90 dias), registro de entradas no sistema e de tentativas de login erradas, com busca e filtro de período. Em Sistema → Usuários, cada sessão mostra o IP.',
-      'Novo em Relatórios: margem por forma de pagamento, vendas por dia da semana, comparação com o ano passado e períodos de 90 dias e 12 meses.',
-      'Novo: cupom progressivo (desconto maior por faixa de valor do pedido), CEP que preenche rua e bairro e filtros no histórico do cliente.',
-      'Novo: busca 🔍 no topo (clientes, pedidos e produtos). A busca de cliente por nome voltou a funcionar, sem precisar de acento.',
-      'Novo: "Dados do restaurante" (nome, endereço, telefone, horário, redes) aparecem no rodapé do cardápio.',
-      'Novo: Linha do tempo do pedido (em "ver pedido completo") e botões para baixar relatórios e dados em CSV para o Excel.',
-      'Cupom não é aceito no Caixa: use o desconto por porcentagem.'
-    ]}
-  ],
-  Operador: [
-    { v:'1.24', em:'01/11/2026', itens:[
-      'Cardápio hoje · Parte nova "🧾 No finalizar": mostra quantos clientes tocaram em "Enviar pedido" e o que segurou o pedido (campo faltando, troco, login, cardápio fechado ou erro).',
-      'Cardápio do cliente · Tocar em qualquer parte do cartão do produto já abre o item.' ] },
-    { v:'1.15', em:'25/10/2026', itens:[
-      'Ações sensíveis (cancelar, excluir, desconto, estorno, ajuste pós-venda) pedem sempre a senha de um Administrador.',
-      'iFood: ao cancelar um pedido do iFood, escolha o motivo oficial na lista com borda dourada. Quando aparecer "🔐 O iFood precisa de um código" em Pedidos/Entregas, peça o código ao entregador (ou ao cliente) e envie.',
-      'Início → "Cardápio hoje": toque para ver o funil do turno (quantos entraram, abriram item, puseram no carrinho e pediram) e o mapa de onde estão acessando.',
-      'Novo botão "🛒 Cardápio" no topo: vê o cardápio digital como o cliente, sem sair. "Voltar à área de funcionários" volta na mesma tela, sem senha.',
-      'iFood: o pedido mostra o 0800 do iFood com o CÓDIGO LOCALIZADOR do cliente (para ligar), também na comanda. Pedido do iFood esperando aceite toca a vinheta do iFood a cada 30 s até ser aceito, com botão "🔇 Silenciar".',
-      'Nenhum erro fica escondido: quando algo dá errado (sem internet, servidor com problema, botão que travou, foto que não subiu), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Mensagens de erro ficam 15 segundos na tela e, se estiverem fora da vista, a tela rola até elas.'
-    ]},
-    { v:'1.11', em:'18/10/2026', itens:[
-      'Os botões do topo ficaram mais fáceis de acertar com o dedo (a aparência continua a mesma). A Ajuda ganhou prints de Abrir e Fechar caixa e de Clientes.'
-    ]},
-    { v:'1.10', em:'18/10/2026', itens:[
-      'Novo: aviso de pedido parado. Aparece a faixa "⏰ Pedidos parados" (com som) quando um pedido do seu perfil fica sem avançar. Toque em Ver pedido, Adiar 10 min ou Silenciar este pedido.',
-      'O "hoje" dos pedidos agora segue o turno do caixa (do abrir ao fechar, mesmo passando da meia-noite).',
-      '"Marcar como recebido" agora pergunta em que forma o cliente pagou.',
-      'A Ajuda ganhou campo de busca e prints reais com a marcação de onde clicar, em versão para celular e para computador.'
-    ]},
-    { v:'1.6', em:'16/10/2026', itens:[
-      'Ajuda atualizada: nova seção “Caixa vencido” (como fechar o caixa vencido) e “No computador” com o menu atual.'
-    ]},
-    { v:'1.3', em:'16/10/2026', itens:[
-      'Novo em Clientes: Perfil 360 no topo do perfil (segmento Novo, Fiel, VIP ou Em risco, gasto total, ticket médio, itens favoritos) e selo do segmento na lista, com filtros Em risco, VIP, Fiéis e Novos.'
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'Novo: você pode responder feedbacks. Em Operação → Feedbacks cada feedback mostra "👤 com conta" ou "sem conta" e tem o botão "💬 Responder": o cliente com conta vê a sua resposta em Minha conta › Pedidos. Sem conta, o botão "WhatsApp" abre a conversa com o telefone dele. O botão de feedback do rodapé do cardápio continua igual e aceita anônimos.',
-      'Novo: no Início, "Cardápio hoje" mostra quantos clientes abriram o cardápio eletrônico hoje (cada aparelho conta 1 vez por dia; aparelhos da equipe não contam). O alerta virou uma faixa fina no topo e a conta das mesas foi para dentro do cartão Mesas.',
-      'No computador: o topo ficou numa linha só e as abas ficam sempre à vista; os pedidos ficam lado a lado e o Caixa mostra carrinho e pagamento à direita. No celular nada muda.',
-      'Valores com ponto de milhar: R$ 1.475,90.',
-      'Mais simples: suspender e recusar pedido agora abrem uma janela com motivos prontos para tocar (ex.: "Cliente não atende", "Sem estoque").',
-      'Novo: quando a nota fiscal for ligada, o Caixa ganha o campo "CPF na nota (só se o cliente pedir)". Enquanto estiver desligada, nada muda.',
-      'Novo: o cliente que aceitou os avisos recebe no celular cada mudança de status que você faz no pedido (confirmado, pronto, saiu para entrega, entregue). Em Feedbacks aparece se veio pelo aviso ou pelo chat.',
-      'Nada abre sozinho: a Ajuda e os avisos do Assistente vêm fechados (toque no título para abrir) e, ao entrar no Admin, aparecem só as telas para você escolher.',
-      'Novo: menu fixo embaixo no celular (Início, Caixa, Pedidos e "Mais"), com bolinha vermelha nos avisos. No computador continua no topo.',
-      'Novo visual do cardápio do cliente: cabeçalho menor, produtos rolando para o lado com botão "+", fotos mais baixas e Atendimento como ícone redondo. Pop-ups sem corte no fim da tela.',
-      'Novo: botão discreto "🌐 Cardápio aberto" em Início e no Caixa para fechar e reabrir o cardápio dos clientes em um toque.',
-      'Novo: modo reserva mais claro. A faixa laranja no topo diz o que funciona (Caixa e pedidos do cardápio) e o que espera a volta do sistema.',
-      'Novo: avisos com o app fechado. No 🔔 do topo, toque em "Ligar avisos com o app fechado" para o celular avisar "Novo pedido" e "Cliente no atendimento" mesmo com o app fechado. No iPhone, instale o app na tela inicial antes.',
-      'Primeira versão estável do sistema.',
-      'Toque na bolinha colorida do topo para ver o estado dos servidores.',
-      'Impressão: fica um botão "🔁 Não saiu? Reimprimir" por 10 minutos; não precisa confirmar quando saiu certo.',
-      'Com só um entregador ativo, toda entrega já fica no nome dele.',
-      'Acréscimo por forma de pagamento: em Pagamentos, cada forma pode cobrar % ou valor fixo a mais (ex.: iFood). O preço do produto agora é um só. O cliente é avisado no cardápio, e o Caixa e o fechamento de mesa somam o acréscimo sozinhos.',
-      'Novo: CEP no Caixa preenche rua e bairro da entrega; filtros no histórico do cliente (período, entrega/retirada, pago/a receber).',
-      'Novo: busca 🔍 no topo (clientes, pedidos e produtos). A busca de cliente por nome voltou a funcionar, sem precisar de acento.',
-      'Novo: Linha do tempo do pedido, em "ver pedido completo".',
-      'Cupom não é aceito no Caixa: use o desconto por porcentagem.'
-    ]}
-  ],
-  'Garçom': [
-    { v:'1.15', em:'25/10/2026', itens:[
-      'Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado.'
-    ]},
-    { v:'1.10', em:'18/10/2026', itens:[
-      'Novo: aviso de pedido parado. Aparece a faixa "⏰ Pedidos parados" (com som) quando um pedido do seu perfil fica sem avançar. Toque em Ver pedido, Adiar 10 min ou Silenciar este pedido. Você recebe os avisos de mesa pronta esperando ser servida, e pode ligar os avisos com o app fechado.',
-      'O "hoje" dos pedidos agora segue o turno do caixa (do abrir ao fechar, mesmo passando da meia-noite).',
-      'A Ajuda ganhou campo de busca e prints reais com a marcação de onde clicar, em versão para celular e para computador.'
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'A Ajuda vem com os tópicos fechados: toque no título para abrir.',
-      'Primeira versão estável do sistema.',
-      'Toque na bolinha colorida do topo para ver se o sistema está online.',
-      'Novo: busca 🔍 no topo (cliente, pedido ou produto). A busca de cliente por nome voltou a funcionar.'
-    ]}
-  ],
-  Cozinha: [
-    { v:'1.15', em:'25/10/2026', itens:[
-      'Pedido do iFood esperando aceite toca a vinheta do iFood a cada 30 s até ser aceito, com botão "🔇 Silenciar" neste aparelho. Os outros pedidos continuam com o som de sempre.',
-      'Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado.'
-    ]},
-    { v:'1.10', em:'18/10/2026', itens:[
-      'Novo: aviso de pedido parado. Aparece a faixa "⏰ Pedidos parados" (com som) quando um pedido do seu perfil fica sem avançar. Toque em Ver pedido, Adiar 10 min ou Silenciar este pedido. Você recebe os avisos de pedido novo sem aceite e de preparo demorado, e pode ligar os avisos com o app fechado.',
-      'O "hoje" dos pedidos agora segue o turno do caixa (do abrir ao fechar, mesmo passando da meia-noite).',
-      'A Ajuda ganhou campo de busca e prints reais com a marcação de onde clicar, em versão para celular e para computador.'
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'A Ajuda vem com os tópicos fechados: toque no título para abrir.',
-      'Primeira versão estável do sistema.',
-      'Impressão da comanda: fica um botão "🔁 Não saiu? Reimprimir" por 10 minutos; não precisa confirmar quando saiu certo.',
-      'Comanda e "Imprimir novos" em 58mm, 80mm e A4.',
-      'Novo: busca 🔍 no topo para achar um pedido pelo número, nome do cliente ou produto.'
-    ]}
-  ],
-  Entregador: [
-    { v:'1.15', em:'25/10/2026', itens:[
-      'iFood: quando o iFood pedir o código de entrega, aparece "🔐 O iFood precisa de um código" no topo de Entregas. Peça o código ao cliente, digite e toque em Enviar.',
-      'Na entrega do iFood, a mensagem e a comanda trazem o telefone 0800 do iFood com o CÓDIGO LOCALIZADOR do cliente, para você ligar se precisar.',
-      'Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado.'
-    ]},
-    { v:'1.10', em:'18/10/2026', itens:[
-      '"Meu dia" e as entregas concluídas agora contam pelo turno do caixa (do abrir ao fechar), sem zerar na meia-noite.',
-      'A Ajuda ganhou campo de busca e prints reais com a marcação de onde clicar, em versão para celular e para computador.'
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'A Ajuda vem com os tópicos fechados: toque no título para abrir.',
-      'Primeira versão estável do sistema.',
-      'Quem marca o pedido como "Pronta" é a Cozinha.',
-      'Enquanto você tem entrega "Saiu para entrega", o app envia sua localização a cada ~18 s (só nesse período, sem histórico).'
-    ]}
-  ],
-  Cliente: [
-    { v:'1.26', em:'01/11/2026', itens:[
-      'Alguns lanches têm preço especial em certos dias: o preço antigo aparece riscado e a etiqueta mostra a promoção.',
-      'Em algumas compras, ao chegar a um valor você ganha um brinde. O carrinho mostra quanto falta.' ] },
-    { v:'1.25', em:'01/11/2026', itens:[
-      'Com os avisos do pedido ligados, você pode escolher receber também as promoções do Texas no celular. Para parar, toque num aviso de promoção e escolha "Não quero mais".',
-      'Informe seu aniversário em Minha conta → Meus dados e ganhe um presente no dia.' ] },
-    { v:'1.24', em:'01/11/2026', itens:[
-      'Toque em qualquer parte do cartão do produto para abrir e escolher.',
-      'Abriu o cardápio pelo Instagram ou Facebook? Para entrar com o Google e pagar pelo site, use "Abrir no navegador". Pedir sem conta funciona ali mesmo.' ] },
-    { v:'1.15', em:'25/10/2026', itens:[
-      'Novo em Minha conta: a aba "🎮 Jogos" com os 4 joguinhos, para jogar quando quiser (o recorde fica guardado no seu aparelho).',
-      'Algumas formas de pagamento pelo site podem abrir a página segura da InfinitePay: pague lá e volte ao cardápio; a tela confere sozinha.',
-      'Novo: enquanto espera o pedido, toque em "🎮 Jogar enquanto espera" no acompanhamento. São 4 joguinhos com os lanches do cardápio, e o jogo pausa e avisa quando o seu pedido muda de etapa.',
-      'Privacidade: usamos sua localização aproximada só para saber de onde vêm os pedidos. Ela é apagada ao fim do turno.',
-      'Ficou mais fácil pedir: busca no celular, o "+" de item simples já coloca no carrinho, dá para mudar a quantidade no carrinho com − e +, o resumo mostra subtotal, entrega e cupom, e "Como quer receber?" virou dois botões com a taxa e o tempo. Na entrega, "📍 Usar minha localização" preenche rua e bairro.',
-      'Se algo der errado (sem internet, sistema do restaurante com problema), aparece um aviso dizendo o que aconteceu e que o pedido NÃO foi enviado, com o WhatsApp para pedir.',
-      'No carrinho, se faltar algum dado da entrega (rua, número, cidade) ou do troco, o campo fica vermelho, a tela vai até ele e o motivo aparece logo abaixo.'
-    ]},
-    { v:'1.6', em:'16/10/2026', itens:[
-      'Ajuda atualizada: pagamento pelo site (Pix e cartão), botão “Acompanhar agora”, voltar para “Todos os pedidos” e convite para instalar o app no cartão “Pedido enviado”.'
-    ]},
-    { v:'1.0', em:'09/10/2026', itens:[
-      'Novo: em Minha conta › Pedidos, cada pedido tem o botão "⭐ Feedback". Quando o restaurante responder, a resposta aparece no próprio pedido. O botão de feedback do rodapé continua funcionando sem login.',
-      'Novo: brindes! Com o cartão fidelidade completo ou um brinde de indicação, escolha seu prêmio na Minha conta ou no carrinho, junto com um pedido ou sozinho. Ele sai por R$ 0,00 e a entrega, se houver, é cobrada.',
-      'O botão Entrar/Minha conta agora fica numa faixa logo abaixo do banner, o calendário da data de nascimento ficou visível e o cartão fidelidade da conta ficou igual ao do cardápio.',
-      'Novo: avisos do pedido no celular (confirmado, pronto, saiu para entrega e entregue) e, depois da entrega, "Como foi seu pedido?". Toque em "Quero receber" no topo do cardápio. No iPhone, instale o app antes.',
-      'O atendente do chat agora oferece registrar o seu elogio ou sugestão como feedback.',
-      'A Ajuda vem com os tópicos fechados: toque no título para abrir.',
-      'Novo: seu nome e telefone voltam preenchidos nos próximos pedidos neste aparelho. O endereço continua vindo pela sua localização.',
-      'Novo: conheça o Tex, o atendente virtual! Ele agora aparece no botão redondo do canto da tela e responde com o rosto dele.',
-      'Atendente virtual no balão "💬 Atendimento": tira dúvidas do cardápio, preços e promoções, e mostra o andamento do seu pedido pelo seu celular.',
-      '"📦 Acompanhe seu pedido" mostra todos os pedidos feitos neste aparelho; dá para cancelar nos primeiros 3 minutos, antes de o restaurante aceitar.',
-      'Cupom de desconto direto no carrinho, cálculo de troco e mesa por QR Code.',
-      'Se a forma de pagamento tem acréscimo, o carrinho avisa quanto você paga a mais e em quais formas não há acréscimo.',
-      'Na entrega, digite o CEP para preencher rua e bairro. O carrinho fica guardado neste aparelho por 24 horas. Alguns cupons dão mais desconto em pedidos maiores.'
-    ]}
-  ]
+ "Admin": [
+  {
+   "v": "1.26",
+   "em": "01/11/2026",
+   "itens": [
+    "Promoções e cupons · Cartão novo \"🏷️ Preço por dia da semana\": escolha um produto ou combo, os dias, o horário (opcional) e o preço fixo ou % de desconto; marque se aceita cupom. No cardápio aparece o preço antigo riscado e a etiqueta. Vale só no cardápio online (entrega e retirada), não em mesa, balcão nem iFood. Pedido entre 0h e 5h59 conta na noite anterior.",
+    "Promoções e cupons · Cartão novo \"🎁 Compre e ganhe\": a partir de R$ X em produtos (sem a taxa de entrega), o cliente ganha o brinde que você escolher. O carrinho mostra \"Faltam R$ X para ganhar…\" e o brinde entra no pedido a R$ 0, com custo e baixa no estoque.",
+    "Promoções e cupons · Cartão novo \"🧾 Bilhete na sacola\": sai impresso junto da comanda dos pedidos do iFood (ou de todas as entregas) com título, texto, QR Code do cardápio e um cupom. Você escreve tudo, vê a prévia, testa a impressão e liga ou desliga.",
+    "Tudo isso é configurado por você; excluir uma promoção pede a senha."
+   ]
+  }
+ ],
+ "Operador": [
+  {
+   "v": "1.24",
+   "em": "01/11/2026",
+   "itens": [
+    "Cardápio hoje · Parte nova \"🧾 No finalizar\": mostra quantos clientes tocaram em \"Enviar pedido\" e o que segurou o pedido (campo faltando, troco, login, cardápio fechado ou erro).",
+    "Cardápio do cliente · Tocar em qualquer parte do cartão do produto já abre o item."
+   ]
+  }
+ ],
+ "Garçom": [
+  {
+   "v": "1.15",
+   "em": "25/10/2026",
+   "itens": [
+    "Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado."
+   ]
+  }
+ ],
+ "Cozinha": [
+  {
+   "v": "1.15",
+   "em": "25/10/2026",
+   "itens": [
+    "Pedido do iFood esperando aceite toca a vinheta do iFood a cada 30 s até ser aceito, com botão \"🔇 Silenciar\" neste aparelho. Os outros pedidos continuam com o som de sempre.",
+    "Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado."
+   ]
+  }
+ ],
+ "Entregador": [
+  {
+   "v": "1.15",
+   "em": "25/10/2026",
+   "itens": [
+    "iFood: quando o iFood pedir o código de entrega, aparece \"🔐 O iFood precisa de um código\" no topo de Entregas. Peça o código ao cliente, digite e toque em Enviar.",
+    "Na entrega do iFood, a mensagem e a comanda trazem o telefone 0800 do iFood com o CÓDIGO LOCALIZADOR do cliente, para você ligar se precisar.",
+    "Quando algo dá errado (sem internet, servidor com problema, botão que travou), aparece um aviso vermelho dizendo o que aconteceu e o que fazer. Nada falha calado."
+   ]
+  }
+ ],
+ "Cliente": [
+  {
+   "v": "1.26",
+   "em": "01/11/2026",
+   "itens": [
+    "Alguns lanches têm preço especial em certos dias: o preço antigo aparece riscado e a etiqueta mostra a promoção.",
+    "Em algumas compras, ao chegar a um valor você ganha um brinde. O carrinho mostra quanto falta."
+   ]
+  }
+ ]
 };
 const CONTINGENCIA_CHAVE_PUBLICA = "txbpub-7be6640269f54d5db1bff1a474d76a417758957a"; // so permite enviar pedido validado e ler o catalogo publico (sem custos/clientes)
 const CONTINGENCIA_CHAVE_KEY = 'txbContChaveInterna'; // chave interna (clientes): guardada so depois do login, apagada ao sair

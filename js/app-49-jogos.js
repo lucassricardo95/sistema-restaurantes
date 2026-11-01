@@ -20,7 +20,7 @@
   const LISTA = [
     { id:'burger',  ico:'🍔', nome:'Monte o Burger',        dica:'Toque para soltar cada camada em cima da outra.' },
     { id:'chuva',   ico:'🧺', nome:'Chuva de Ingredientes', dica:'Arraste a bandeja: pegue os ingredientes, fuja das bombas.' },
-    { id:'memoria', ico:'🃏', nome:'Memória Texas',         dica:'Ache os pares de lanches com o menor número de jogadas.' },
+    { id:'memoria', ico:'🃏', nome:'Jogo da Memória',         dica:'Ache os pares de lanches com o menor número de jogadas.' },
     { id:'cobra',   ico:'🐍', nome:'Cobra Smash',           dica:'Deslize o dedo (ou use as setas) para comer os lanches.' }
   ];
   const J = window.Jogos = window.Jogos || {};

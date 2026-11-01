@@ -584,7 +584,7 @@ window.contaBaixarDados_ = async function(){
   var r = await rpc('api_conta_exportar', {}); if(!r.ok){ toast(r.message || 'Não foi possível gerar agora.'); return; }
   try{
     var blob = new Blob([JSON.stringify(r, null, 2)], { type:'application/json' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meus-dados-texas-burger.json'; document.body.appendChild(a); a.click();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meus-dados.json'; document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   }catch(e){ toast('Não foi possível baixar neste aparelho.'); }
 };
