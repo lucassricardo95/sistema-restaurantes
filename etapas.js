@@ -9,7 +9,7 @@ window.MODULOS = [
   { id:'ia', nome:'Assistente virtual (IA)', pad:true }
 ];
 window.TEMAS = [
-  { id:'texas', nome:'Texas', destaque:'#e0b53a', botao:'#d20807', fundo:'#0b0705' },
+  { id:'brasa', nome:'Brasa', destaque:'#e0b53a', botao:'#d20807', fundo:'#0b0705' },
   { id:'classico', nome:'Clássico', destaque:'#d9a21b', botao:'#8c1c13', fundo:'#14100c' },
   { id:'verde', nome:'Verde', destaque:'#7ed957', botao:'#1f8f4e', fundo:'#07120b' },
   { id:'azul', nome:'Azul', destaque:'#5aa9ff', botao:'#1f5fbf', fundo:'#07101c' },
