@@ -68,7 +68,7 @@ function atualizarCardAvisos_(){
   if(txt) txt.textContent = t;
   if(btn) btn.style.display = mostrar ? '' : 'none';
 }
-try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
+try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register(window.SW_URL_||'sw.js').catch(()=>{}); }catch(e){}
 /* ITEM 20 — o service worker avisa quando a página guardada ficou velha; o usuário atualiza quando quiser (nunca no meio de uma venda). */
 try{ if('serviceWorker' in navigator){ navigator.serviceWorker.addEventListener('message', ev=>{ if(ev.data && ev.data.tipo === 'nova-versao') mostrarAvisoNovaVersao_(); }); } }catch(e){}
 function mostrarAvisoNovaVersao_(){

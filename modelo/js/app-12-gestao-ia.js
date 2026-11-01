@@ -849,7 +849,7 @@ function dadosRestaurante_(){
   const r = (configCardapio && configCardapio.restaurante) || {};
   return { nome: r.nome||'', endereco: r.endereco||'', telefone: r.telefone||'', horario: r.horario||'', redes: r.redes||'' };
 }
-function nomeRestaurante_(){ return dadosRestaurante_().nome || '${NOME_H_()}'; }
+function nomeRestaurante_(){ return dadosRestaurante_().nome || NOME_RESTAURANTE_; }
 function renderDadosRestaurante_(){
   if(!document.getElementById('drNome')) return;
   const r = dadosRestaurante_();
@@ -882,7 +882,7 @@ function cdInfoRestauranteHtml_(r){
   if(r.telefone) lin.push('📞 ' + escH(r.telefone));
   if(r.horario) lin.push('🕒 ' + escH(r.horario).replace(/\n/g,'<br>'));
   if(r.redes) lin.push('📱 ' + escH(r.redes).replace(/\n/g,'<br>'));
-  return lin.length ? '<b>' + escH(r.nome || '${NOME_H_()}') + '</b><br>' + lin.join('<br>') : '';
+  return lin.length ? '<b>' + escH(r.nome || NOME_RESTAURANTE_) + '</b><br>' + lin.join('<br>') : '';
 }
 /* ---------- FECHAR O CARDÁPIO: só pelo botão discreto (Início e Caixa). Os períodos já gravados são preservados ao alternar. ---------- */
 /* Botão discreto (Início e Caixa): fecha ou reabre o cardápio dos clientes. Usa o mesmo fechamento manual de Cardápio Digital. */

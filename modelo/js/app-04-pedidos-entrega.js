@@ -601,7 +601,7 @@ function somDoSistemaAtivo_(){ try{ return avisosSuportado_() && Notification.pe
 function somAlerta_(){
   if(somDoSistemaAtivo_()){
     /* Som padrão de notificação do celular: quem toca é a notificação. Se quem chamou não mostrou nenhuma, mostra uma simples. */
-    setTimeout(()=>{ if(Date.now() - _ultimaNotifEm_ > 1500) mostrarNotificacao_('🔔 ${NOME_RESTAURANTE_}', 'Há uma atualização nos pedidos.'); }, 400);
+    setTimeout(()=>{ if(Date.now() - _ultimaNotifEm_ > 1500) mostrarNotificacao_('🔔 ' + NOME_RESTAURANTE_, 'Há uma atualização nos pedidos.'); }, 400);
   } else {
     try{
       const ctx = audioCtx_();

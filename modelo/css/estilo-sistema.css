@@ -6,11 +6,13 @@
    cartões lisos; 3 tipos de botão (principal dourado, secundário de contorno, perigo vermelho).
    ===================================================================== */
 
+/* valores originais da área da equipe (usados quando o tema é o padrão; outros temas recalculam em app-00-marca.js) */
+:root{ --eq-bg:#0c0a08; --eq-panel:#15110d; --eq-panel-2:#1c1712; --eq-panel-3:#241d16; --eq-cream:#f1e8d6; --eq-muted:#a3977f; --eq-line:rgba(255,236,200,.09); --eq-line-forte:rgba(255,236,200,.16); }
 /* ---------- 1. Paleta e letras (a letra de faroeste fica só na marca) ---------- */
 :is(.eq #mainWrap, .eq:not(.vendo-cardapio) .modal-overlay, .eq #navInf, .eq #navInfMais){
   --font-display: var(--font-body);
   --bg:var(--eq-bg); --panel:var(--eq-panel); --panel-2:var(--eq-panel-2); --panel-3:var(--eq-panel-3);
-  --line:rgba(255,255,255,.09); --line-forte:rgba(255,255,255,.16);
+  --line:var(--eq-line); --line-forte:var(--eq-line-forte);
   --cream:var(--eq-cream); --muted:var(--eq-muted);
   --raio-controle:10px; --raio-card:14px;
   --sombra-card:0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);

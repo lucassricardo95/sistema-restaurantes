@@ -36,12 +36,15 @@
       '--red': b, '--red-rgb': h2r(b).join(','), '--red-hi': mix(b, claro, .18), '--red-dim': mix(b, escuro, .32),
       '--on-gold': tinta(d), '--cream': cream, '--muted': mix(cream, f, modoClaro ? .45 : .40),
       '--eq-bg': eqB, '--eq-panel': mix(eqB, lado, modoClaro ? .05 : .06), '--eq-panel-2': mix(eqB, lado, modoClaro ? .09 : .10), '--eq-panel-3': mix(eqB, lado, modoClaro ? .13 : .14),
-      '--eq-cream': eqC, '--eq-muted': mix(eqC, eqB, .42), 'color-scheme': modoClaro ? 'light' : 'dark'
+      '--eq-line': modoClaro ? 'rgba(0,0,0,.12)' : 'rgba(255,236,200,.09)', '--eq-line-forte': modoClaro ? 'rgba(0,0,0,.22)' : 'rgba(255,236,200,.16)', '--eq-cream': eqC, '--eq-muted': mix(eqC, eqB, .42), 'color-scheme': modoClaro ? 'light' : 'dark'
     };
   }
   function pintar(m){
     let st = document.getElementById('marcaCss');
     if(!st){ st = document.createElement('style'); st.id = 'marcaCss'; (document.head || document.documentElement).appendChild(st); }
+    /* Tema original "Brasa" (dourado/vermelho/marrom-escuro): usa as cores escritas à mão no CSS, sem recalcular, para ficar idêntico ao visual aprovado. */
+    const c0 = m.cores || {};
+    if(String(c0.destaque).toLowerCase() === '#e0b53a' && String(c0.botao).toLowerCase() === '#d20807' && String(c0.fundo).toLowerCase() === '#0b0705'){ st.textContent = ''; document.documentElement.setAttribute('data-modo', 'escuro'); return; }
     const p = paleta(m.cores);
     document.documentElement.setAttribute('data-modo', lum(m.cores.fundo) > .4 ? 'claro' : 'escuro');
     st.textContent = 'html:root{' + Object.keys(p).map(k => k + ':' + p[k] + ';').join('') + '}';
