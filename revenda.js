@@ -105,7 +105,7 @@ window.rvNovo = async () => {
   if(!slug) return;
   try{
     const mod = {}; MODULOS.forEach(m => { mod[m.id] = m.pad; });
-    const r = await rest('restaurantes', 'POST', { slug, nome, modulos:mod, marca:{ tema:'texas', slogan:'', assistente:'Assistente', cores:{ destaque:TEMAS[0].destaque, botao:TEMAS[0].botao, fundo:TEMAS[0].fundo } }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
+    const r = await rest('restaurantes', 'POST', { slug, nome, modulos:mod, marca:{ tema:'brasa', slogan:'', assistente:'Assistente', cores:{ destaque:TEMAS[0].destaque, botao:TEMAS[0].botao, fundo:TEMAS[0].fundo } }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
     await hist(r[0].id, 'Restaurante criado', nome); await carregar(); window.rvAbrir(r[0].id);
   }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
 };
