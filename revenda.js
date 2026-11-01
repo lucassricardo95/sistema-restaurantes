@@ -36,9 +36,11 @@ const rest = (q, m, b, extra) => req('/rest/v1/' + q, { method:m, body: b ? JSON
 const rpc = (fn, a) => req('/rest/v1/rpc/' + fn, { method:'POST', body:JSON.stringify(a || {}) });
 
 async function entrar(email, senha, criar){
+  if(!email || !senha) throw new Error('Preencha o e-mail e a senha' + (criar ? ' que você quer usar como dono e toque em "Criar a conta do dono".' : '.'));
+  if(criar && senha.length < 8) throw new Error('Use uma senha de pelo menos 8 caracteres.');
   const r = await fetch(URL_ + (criar ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password'), { method:'POST', headers:{ apikey:CHAVE_, 'Content-Type':'application/json' }, body:JSON.stringify({ email, password:senha }) });
   const j = await r.json().catch(() => ({}));
-  if(!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Não foi possível entrar.');
+  if(!r.ok) throw new Error(/invalid login/i.test(j.msg || j.error_description || j.message || '') ? 'E-mail ou senha incorretos.' : (j.msg || j.error_description || j.message || 'Não foi possível entrar.'));
   if(!j.access_token) throw new Error('Conta criada. Abra o e-mail de confirmação que o Supabase enviou, confirme e depois entre.');
   sessGravar({ access_token:j.access_token, refresh_token:j.refresh_token, exp: Date.now() + (j.expires_in - 60) * 1000, email });
 }
