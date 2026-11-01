@@ -93,3 +93,54 @@
       document.body.appendChild(d);
     } });
 })();
+
+/* =====================================================================
+   ACESSO SUSPENSO — o fornecedor do sistema pode bloquear o restaurante (botão "Bloquear acesso" no Painel de Revenda).
+   Nunca é automático. A verificação é feita pelo endereço do banco do restaurante (não dá para escapar trocando o nome).
+   Sem internet ou se o painel não responder: o sistema continua abrindo (só vale o último bloqueio já visto neste aparelho).
+   ===================================================================== */
+(function(){
+  'use strict';
+  var PAINEL = 'https://shbhclxhlffdusikjeqp.supabase.co', CHAVE = 'sb_publishable_0u_j3zKFnJDkhN57KRJ9Ng_7uN24jl4', FLAG = 'rvAcessoSuspenso_v1';
+  var R = window.RESTAURANTE || {}, FETCH = window.fetch.bind(window);
+  if(!R.supabaseUrl && !R.slug) return;
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function ler(){ try{ return JSON.parse(localStorage.getItem(FLAG) || 'null'); }catch(e){ return null; } }
+  function gravar(v){ try{ if(v) localStorage.setItem(FLAG, JSON.stringify(v)); else localStorage.removeItem(FLAG); }catch(e){} }
+  function bloquear(msg){
+    try{ window.stop(); }catch(e){}
+    try{ window.fetch = function(){ return Promise.reject(new Error('Acesso suspenso')); }; }catch(e){}
+    function pintar(){
+      var d = document.documentElement; if(!d) return;
+      d.innerHTML = '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acesso suspenso</title></head>'
+        + '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#f3ecec;font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box">'
+        + '<div style="max-width:420px"><div style="font-size:54px">⛔</div><h1 style="margin:10px 0 8px;font-size:24px">Acesso suspenso</h1>'
+        + '<p style="color:#cfc4c4;margin:0 0 20px">' + esc(msg || 'O acesso a este sistema está suspenso. Fale com o fornecedor do sistema.') + '</p>'
+        + '<button onclick="location.reload()" style="font:inherit;padding:12px 22px;border:0;border-radius:12px;background:#d4262c;color:#fff;font-weight:700">Verificar de novo</button></div></body>';
+    }
+    function guardar(){
+      try{ var b = document.body; if(!b || b.__rvGuarda) return; b.__rvGuarda = true;
+        new MutationObserver(function(ms){ ms.forEach(function(m){ m.addedNodes.forEach(function(n){ if(n.parentNode === b && !n.__rv) b.removeChild(n); }); }); }).observe(b, { childList:true });
+        Array.prototype.forEach.call(b.children, function(n){ n.__rv = true; });
+      }catch(e){}
+    }
+    window.addEventListener('unhandledrejection', function(e){ e.preventDefault(); }, true);
+    window.addEventListener('error', function(e){ e.stopImmediatePropagation(); }, true);
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ pintar(); guardar(); }); else { pintar(); guardar(); }
+    pintar(); guardar();
+  }
+  var antes = ler();
+  if(antes && antes.bloqueado) bloquear(antes.mensagem);
+  var t = null;
+  try{
+    var c = new AbortController(); t = setTimeout(function(){ c.abort(); }, 6000);
+    FETCH(PAINEL + '/rest/v1/rpc/status_restaurante', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE, 'Content-Type':'application/json' },
+      body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '' }) })
+      .then(function(r){ clearTimeout(t); return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j || typeof j.bloqueado !== 'boolean') return;           // painel fora do ar ou sem a função: não mexe em nada
+        if(j.bloqueado){ gravar({ bloqueado:true, mensagem:j.mensagem || '' }); if(!(antes && antes.bloqueado)) bloquear(j.mensagem); }
+        else { gravar(null); if(antes && antes.bloqueado) location.reload(); }
+      }).catch(function(){ clearTimeout(t); });
+  }catch(e){}
+})();

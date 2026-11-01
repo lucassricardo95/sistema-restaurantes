@@ -91,7 +91,7 @@ function telaLista(){
    + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
    + (S.lista.length ? '<div class="grade">' + S.lista.map(r => {
       const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), a = atrasadas(r.id).length;
-      return '<div class="card"><div class="linha"><b>' + esc(r.nome) + '</b><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span></div>'
+      return '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><div class="linha"><b>' + esc(r.nome) + '</b>' + (r.bloqueado ? '<span class="selo" style="background:var(--erro);color:#000">⛔ Bloqueado</span>' : '<span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span>') + '</div>'
        + '<small class="mudo">' + esc(r.dominio || r.slug) + '</small>'
        + '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + n + ' de ' + ETAPAS.length + ' · ' + p + '%</small>'
        + '<p class="mudo" style="margin:8px 0 10px;font-size:13px">' + (r.valor_mensal ? BRL(r.valor_mensal) + '/mês' : 'Sem mensalidade definida') + (a ? ' · <b style="color:var(--erro)">' + a + ' em atraso</b>' : '') + '</p>'
@@ -201,7 +201,7 @@ window.rvTeste = async id => {
 function mostrarRes(box, ids){ const b = $(box); if(!b) return; b.innerHTML = ids.filter(i => S.res && S.res[i]).map(i => '<div class="res ' + S.res[i][0] + '">' + ({ ok:'✅ ', erro:'❌ ', aviso:'⏳ ' }[S.res[i][0]]) + '<b>' + esc(i) + ':</b> ' + S.res[i][1] + '</div>').join(''); }
 
 /* ---------- passo a passo ---------- */
-function sub(t){ const r = S.rest; return String(t).replace(/\{nome\}/g, r.nome).replace(/\{slug\}/g, r.slug).replace(/\{ref\}/g, refDe(r)).replace(/\{supabase_url\}/g, r.supabase_url || '(URL do Supabase)'); }
+function sub(t){ const r = S.rest; return String(t).replace(/\{nome\}/g, r.nome).replace(/\{slug\}/g, r.slug).replace(/\{ref\}/g, refDe(r)).replace(/\{supabase_url\}/g, r.supabase_url || '(URL do Supabase)').replace(/\{site_url\}/g, r.site_url || '(endereço do site)').replace(/\{site_origem\}/g, (r.site_url || '(endereço do site)').replace(/\/+$/, '')); }
 const QUEM = { voce:'👤 Você faz', claude:'🤖 Peça ao Claude', cliente:'🍽️ O restaurante faz' };
 function abaPasso(){
   const r = S.rest, e = r.etapas || {}; const prox = ETAPAS.find(x => !(e[x.id] && e[x.id].feita));
@@ -264,10 +264,29 @@ function abaMod(){
 /* ---------- cobrança ---------- */
 function abaCob(){
   const r = S.rest, h = hoje();
-  $('corpo').innerHTML = '<div class="card"><div class="linha"><h2>Mensalidades</h2><button class="principal mini" onclick="rvGerarCob()">Gerar a do mês</button></div><p class="mudo">' + (r.valor_mensal ? BRL(r.valor_mensal) + ' por mês, vence todo dia ' + (r.dia_vencimento || '—') + '.' : 'Defina o valor e o dia na aba Dados.') + '</p>'
+  const nAtr = atrasadas(r.id).length;
+  const bloq = '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><h2>Acesso ao sistema</h2>'
+    + (r.bloqueado
+      ? '<p><b style="color:var(--erro)">⛔ Bloqueado' + (r.bloqueado_em ? ' em ' + esc(new Date(r.bloqueado_em).toLocaleDateString('pt-BR')) : '') + '.</b> O restaurante vê "Acesso suspenso" e não consegue usar o sistema (cardápio e equipe).' + (r.bloqueio_motivo ? '<br><small class="mudo">Mensagem mostrada: ' + esc(r.bloqueio_motivo) + '</small>' : '') + '</p><button class="principal" onclick="rvBloquear(false)">Liberar acesso</button>'
+      : '<p class="mudo">' + (nAtr ? '<b style="color:var(--erro)">' + nAtr + ' mensalidade(s) em atraso.</b> ' : 'Nenhuma mensalidade em atraso. ') + 'O bloqueio nunca é automático: só vale depois que você tocar em "Bloquear acesso". Dá para liberar de novo a qualquer momento.</p>'
+        + '<label class="mudo" style="font-size:13px">Mensagem para o restaurante (opcional)</label><textarea id="bloqMsg" rows="2" maxlength="200" placeholder="Ex.: Acesso suspenso por mensalidade em aberto. Fale com o suporte pelo WhatsApp (16) 9xxxx-xxxx."></textarea>'
+        + '<button class="mini" style="margin-top:8px;border-color:var(--erro);color:var(--erro)" onclick="rvBloquear(true)">⛔ Bloquear acesso</button>')
+    + '</div>';
+  $('corpo').innerHTML = bloq + '<div class="card"><div class="linha"><h2>Mensalidades</h2><button class="principal mini" onclick="rvGerarCob()">Gerar a do mês</button></div><p class="mudo">' + (r.valor_mensal ? BRL(r.valor_mensal) + ' por mês, vence todo dia ' + (r.dia_vencimento || '—') + '.' : 'Defina o valor e o dia na aba Dados.') + '</p>'
    + (S.cobR.length ? '<table><tr><th>Mês</th><th>Valor</th><th>Vence</th><th></th></tr>' + S.cobR.map(c => { const at = !c.pago_em && c.vencimento && c.vencimento < h; return '<tr><td>' + esc(c.competencia.slice(5, 7) + '/' + c.competencia.slice(0, 4)) + '</td><td>' + BRL(c.valor) + '</td><td>' + esc(c.vencimento ? c.vencimento.split('-').reverse().join('/') : '—') + '</td><td>'
       + (c.pago_em ? '<span class="res ok">Pago ' + esc(c.pago_em.split('-').reverse().join('/')) + '</span> <button class="mini" onclick="rvPago(\'' + c.id + '\',false)">Desfazer</button>' : (at ? '<span class="res erro">Atrasada</span> ' : '') + '<button class="mini principal" onclick="rvPago(\'' + c.id + '\',true)">Marcar paga</button>') + '</td></tr>'; }).join('') + '</table>' : '<p>Nenhuma mensalidade gerada.</p>') + '</div>';
 }
+window.rvBloquear = async b => {
+  const r = S.rest, msg = ((document.getElementById('bloqMsg') || {}).value || '').trim();
+  if(!confirm(b ? 'Bloquear o acesso de "' + r.nome + '" agora?\n\nO cardápio e o sistema da equipe deixam de abrir para ele até você liberar.' : 'Liberar o acesso de "' + r.nome + '"?')) return;
+  const dados = { bloqueado:b, bloqueado_em:b ? new Date().toISOString() : null, bloqueio_motivo:b ? (msg || null) : null };
+  try{
+    await rest('restaurantes?id=eq.' + r.id, 'PATCH', dados);
+    Object.assign(r, dados);
+    await hist(r.id, b ? 'Acesso BLOQUEADO' : 'Acesso liberado', b ? msg : '');
+    aviso(b ? 'Acesso bloqueado.' : 'Acesso liberado.', 'ok'); abaCob();
+  }catch(e){ erro(/bloqueado|bloqueio|column|schema/i.test(e.message) ? 'O banco ainda não tem o bloqueio. Rode o SQL "001-bloqueio.sql" no projeto revenda (peça ao Claude) e tente de novo.' : e.message); }
+};
 window.rvGerarCob = async () => {
   const r = S.rest; if(!r.valor_mensal) return erro('Defina a mensalidade na aba Dados e salve antes.');
   const d = new Date(), comp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01', dia = String(r.dia_vencimento || 10).padStart(2, '0');
