@@ -3664,7 +3664,7 @@ declare v_cfg jsonb; r record;
 begin
   v_cfg := coalesce((select valor from sistema where chave = 'MARGEM_POR_CATEGORIA'), '{}'::jsonb);
   -- a pré-configuração anterior (só Bebidas = 25) é substituída pelos valores calculados dos preços atuais
-  if v_cfg = jsonb_build_object((select id::text from categorias where nome = 'Bebidas' limit 1), 25) then v_cfg := '{}'::jsonb; end if;
+  if v_cfg = jsonb_build_object(coalesce((select id::text from categorias where nome = 'Bebidas' limit 1), '-'), 25) then v_cfg := '{}'::jsonb; end if;
   for r in select * from _margem_pior_por_categoria() loop
     if not (v_cfg ? r.categoria_id::text) then v_cfg := v_cfg || jsonb_build_object(r.categoria_id::text, r.sugerido); end if;
   end loop;
