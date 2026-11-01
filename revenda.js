@@ -154,9 +154,27 @@ function abaLig(){
    + campoTxt('Planilha principal (endereço /exec do Apps Script) — opcional', 'api_url') + campoTxt('Planilha de contingência (endereço /exec) — opcional', 'contingencia_url')
    + campoTxt('Chave pública dos avisos no celular (push)', 'push_chave_publica')
    + campoTxt('Endereço (domínio) do site — só o nome', 'dominio', { ph:'churros.meusistema.com.br' }) + campoTxt('Endereço completo do site', 'site_url', { ph:'https://churros.meusistema.com.br/' })
-   + botSalvar + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvTeste(\'supabase\')">Testar ligação</button><button class="mini" onclick="rvTeste(\'banco\')">Testar banco</button><button class="mini" onclick="rvTeste(\'funcoes\')">Testar funções</button><button class="mini" onclick="rvTeste(\'site\')">Testar site</button></div><div id="resTeste"></div></div>';
+   + botSalvar + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvTeste(\'supabase\')">Testar ligação</button><button class="mini" onclick="rvTeste(\'banco\')">Testar banco</button><button class="mini" onclick="rvTeste(\'funcoes\')">Testar funções</button><button class="mini" onclick="rvTeste(\'site\')">Testar site</button></div><div id="resTeste"></div>'
+   + '<h3>Arquivo de configuração do restaurante</h3><p class="mudo" style="font-size:13px">Preencha tudo acima, salve e gere. Este arquivo vai para o GitHub do restaurante e é o único que muda de um restaurante para outro.</p><button class="mini principal" onclick="rvGerarConfig()">Gerar config-restaurante.js</button><div id="cfgGerado"></div></div>';
   mostrarRes('resTeste', ['supabase','banco','funcoes','site']);
 }
+
+/* ---------- arquivo de configuração do restaurante ---------- */
+function configTexto(r){
+  const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {};
+  const o = { slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
+    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || 'img/icon-512.png' } }, modulos:mod };
+  return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Para mudar, gere de novo no painel. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
+}
+window.rvGerarConfig = async () => {
+  lerForm(); const r = S.rest, falta = [];
+  if(!r.supabase_url || !r.supabase_chave) falta.push('endereço e chave pública do Supabase'); if(!r.site_url) falta.push('endereço completo do site');
+  if(falta.length) return erro('Antes de gerar, preencha: ' + falta.join(' e ') + '.');
+  if(!await salvar('Salvo.')) return;
+  const t = configTexto(S.rest); $('cfgGerado').innerHTML = '<div class="copiar" id="cfgTxt"></div><button class="mini" onclick="rvCopiar(\'cfgTxt\')">Copiar</button> <button class="mini" onclick="rvBaixarConfig()">Baixar arquivo</button>'; $('cfgTxt').textContent = t; window.__cfg = t;
+  await hist(S.rest.id, 'Arquivo de configuração gerado', '');
+};
+window.rvBaixarConfig = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([window.__cfg || ''], { type:'text/javascript' })); a.download = 'config-restaurante.js'; a.click(); };
 
 /* ---------- testes automáticos (feitos pelo seu navegador) ---------- */
 async function tempo(url, o){ const c = new AbortController(); const t = setTimeout(() => c.abort(), 12000); try{ return await fetch(url, Object.assign({ signal:c.signal }, o)); } finally { clearTimeout(t); } }
