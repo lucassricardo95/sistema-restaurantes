@@ -331,7 +331,7 @@ const USAR_SUPABASE_ = true;
 const SUPABASE_URL_ = (window.RESTAURANTE && window.RESTAURANTE.supabaseUrl) || '';
 const SUPABASE_CHAVE_ = (window.RESTAURANTE && window.RESTAURANTE.supabaseChave) || ''; // chave PÚBLICA por desenho (a segurança está nas regras do banco)
 const SB_SESSAO_KEY_ = 'texasBurgerSb_v1';
-const SB_DOMINIO_ = '@usuarios.texasburger.app';
+const SB_DOMINIO_ = '@usuarios.restaurante.app';
 const SB_DRIVE_FOTO_ = 'https://drive.google.com/uc?export=view&id=';
 function sbEmail_(login){ return String(login||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim() + SB_DOMINIO_; }
 function sbSessaoLer_(){ try{ return JSON.parse(localStorage.getItem(SB_SESSAO_KEY_)||'null'); }catch(e){ return null; } }
