@@ -134,7 +134,7 @@ async function salvar(msg){
   ['dominio','site_url'].forEach(k => { if(corpo[k]) corpo[k] = String(corpo[k]).replace(/^https?:\/\//, k === 'dominio' ? '' : '$&').replace(/\/+$/, k === 'dominio' ? '' : '/'); });
   if(corpo.site_url && !/^https?:\/\//.test(corpo.site_url)) corpo.site_url = 'https://' + corpo.site_url;
   if(corpo.site_url && !corpo.site_url.endsWith('/')) corpo.site_url += '/';
-  try{ const r = await rest('restaurantes?id=eq.' + S.rest.id, 'PATCH', corpo); S.rest = r[0]; const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = S.rest; aviso(msg || 'Salvo.', 'ok'); return true; }
+  try{ const local = corpo.etapas; const r = await rest('restaurantes?id=eq.' + S.rest.id, 'PATCH', corpo); if(!r || !r[0]) throw new Error('O banco não confirmou a gravação (nenhuma linha alterada). Saia e entre de novo no painel.'); S.rest = r[0]; if(local){ const igual = (a, b) => Object.keys(local).every(k => !!(a && a[k] && a[k].feita) === !!(local[k] && local[k].feita) && ((a && a[k] && a[k].itens || []).length === (local[k].itens || []).length)); if(!igual(S.rest.etapas)){ S.rest.etapas = local; const conf = await rest('restaurantes?id=eq.' + S.rest.id + '&select=etapas'); if(!igual(conf && conf[0] && conf[0].etapas)) throw new Error('O banco recebeu mas NÃO guardou a etapa. Peça ao Claude para conferir a coluna etapas do banco do painel.'); } } const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = S.rest; aviso(msg || 'Salvo.', 'ok'); return true; }
   catch(e){ erro(/unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message); return false; }
 }
 window.rvSalvar = async () => { if(await salvar()) { await hist(S.rest.id, 'Dados salvos', S.aba); telaRest(); } };

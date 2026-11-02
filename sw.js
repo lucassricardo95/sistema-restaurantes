@@ -1,5 +1,5 @@
 // Painel de Revenda: guarda só a casca para abrir como aplicativo. Dados vêm sempre da rede.
-const V = 'revenda-v8';
+const V = 'revenda-v9';
 const CASCA = ['./', 'index.html', 'revenda.css', 'config.js', 'etapas.js', 'revenda.js', 'icones/icone-192-v2.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(CASCA)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
