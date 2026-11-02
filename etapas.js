@@ -167,6 +167,13 @@ window.ETAPAS = [
     { t:'Copie o código que apareceu e rode no SQL Editor do Supabase do restaurante. Ele guarda as chaves no cofre do banco (a privada nunca fica no site). Pronto.' }
    ],
    pedido:'Gere as chaves de aviso no celular (VAPID) do restaurante "{nome}" (projeto {ref}), guarde-as no Vault (vapid_publica e vapid_privada) e me devolva a chave pública.' },
+ { id:'leitura', titulo:'Ligar o assistente do painel', curto:'Para a sua IA ler os dados dele', quem:'voce', tempo:'3 min',
+   porque:'Deixa o assistente do SEU painel responder coisas como "quanto esse restaurante vendeu na semana?" ou "o que está faltando no estoque?". É só leitura: ele nunca muda nada no restaurante e não vê telefone nem endereço de cliente.',
+   precisa:['Banco do restaurante pronto (etapa "Montar as tabelas")'],
+   partes:[
+    { t:'Rode no SQL Editor do Supabase do restaurante o código abaixo. Restaurantes criados agora já vêm com ele; rodar de novo não faz mal.', extra:'codigos' },
+    { t:'Toque em "Gerar chave de leitura". Copie o código que aparecer, rode também no SQL Editor do Supabase do restaurante e depois toque em "Testar a leitura".', extra:'leitura' }
+   ] },
  { id:'marca', titulo:'Cores e logos', curto:'A cara do restaurante', quem:'voce', tempo:'10 min',
    porque:'Deixa o sistema com as cores e a logo do restaurante. Muda na hora, sem mexer no site.',
    precisa:['3 imagens: logo principal, logo de impressão e ícone (o painel ensina a pedir ao ChatGPT)'],
@@ -218,4 +225,4 @@ window.ETAPAS = [
     { t:'Gere a taxa de implantação e a primeira mensalidade, mude a situação para "Ativo" e pronto!', extra:'cobranca' }
    ] }
 ];
-window.FASES = [['Banco e site',['cadastro','supabase','repositorio','banco','funcoes','admin']],['Google e backup',['entrada','drive']],['Recursos',['ia','planilhas','push']],['Marca e site',['marca','modulos','publicar','app']],['Entrega',['contas','teste','entrega']]];
+window.FASES = [['Banco e site',['cadastro','supabase','repositorio','banco','funcoes','admin']],['Google e backup',['entrada','drive']],['Recursos',['ia','planilhas','push','leitura']],['Marca e site',['marca','modulos','publicar','app']],['Entrega',['contas','teste','entrega']]];

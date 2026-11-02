@@ -69,6 +69,7 @@ async function carregar(){
     tenta(() => rest('revenda_ajustes?select=dados'), []), tenta(() => rest('termos_uso?select=id,versao,fornecedor_nome,fornecedor_doc,foro,contato,atualizado_em'), []),
     tenta(() => rest('promessas?select=*&order=criada_em.desc'), []) ]);
   S.desp = d; S.prop = p; S.aj = (a[0] && a[0].dados) || {}; S.termos = t[0] || null; S.prom = pr;
+  S.segs = await tenta(() => rpc('revenda_segredos_status'), {});
   await carregarSaude();
 }
 async function carregarSaude(){
@@ -149,11 +150,11 @@ const NAV = [['inicio','🏠','Início'],['restaurantes','🍽️','Restaurantes
 function desenhar(){
   clearInterval(timerAuto);
   const v = S.view, alertaSaude = S.erros.length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
-  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia }[v] || vInicio;
-  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais' }[v] || v;
+  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente }[v] || vInicio;
+  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais' }[v] || v;
   $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a"><button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
     + '<main id="tela"></main>'
-    + '<nav class="nav">' + NAV.map(n => '<button class="' + (navOn === n[0] ? 'on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('') + '</nav>';
+    + '<nav class="nav">' + NAV.map(n => '<button class="' + (navOn === n[0] ? 'on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('') + '</nav><button id="bAssist" class="b-assist" onclick="rvChat()" title="Assistente" aria-label="Abrir o assistente">✨</button>';
   corpo();
   if(['inicio','saude'].includes(v)) timerAuto = setInterval(async () => { if(document.hidden) return; await carregarSaude(); if(['inicio','saude'].includes(S.view) && !document.querySelector('.modal')) desenhar(); }, 120000);
   window.scrollTo(0, 0);
@@ -390,6 +391,7 @@ function desenharExtra(et, tipo, box){
     checklist: () => et.checklist.map((c, j) => { const ck = ((r.etapas[et.id] || {}).itens || []).includes(j); return '<label class="check"><input type="checkbox" ' + (ck ? 'checked ' : '') + 'onchange="rvItem(\'' + et.id + '\',' + j + ',this.checked)"><span>' + esc(c) + '</span></label>'; }).join(''),
     contrato: () => '<button class="mini" onclick="rvAba(\'contrato\')">📄 Abrir a aba Contrato</button>',
     workflow: () => workflowHtml(),
+    leitura: () => leituraHtml(),
     privacidade: () => '<button class="principal" onclick="rvPrivacidade()">⬇️ Gerar e baixar privacidade.html</button><p class="pequeno mudo">Onde colocar: <b>na raiz do repositório</b> (junto do index.html). Endereço depois de subir: <code class="quebra">' + esc((r.site_url || '(site)') + 'privacidade.html') + '</code></p><div id="privRes"></div>',
     conferir: () => '<button class="principal" onclick="rvConferir()">🔎 Conferir o site</button><div id="confRes"></div>',
     cobranca: () => '<div class="linha" style="justify-content:flex-start">' + (r.taxa_implantacao ? '<button class="mini" onclick="rvCobRest(\'implantacao\')">Gerar taxa de implantação (' + BRL(r.taxa_implantacao) + ')</button>' : '') + '<button class="mini" onclick="rvCobRest(\'mensalidade\')">Gerar mensalidade deste mês</button>' + (r.situacao !== 'ativo' ? '<button class="principal mini" onclick="rvAtivar()">Mudar para Ativo</button>' : '<span class="selo ativo">✓ Ativo</span>') + '</div>'
@@ -656,6 +658,7 @@ function abaDados(){
    + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start">' + Object.keys(TESTES).map(t => '<button class="mini" onclick="rvTeste(\'' + t + '\')">' + NOME_T[t] + '</button>').join('') + '</div><div id="resTeste"></div>'
    + '<h3>Arquivos do site</h3>' + publicarHtml() + '</div>'
    + '<div class="card"><h2>🧩 Módulos contratados</h2>' + modulosHtml() + '</div>'
+   + '<div class="card"><h2>🤖 Leitura do assistente</h2><p class="mudo pequeno">Deixa o seu assistente ler vendas, produtos, estoque e caixa deste restaurante (só leitura). O código da consulta fica na etapa "Ligar o assistente do painel".</p>' + leituraHtml() + '<p><button class="mini" onclick="rvAba(\'passo\');rvVerPasso(\'leitura\')">Abrir a etapa</button></p></div>'
    + '<details class="card"><summary><b class="txt-erro">🗑️ Excluir restaurante</b></summary>' + excluirHtml() + '</details>');
   mostrarRes('resTeste', Object.keys(S.res));
 }
@@ -880,7 +883,7 @@ window.rvPropFechar = id => { const p = S.prop.find(x => x.id === id); rvNovo(p)
 
 /* ---------- MAIS / AJUSTES / GUIA ---------- */
 function vMais(){
-  const it = [['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
+  const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
   T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
    + '<div class="card"><small class="mudo">Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
 }
@@ -922,6 +925,135 @@ function vGuia(){
    + '<h2 class="sec-t">3. Logos</h2><div class="card">' + LOGOS.map(L => '<div class="guia-e"><b>' + L.icone + ' ' + L.nome + '</b><br><small>' + esc(L.onde) + '</small><br><small class="mudo">' + esc(L.regras.slice(0, 3).join(' · ')) + '</small></div>').join('') + '<p class="mudo pequeno">Na etapa "Cores e logos" o painel monta o texto pronto para pedir cada uma ao ChatGPT.</p></div>'
    + '<button class="principal grande" onclick="rvNovo()">＋ Começar um restaurante agora</button>');
 }
+
+/* ---------- LEITURA DOS RESTAURANTES (chave só de leitura para o assistente) ---------- */
+const temLeitura = r => !!(S.segs && S.segs['leitura_' + r.id]);
+function tokenNovo(){ const u = new Uint8Array(36); crypto.getRandomValues(u); return b64url(u); }
+function leituraHtml(){
+  const r = S.rest, t = (S.leitTok || {})[r.id];
+  return (temLeitura(r) ? '<div class="res ok">✓ Leitura ligada (chave termina em …' + esc(S.segs['leitura_' + r.id].fim) + ').</div>' : '<div class="res aviso">Leitura ainda não ligada.</div>')
+   + '<button class="' + (temLeitura(r) ? 'mini' : 'principal') + '" onclick="rvGerarLeitura()">🔑 ' + (temLeitura(r) ? 'Gerar chave nova' : 'Gerar chave de leitura') + '</button>'
+   + (t ? '<p class="pequeno"><b>Rode este código no SQL Editor do Supabase de ' + esc(r.nome) + '</b> (só aparece agora):</p><div class="copiar" id="leitSql">' + esc(leituraSql(r, t)) + '</div><button class="principal" onclick="rvCopiar(\'leitSql\')">📋 Copiar código</button> <button class="mini" onclick="rvTestarLeitura()">▶️ Testar a leitura</button><div id="leitRes"></div>' : '');
+}
+const leituraSql = (r, t) => '-- Chave de leitura do assistente do Painel de Revenda para ' + r.nome + '\ndo $$ declare v_id uuid; begin\n  select id into v_id from vault.secrets where name = \'revenda_leitura\';\n  if v_id is null then perform vault.create_secret(\'' + t + '\', \'revenda_leitura\'); else perform vault.update_secret(v_id, \'' + t + '\'); end if;\nend $$;';
+window.rvGerarLeitura = async () => {
+  const r = S.rest; if(temLeitura(r) && !confirm('Gerar uma chave NOVA? A antiga para de funcionar quando você rodar o código novo no restaurante.')) return;
+  try{ const t = tokenNovo(), x = await rpc('revenda_segredo_salvar', { p_nome:'leitura_' + r.id, p_valor:t }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou');
+    (S.leitTok = S.leitTok || {})[r.id] = t; S.segs = await tenta(() => rpc('revenda_segredos_status'), S.segs); await hist(r.id, 'Chave de leitura do assistente gerada', ''); aviso('Chave criada. Agora rode o código no Supabase do restaurante.', 'ok');
+    S.aba === 'passo' ? abaPasso() : abaDados(); }catch(e){ erro('Não deu para gerar: ' + e.message); }
+};
+window.rvTestarLeitura = async () => {
+  const r = S.rest, t = (S.leitTok || {})[r.id], box = $('leitRes'); if(!t || !box) return; box.innerHTML = '<div class="res aviso">⏳ Testando…</div>';
+  try{ const x = await tempo(r.supabase_url + '/rest/v1/rpc/api_revenda_consulta', { method:'POST', headers:{ apikey:r.supabase_chave, Authorization:'Bearer ' + r.supabase_chave, 'Content-Type':'application/json' }, body:JSON.stringify({ p:{ token:t, tipo:'resumo' } }) });
+    if(x.status === 404) return box.innerHTML = '<div class="res erro">❌ O banco ainda não tem a consulta. Rode primeiro o código da parte 1 (Consulta do assistente).</div>';
+    const j = await x.json().catch(() => null);
+    box.innerHTML = j && j.ok ? '<div class="res ok">✅ Funcionando! O assistente já lê os dados de ' + esc(r.nome) + ' (' + (j.dados.vendas ? j.dados.vendas.pedidos : 0) + ' pedidos nos últimos 7 dias).</div>' : '<div class="res erro">❌ ' + esc(j && j.erro === 'acesso negado' ? 'A chave não confere: rode o código acima no Supabase do restaurante e teste de novo.' : (j && j.erro) || 'erro ' + x.status) + '</div>';
+  }catch(e){ box.innerHTML = '<div class="res erro">❌ Não deu para chegar no banco (' + esc(e.message) + ').</div>'; }
+};
+
+/* ---------- ASSISTENTE: chaves das IAs ---------- */
+const IAS = [
+  ['ia_groq','Groq','1º a responder. Crie em console.groq.com/keys (começa com gsk_).','https://console.groq.com/keys'],
+  ['ia_groq_2','Groq 2','Reserva do Groq: OUTRA conta ou outro e-mail.','https://console.groq.com/keys'],
+  ['ia_cloudflare_conta','Cloudflare · Account ID','O código de 32 letras e números da barra de endereço do dash.cloudflare.com.','https://dash.cloudflare.com/'],
+  ['ia_cloudflare','Cloudflare · Token','Profile → API Tokens → Create Token → modelo "Workers AI" (começa com cfut_).','https://dash.cloudflare.com/profile/api-tokens'],
+  ['ia_gemini','Gemini','Também faz a PESQUISA NA INTERNET. aistudio.google.com/apikey (começa com AIza ou AQ.).','https://aistudio.google.com/apikey'],
+  ['ia_nvidia','NVIDIA','Reserva mais lenta. build.nvidia.com → API Keys (começa com nvapi-).','https://build.nvidia.com/settings/api-keys'],
+  ['ia_gemini_2','Gemini 2','Último recurso e reserva da pesquisa: chave de OUTRO projeto do Google.','https://aistudio.google.com/apikey']
+];
+async function vAssistente(){
+  const g = S.segs || {}, n = IAS.filter(x => g[x[0]]).length;
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>✨ Assistente</h1>'
+   + '<div class="card"><p>Seu sócio digital: responde sobre o seu negócio e os seus restaurantes, pesquisa na internet e <b>prepara</b> ações (cobrar, lançar despesa, criar proposta, mandar WhatsApp) que só acontecem quando você toca em <b>Confirmar</b>.</p>'
+   + '<p class="mudo pequeno">Use chaves SUAS, diferentes das dos restaurantes (cada chave grátis tem cota própria). Elas ficam no cofre do banco do painel: este site nunca mostra a chave inteira.</p>'
+   + '<div class="linha"><b>' + n + ' de ' + IAS.length + ' chaves cadastradas</b><button class="principal mini" onclick="rvTestarIAs()"' + (n ? '' : ' disabled') + '>▶️ Testar todas</button></div><div id="iaTeste"></div></div>'
+   + '<div class="card"><h2>🔑 Chaves das IAs</h2><p class="mudo pequeno">A ordem é a ordem em que o assistente tenta: se uma falhar ou acabar a cota, ele passa para a próxima. Mínimo: Groq + Gemini.</p>'
+   + IAS.map(x => '<div class="ia-item"><div class="linha"><b>' + x[1] + '</b>' + (g[x[0]] ? '<span class="selo ativo">✓ …' + esc(g[x[0]].fim) + '</span>' : '<span class="selo aviso">falta</span>') + '</div><small>' + esc(x[2]) + ' <a href="' + x[3] + '" target="_blank" rel="noopener">abrir ↗</a></small>'
+      + '<div class="linha ia-campo"><input type="password" id="k_' + x[0] + '" placeholder="' + (g[x[0]] ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvSalvarIA(\'' + x[0] + '\')">Salvar</button>' + (g[x[0]] ? '<button class="mini" onclick="rvApagarIA(\'' + x[0] + '\')">🗑️</button>' : '') + '</div></div>').join('') + '</div>'
+   + '<div class="card"><h2>🍽️ Leitura dos restaurantes</h2><p class="mudo pequeno">Para o assistente ver vendas, produtos, estoque e caixa de cada um.</p>'
+   + S.lista.filter(r => r.situacao !== 'encerrado').map(r => '<div class="linha mapa-l"><span>' + (temLeitura(r) ? '✅' : '⬜') + ' ' + esc(r.nome) + '</span>' + (temLeitura(r) ? '<small class="mudo">ligada</small>' : '<button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'passo\').then(()=>rvVerPasso(\'leitura\'))">Ligar ›</button>') + '</div>').join('') + '</div>'
+   + '<div class="card"><h2>📒 Últimas respostas</h2><div id="iaLog"><small class="mudo">Carregando…</small></div></div>');
+  try{ const L = await rest('assistente_log?select=*&order=em.desc&limit=15') || []; const b = $('iaLog'); if(b) b.innerHTML = L.length ? L.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(l.provedor || '—') + (l.modelo ? ' · ' + esc(l.modelo) : '') + ' · ' + Math.round((l.ms || 0) / 100) / 10 + ' s · ' + (l.ferramentas || 0) + ' consulta(s)</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ respondeu' : '✗ ' + esc(l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Ainda não foi usado.</small>'; }catch(e){}
+}
+window.rvSalvarIA = async k => { const v = jv('k_' + k); if(!v) return erro('Cole a chave no campo.'); if(k === 'ia_cloudflare_conta' && !/^[0-9a-f]{32}$/.test(v)) return erro('O Account ID tem 32 letras (a-f) e números.');
+  try{ const x = await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou'); S.segs = await rpc('revenda_segredos_status'); aviso('Chave guardada no cofre ✓', 'ok'); vAssistente(); }catch(e){ erro(e.message); } };
+window.rvApagarIA = async k => { if(!confirm('Apagar esta chave do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); vAssistente(); }catch(e){ erro(e.message); } };
+async function chamarAssistente(corpo){
+  if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 130000);
+  try{ const r = await fetch(URL_ + '/functions/v1/assistente', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
+    const j = await r.json().catch(() => null); if(!j) throw new Error('O assistente não respondeu (erro ' + r.status + ').'); if(r.status === 404) throw new Error('A função do assistente ainda não foi publicada no servidor do painel.'); return j;
+  }catch(e){ if(e.name === 'AbortError') throw new Error('Demorou demais. Tente uma pergunta mais curta.'); throw e; } finally { clearTimeout(t); }
+}
+window.rvTestarIAs = async () => { const b = $('iaTeste'); b.innerHTML = '<div class="res aviso">⏳ Testando cada IA…</div>';
+  try{ const j = await chamarAssistente({ acao:'testar' }); if(!j.ok) throw new Error(j.erro); b.innerHTML = j.resultados.map(x => '<div class="res ' + (x.ok ? 'ok' : 'erro') + '">' + (x.ok ? '✅ ' : '❌ ') + '<b>' + esc(x.nome) + '</b>: ' + (x.ok ? 'funcionando · ' + esc(x.modelo) + ' · ' + x.ms + ' ms' : esc(x.erro)) + '</div>').join(''); }
+  catch(e){ b.innerHTML = '<div class="res erro">❌ ' + esc(e.message) + '</div>'; } };
+
+/* ---------- ASSISTENTE: conversa ---------- */
+const CHAT_K = 'rv_chat_v1';
+function chatLer(){ try{ return JSON.parse(localStorage.getItem(CHAT_K) || '[]'); }catch(e){ return []; } }
+function chatGravar(){ try{ localStorage.setItem(CHAT_K, JSON.stringify((S.chat || []).slice(-40))); }catch(e){} }
+const SUGESTOES = ['Como está o meu mês?','Quem está com mensalidade atrasada?','Algum restaurante com problema agora?','Quanto cada restaurante vendeu nesta semana?','O que falta para terminar a implantação do Teste?','Quanto cobram sistemas de cardápio digital hoje no Brasil?'];
+function telaAtual(){ const v = S.view; if(v === 'rest' && S.rest) return 'restaurante ' + S.rest.nome + ', aba ' + S.aba; return { inicio:'Início', restaurantes:'lista de restaurantes', saude:'Saúde', dinheiro:'Dinheiro, mês ' + S.mes, vendas:'Vendas (propostas)', mais:'Mais', ajustes:'Ajustes', guia:'Guia', assistente:'configuração do assistente', novo:'criar restaurante' }[v] || v; }
+function md(t){ let h = esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return h.split('\n').map(l => /^\s*([-•*]|\d+[.)])\s+/.test(l) ? '<li>' + l.replace(/^\s*([-•*]|\d+[.)])\s+/, '') + '</li>' : (l.trim() ? '<p>' + l + '</p>' : '')).join('').replace(/(<li>.*?<\/li>)+/g, m => '<ul>' + m + '</ul>'); }
+const ROT_ACAO = { gerar_cobranca:'💰 Gerar cobrança', registrar_recebimento:'💵 Registrar recebimento', criar_despesa:'🧾 Lançar despesa', criar_proposta:'🤝 Criar proposta', atualizar_proposta:'✏️ Atualizar proposta', enviar_whatsapp:'💬 Mandar WhatsApp', marcar_erros_resolvidos:'🐞 Marcar erros como resolvidos', abrir_tela:'➡️ Abrir tela' };
+function detAcao(a){ const d = a.dados || {}, L = [];
+  if(d.restaurante_nome) L.push('Restaurante: ' + d.restaurante_nome); if(d.nome) L.push('Nome: ' + d.nome); if(d.descricao) L.push('Descrição: ' + d.descricao);
+  if(d.valor != null) L.push('Valor: ' + BRL(d.valor)); if(d.valor_mensal != null) L.push('Mensalidade: ' + BRL(d.valor_mensal)); if(d.vencimento) L.push('Vencimento: ' + dataBr(d.vencimento)); if(d.data) L.push('Data: ' + dataBr(d.data));
+  if(d.forma) L.push('Forma: ' + d.forma); if(d.categoria) L.push('Categoria: ' + d.categoria); if(d.status) L.push('Situação: ' + (ST_PROP[d.status] || d.status)); if(d.proxima_acao) L.push('Retornar em: ' + dataBr(d.proxima_acao));
+  if(d.texto) L.push('Mensagem: "' + String(d.texto).slice(0, 300) + '"'); if(d.tela) L.push('Tela: ' + d.tela); return L; }
+window.rvChat = () => { S.chat = S.chat || chatLer(); S.chatAberto = true; desenharChat(); setTimeout(() => { const i = $('chatTxt'); if(i) i.focus(); }, 80); };
+window.rvChatFechar = () => { S.chatAberto = false; const c = $('chat'); if(c) c.remove(); };
+window.rvChatLimpar = () => { if(!confirm('Apagar a conversa?')) return; S.chat = []; chatGravar(); desenharChat(); };
+function desenharChat(){
+  let c = $('chat'); if(!c){ c = document.createElement('div'); c.id = 'chat'; c.className = 'chat'; document.body.appendChild(c); }
+  const txt = ($('chatTxt') || {}).value != null ? $('chatTxt').value : (S.chatTxt || '');
+  const M = S.chat || [];
+  c.innerHTML = '<div class="chat-c"><div class="chat-cab"><b>✨ Assistente</b><span><button class="mini" onclick="rvChatLimpar()" title="Apagar conversa">🗑️</button> <button class="mini" onclick="rvChatFechar()">✕</button></span></div>'
+   + '<div class="chat-msgs" id="chatMsgs">' + (M.length ? '' : '<div class="chat-vazio"><div style="font-size:40px">✨</div><b>Pergunte qualquer coisa sobre o seu negócio</b><p class="mudo pequeno">Eu leio os seus restaurantes, o seu dinheiro, a saúde dos sistemas e pesquiso na internet. Quando você pedir para fazer algo, eu deixo pronto para você confirmar.</p></div><div class="sugestoes">' + SUGESTOES.map(x => '<button class="chip" onclick="rvChatEnviar(' + esc(JSON.stringify(x)) + ')">' + esc(x) + '</button>').join('') + '</div>')
+   + M.map((m, i) => '<div class="bolha-m ' + m.role + (m.erro ? ' erro' : '') + '">' + (m.role === 'user' ? esc(m.content).replace(/\n/g, '<br>') : md(m.content))
+      + (m.acoes && m.acoes.length ? m.acoes.map((a, k) => '<div class="acao-c ' + (a.estado || 'pendente') + '"><b>' + (ROT_ACAO[a.tipo] || a.tipo) + '</b><small>' + esc(a.resumo || '') + '</small>' + detAcao(a).map(l => '<small class="mudo">' + esc(l) + '</small>').join('')
+          + (a.estado === 'feita' ? '<span class="selo ativo">✓ Feito</span>' : a.estado === 'descartada' ? '<span class="selo">Descartada</span>' : '<div class="linha" style="justify-content:flex-start;margin-top:6px"><button class="mini principal" onclick="rvAcao(' + i + ',' + k + ')">✅ Confirmar</button><button class="mini" onclick="rvAcaoDesc(' + i + ',' + k + ')">Descartar</button></div>') + '</div>').join('') : '')
+      + (m.fontes && m.fontes.length ? '<div class="fontes">🔎 ' + m.fontes.map(f => '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(String(f.titulo || f.url).slice(0, 40)) + '</a>').join(' · ') + '</div>' : '')
+      + (m.info ? '<small class="info-m">' + esc(m.info) + '</small>' : '') + '</div>').join('')
+   + (S.chatEspera ? '<div class="bolha-m assistant esperando"><span class="pontinhos"><i></i><i></i><i></i></span> <small class="mudo">' + esc(S.chatEspera) + '</small></div>' : '') + '</div>'
+   + '<div class="chat-in"><textarea id="chatTxt" rows="1" placeholder="Pergunte ou peça algo…" oninput="this.style.height=\'auto\';this.style.height=Math.min(120,this.scrollHeight)+\'px\'" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();rvChatEnviar()}">' + esc(txt) + '</textarea><button class="principal" onclick="rvChatEnviar()"' + (S.chatEspera ? ' disabled' : '') + ' aria-label="Enviar">➤</button></div></div>';
+  const ms = $('chatMsgs'); if(ms) ms.scrollTop = ms.scrollHeight;
+}
+window.rvChatEnviar = async (pronto) => {
+  if(S.chatEspera) return; const i = $('chatTxt'), q = String(pronto || (i && i.value) || '').trim(); if(!q) return;
+  if(!Object.keys(S.segs || {}).some(k => /^ia_/.test(k))){ erro('Cadastre as chaves das IAs primeiro (Mais → Assistente).'); return; }
+  S.chat = S.chat || []; S.chat.push({ role:'user', content:q }); if(i) i.value = ''; S.chatTxt = ''; S.chatEspera = 'pensando…'; chatGravar(); desenharChat();
+  const fr = ['pensando…','consultando os dados…','juntando as informações…','quase lá…'], tf = setInterval(() => { S.chatEspera = fr[(fr.indexOf(S.chatEspera) + 1) % fr.length]; const e = document.querySelector('.esperando small'); if(e) e.textContent = S.chatEspera; }, 3500);
+  try{ const j = await chamarAssistente({ mensagens:S.chat.filter(m => !m.erro).slice(-12).map(m => ({ role:m.role, content:m.content })), tela:telaAtual() });
+    if(!j.ok) throw new Error(j.erro || 'sem resposta');
+    S.chat.push({ role:'assistant', content:j.texto, acoes:(j.acoes || []).map(a => Object.assign(a, { estado:'pendente' })), fontes:j.fontes || [], info:j.provedor + (j.ferramentas ? ' · ' + j.ferramentas + ' consulta(s)' : '') });
+  }catch(e){ S.chat.push({ role:'assistant', content:'⚠️ ' + e.message, erro:true }); }
+  finally{ clearInterval(tf); S.chatEspera = null; chatGravar(); if(S.chatAberto) desenharChat(); }
+};
+window.rvAcaoDesc = (i, k) => { S.chat[i].acoes[k].estado = 'descartada'; chatGravar(); desenharChat(); };
+window.rvAcao = async (i, k) => {
+  const a = S.chat[i].acoes[k], d = a.dados || {}, agora = new Date().toISOString();
+  try{
+    if(a.tipo === 'gerar_cobranca'){ const v = num(d.valor), venc = d.vencimento || hoje(); if(!d.restaurante_id || !v) throw new Error('Faltam o restaurante ou o valor.');
+      await rest('cobrancas', 'POST', { restaurante_id:d.restaurante_id, tipo:['mensalidade','implantacao','avulsa'].includes(d.tipo) ? d.tipo : 'avulsa', valor:v, vencimento:venc, competencia:venc.slice(0, 8) + '01', descricao:d.descricao || null }); await hist(d.restaurante_id, 'Cobrança criada pelo assistente', BRL(v)); }
+    else if(a.tipo === 'registrar_recebimento'){ if(!d.cobranca_id) throw new Error('Falta a cobrança.'); const c = S.cob.find(x => x.id === d.cobranca_id); if(!c) throw new Error('Cobrança não encontrada.');
+      await rest('cobrancas?id=eq.' + d.cobranca_id, 'PATCH', { pago_em:d.data || hoje(), valor_pago:num(d.valor) != null ? num(d.valor) : c.valor, forma:d.forma || 'Pix' }); await hist(c.restaurante_id, 'Pagamento recebido (assistente)', BRL(num(d.valor) || c.valor)); }
+    else if(a.tipo === 'criar_despesa'){ const v = num(d.valor); if(!d.descricao || v == null) throw new Error('Faltam a descrição ou o valor.');
+      await rest('despesas_revenda', 'POST', { descricao:d.descricao, valor:v, data:d.data || hoje(), categoria:CAT_DESP.includes(d.categoria) ? d.categoria : 'Outros', pago:d.pago !== false, recorrente:!!d.recorrente, restaurante_id:d.restaurante_id || null }); }
+    else if(a.tipo === 'criar_proposta'){ if(!d.nome) throw new Error('Falta o nome.');
+      await rest('propostas', 'POST', { nome:d.nome, contato_nome:d.contato_nome || null, telefone:d.telefone || null, cidade:d.cidade || null, origem:d.origem || null, status:ST_PROP[d.status] ? d.status : 'novo', valor_mensal:num(d.valor_mensal), taxa_implantacao:num(d.taxa_implantacao), proxima_acao:d.proxima_acao || null, observacoes:d.observacoes || null }); }
+    else if(a.tipo === 'atualizar_proposta'){ if(!d.proposta_id) throw new Error('Falta a proposta.'); const c = { atualizado_em:agora }; if(ST_PROP[d.status]) c.status = d.status; if(d.proxima_acao) c.proxima_acao = d.proxima_acao; if(d.observacoes) c.observacoes = d.observacoes;
+      await rest('propostas?id=eq.' + d.proposta_id, 'PATCH', c); }
+    else if(a.tipo === 'enviar_whatsapp'){ const l = waLink(d.telefone, d.texto); if(!l) throw new Error('Falta o telefone.'); window.open(l, '_blank'); }
+    else if(a.tipo === 'marcar_erros_resolvidos'){ if(!d.restaurante_slug) throw new Error('Falta o restaurante.'); await rest('erros_app?slug=eq.' + encodeURIComponent(d.restaurante_slug) + '&resolvido=eq.false', 'PATCH', { resolvido:true, resolvido_em:agora }); }
+    else if(a.tipo === 'abrir_tela'){ a.estado = 'feita'; chatGravar(); rvChatFechar(); if(d.restaurante_id) return rvAbrir(d.restaurante_id); return rvIr(['inicio','restaurantes','saude','dinheiro','vendas'].includes(d.tela) ? d.tela : 'inicio'); }
+    a.estado = 'feita'; chatGravar(); aviso('Feito ✓', 'ok');
+    if(a.tipo !== 'enviar_whatsapp'){ await carregar(); if(S.rest){ const x = S.lista.find(r => r.id === S.rest.id); if(x) S.rest = normalizar(JSON.parse(JSON.stringify(x))); await carregarRest(); } desenhar(); }
+  }catch(e){ erro('Não deu: ' + e.message); }
+  if(S.chatAberto) desenharChat();
+};
 
 S.sess = sessLer(); tela();
 })();

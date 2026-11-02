@@ -190,7 +190,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
@@ -202,7 +202,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
@@ -214,7 +214,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -226,7 +226,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 64
   },
   {
    "etapa": "banco",
@@ -358,7 +358,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 2
+   "kb": 5
   },
   {
    "etapa": "banco",
@@ -478,6 +478,19 @@ window.CODIGOS = {
    "quando": "Depois de criar o cliente OAuth no Google Cloud (etapa Login com Google).",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Cole o ID e a chave como TEXTO, copiados pelo ícone de copiar do Google, nunca digitados nem lidos de foto: l, I e 1 se confundem. A chave só aparece inteira uma vez."
+  }
+ ],
+ "leitura": [
+  {
+   "etapa": "leitura",
+   "id": "leit133",
+   "titulo": "Consulta do assistente do painel (só leitura)",
+   "arq": "banco-restaurante/133-consulta-revenda.sql",
+   "desc": "Deixa o assistente do Painel de Revenda ler os dados deste restaurante (vendas, produtos, estoque, caixa, avaliações) em pedaços pequenos. Não grava nada e não entrega telefone nem endereço de cliente.",
+   "quando": "Uma vez por restaurante (restaurantes criados depois de 02/11/2026 já vêm com ela; rodar de novo não faz mal).",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Sozinha ela não abre nada: só responde a quem tiver a chave de leitura, que o painel gera no próximo código.",
+   "kb": 10
   }
  ]
 };
