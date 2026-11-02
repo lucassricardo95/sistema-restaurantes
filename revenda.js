@@ -6,7 +6,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL = v => 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const SIT = { implantacao:'Em implantação', teste:'Em teste', ativo:'Ativo', suspenso:'Suspenso', encerrado:'Encerrado' };
-let S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null };
+let S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[] };
 let timerAviso = null;
 function aviso(m, t){ const a = $('aviso'); a.textContent = m; a.className = 'aviso ' + (t || ''); a.hidden = false; clearTimeout(timerAviso); timerAviso = setTimeout(() => { a.hidden = true; }, t === 'erro' ? 9000 : 3500); }
 const erro = m => aviso('⚠️ ' + m, 'erro');
@@ -49,6 +49,7 @@ async function entrar(email, senha, criar){
 async function carregar(){
   const [l, c] = await Promise.all([ rest('restaurantes?select=*&order=nome.asc'), rest('cobrancas?select=*&order=competencia.desc') ]);
   S.lista = l || []; S.cob = c || [];
+  try{ S.erros = await rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=200') || []; }catch(e){ S.erros = []; }
 }
 const nEtapas = r => ETAPAS.filter(e => r.etapas && r.etapas[e.id] && r.etapas[e.id].feita).length;
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -81,7 +82,7 @@ function telaLogin(){
   $('lgB').onclick = () => go(false); $('lgC').onclick = ev => { ev.preventDefault(); go(true); };
   $('lgS').onkeydown = ev => { if(ev.key === 'Enter') go(false); };
 }
-window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null }; tela(); };
+window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[] }; tela(); };
 
 function telaLista(){
   const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
@@ -89,6 +90,7 @@ function telaLista(){
   $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
    + '<div class="resumo"><div class="card"><small>Ativos</small><b>' + at.length + '</b></div><div class="card"><small>Em implantação / teste</small><b>' + im.length + '</b></div>'
    + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
+   + '<div class="card"><div class="linha"><b>Erros do sistema</b><span class="selo" style="' + (S.erros.length ? 'background:var(--erro);color:#000' : '') + '">' + (S.erros.length ? S.erros.length + ' aberto(s)' : 'nenhum') + '</span></div><small class="mudo">Erros que apareceram na tela dos restaurantes.</small><p style="margin:8px 0 0"><button class="mini' + (S.erros.length ? ' principal' : '') + '" onclick="rvErros()">Ver erros</button></p></div>'
    + (S.lista.length ? '<div class="grade">' + S.lista.map(r => {
       const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), a = atrasadas(r.id).length;
       return '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><div class="linha"><b>' + esc(r.nome) + '</b>' + (r.bloqueado ? '<span class="selo" style="background:var(--erro);color:#000">⛔ Bloqueado</span>' : '<span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span>') + '</div>'
@@ -296,6 +298,17 @@ window.rvGerarCob = async () => {
 };
 window.rvPago = async (id, pago) => { try{ await rest('cobrancas?id=eq.' + id, 'PATCH', { pago_em: pago ? hoje() : null }); await hist(S.rest.id, pago ? 'Mensalidade paga' : 'Pagamento desfeito', ''); await carregar(); await carregarRest(); abaCob(); }catch(e){ erro(e.message); } };
 
+function telaErros(){
+  const nome = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
+  $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div></div><h1>Erros do sistema</h1>'
+   + (S.erros.length ? S.erros.map(e => '<div class="card" style="overflow-wrap:anywhere"><div class="linha"><b>' + esc(nome(e.slug)) + '</b><span class="selo">' + e.ocorrencias + 'x</span></div>'
+     + '<p style="margin:6px 0"><b>' + esc(e.mensagem) + '</b></p>'
+     + '<small class="mudo">Tela: ' + esc(e.tela || '—') + ' · versão ' + esc(e.versao || '—') + '<br>' + esc(e.aparelho || '') + '<br>Último: ' + esc(new Date(e.ultimo_em).toLocaleString('pt-BR')) + ' · primeiro: ' + esc(new Date(e.primeiro_em).toLocaleString('pt-BR')) + '</small>'
+     + (e.detalhe ? '<details style="margin-top:6px"><summary class="mudo">Detalhe técnico</summary><small class="mudo" style="white-space:pre-wrap">' + esc(e.detalhe) + '</small></details>' : '')
+     + '<p style="margin:8px 0 0"><button class="mini" onclick="rvErroOk(' + e.id + ')">Marcar como resolvido</button></p></div>').join('') : '<div class="card">Nenhum erro aberto.</div>');
+}
+window.rvErros = async () => { try{ await carregar(); }catch(e){ erro(e.message); } telaErros(); };
+window.rvErroOk = async id => { try{ await rest('erros_app?id=eq.' + id, 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.id !== id); telaErros(); }catch(e){ erro('Não foi possível marcar como resolvido: ' + e.message); } };
 function abaHist(){ $('corpo').innerHTML = '<div class="card"><h2>Histórico</h2>' + (S.hist.length ? '<table>' + S.hist.map(h => '<tr><td>' + esc(new Date(h.em).toLocaleString('pt-BR')) + '</td><td>' + esc(h.acao) + '</td><td class="mudo">' + esc(h.detalhe || '') + '</td></tr>').join('') + '</table>' : '<p>Sem registros.</p>') + '</div>'; }
 
 S.sess = sessLer(); tela();
