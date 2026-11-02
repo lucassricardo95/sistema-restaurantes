@@ -135,7 +135,7 @@ async function salvar(msg){
   if(corpo.site_url && !/^https?:\/\//.test(corpo.site_url)) corpo.site_url = 'https://' + corpo.site_url;
   if(corpo.site_url && !corpo.site_url.endsWith('/')) corpo.site_url += '/';
   try{ const local = corpo.etapas; const r = await rest('restaurantes?id=eq.' + S.rest.id, 'PATCH', corpo); if(!r || !r[0]) throw new Error('O banco não confirmou a gravação (nenhuma linha alterada). Saia e entre de novo no painel.'); S.rest = r[0]; if(local){ const igual = (a, b) => Object.keys(local).every(k => !!(a && a[k] && a[k].feita) === !!(local[k] && local[k].feita) && ((a && a[k] && a[k].itens || []).length === (local[k].itens || []).length)); if(!igual(S.rest.etapas)){ S.rest.etapas = local; const conf = await rest('restaurantes?id=eq.' + S.rest.id + '&select=etapas'); if(!igual(conf && conf[0] && conf[0].etapas)) throw new Error('O banco recebeu mas NÃO guardou a etapa. Peça ao Claude para conferir a coluna etapas do banco do painel.'); } } const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = S.rest; aviso(msg || 'Salvo.', 'ok'); return true; }
-  catch(e){ erro(/unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message); return false; }
+  catch(e){ S.ultimoErro = /unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message; erro(S.ultimoErro); return false; }
 }
 window.rvSalvar = async () => { if(await salvar()) { await hist(S.rest.id, 'Dados salvos', S.aba); telaRest(); } };
 const botSalvar = '<p><button class="principal" onclick="rvSalvar()">Salvar</button></p>';
@@ -227,7 +227,7 @@ window.rvEtapa = async (id, feita) => {
   if(feita && et.checklist){ const ck = ((S.rest.etapas || {})[id] || {}).itens || []; if(ck.length < et.checklist.length){ return erro('Marque todos os itens do teste antes de concluir.'); } }
   S.rest.etapas = S.rest.etapas || {}; const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null)); S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, em:new Date().toISOString() });
   if(await salvar(feita ? 'Etapa concluída.' : 'Etapa reaberta.')){ await hist(S.rest.id, feita ? 'Etapa concluída' : 'Etapa reaberta', et.titulo); telaRest(); }
-  else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; try{ telaRest(); }catch(e){} erro('NÃO foi salvo. A etapa continua como estava. Confira a internet e toque de novo.'); }
+  else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; try{ telaRest(); }catch(e){} erro('NÃO foi salvo. Motivo: ' + (S.ultimoErro || 'sem resposta do banco') + ' — me mande este texto.'); }
 };
 
 /* ---------- marca ---------- */
