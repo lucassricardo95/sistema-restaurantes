@@ -109,7 +109,7 @@ function telaLista(){
       const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), a = atrasadas(r.id).length;
       return '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><div class="linha"><b>' + esc(r.nome) + '</b>' + (r.bloqueado ? '<span class="selo" style="background:var(--erro);color:#000">⛔ Bloqueado</span>' + ((S.prom || []).some(x => x.restaurante_id === r.id && x.status === 'pendente') ? ' <span class="selo" style="background:#f0a500;color:#000">🤝 Promessa pendente</span>' : '') : '<span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span>') + '</div>'
        + '<small class="mudo">' + esc(r.dominio || r.slug) + '</small>'
-       + '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + n + ' de ' + ETAPAS.length + ' · ' + p + '%</small>'
+       + '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + n + ' de ' + ETAPAS.length + ' · ' + p + '%</small>' + (() => { const px = ETAPAS.find(x => !(r.etapas && r.etapas[x.id] && r.etapas[x.id].feita)); return px ? '<small style="display:block;margin-top:4px"><b>Próximo passo:</b> ' + esc(px.titulo) + '</small>' : '<small style="display:block;margin-top:4px">✅ Implantação completa</small>'; })()
        + (() => { const sd = saudeDe(r.slug), banco = usoDe(sd.h).find(u => u.id === 'uso_banco'), ruins = sd.h ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')).length : 0;
           return '<div style="margin-top:10px"><div class="linha"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + SAUDE_COR[sd.geral] + ';margin-right:6px"></span><b style="font-size:14px">' + SAUDE_ROT[sd.geral] + '</b>' + (ruins ? ' <small class="mudo">· ' + ruins + (ruins === 1 ? ' item pede' : ' itens pedem') + ' atenção</small>' : '') + '</span><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small></div>' + (banco ? barraUso({ tit:'Banco', uso:banco.uso, lim:banco.lim, pct:banco.pct }) : '') + '</div>'
             + '<details style="margin-top:8px"><summary class="mini" style="cursor:pointer;display:inline-block;list-style:none;padding:6px 10px;border:1px solid #2a2a2a;border-radius:8px">Ver tudo ▾</summary>' + saudeHtml(r, true) + '</details>'; })()
@@ -130,19 +130,31 @@ window.rvNovo = async () => {
   }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
 };
 async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
-window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); const et0 = S.rest.etapas || {}; Object.keys(et0).forEach(k => { if(!et0[k] || typeof et0[k] !== 'object') et0[k] = { feita: !!et0[k] && et0[k] !== 'pendente' }; }); S.rest.etapas = et0; S.aba = 'dados'; S.res = {}; await carregarRest(); telaRest(); };
+window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); const et0 = S.rest.etapas || {}; Object.keys(et0).forEach(k => { if(!et0[k] || typeof et0[k] !== 'object') et0[k] = { feita: !!et0[k] && et0[k] !== 'pendente' }; }); S.rest.etapas = et0; S.aba = nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'; S.passoVer = null; S.det = {}; S.res = {}; await carregarRest(); telaRest(); };
 window.rvVoltar = async () => { S.rest = null; try{ await carregar(); }catch(e){ erro(e.message); } telaLista(); };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); try{ S.aceite = (await rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1') || [])[0] || null; }catch(e){ S.aceite = null; } }catch(e){ erro(e.message); } }
 
-const ABAS = [['dados','Dados'],['saude','Saúde'],['passo','Passo a passo'],['ligacoes','Ligações'],['marca','Marca'],['modulos','Módulos'],['cobranca','Cobrança'],['termos','Termos'],['hist','Histórico']];
+const ABAS = [['passo','Implantação'],['saude','Situação'],['dados','Dados'],['cobranca','Contrato']];
+const ALIAS = { ligacoes:'dados', marca:'dados', modulos:'dados', termos:'cobranca', hist:'saude' };
+const FASES = [['Banco e site',['cadastro','supabase','repositorio','banco','funcoes']],['Entrada e Drive',['entrada','drive','admin']],['IA e avisos',['ia','planilhas','push']],['Marca e módulos',['marca','modulos','publicar']],['Teste',['app','contas','teste']],['Entrega',['entrega']]];
+const OPCIONAIS = ['planilhas','app'];
 function telaRest(){
   const r = S.rest, n = nEtapas(r);
   $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span></div>'
    + '<h1>' + esc(r.nome) + '</h1><small class="mudo">' + esc(r.slug) + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small><div class="barra"><i style="width:' + Math.round(n / ETAPAS.length * 100) + '%"></i></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>';
-  ({ dados:abaDados, saude:abaSaude, passo:abaPasso, ligacoes:abaLig, marca:abaMarca, modulos:abaMod, cobranca:abaCob, termos:abaTermos, hist:abaHist })[S.aba]();
+  ({ passo:abaPasso, saude:abaSituacao, dados:abaDadosTudo, cobranca:abaContrato })[S.aba]();
 }
-window.rvAba = a => { S.aba = a; telaRest(); };
+window.rvAba = a => { if(ALIAS[a]){ (S.det = S.det || {})[a] = true; a = ALIAS[a]; } S.aba = a; telaRest(); };
+window.rvDet = (id, ab) => { (S.det = S.det || {})[id] = !!ab; };
+function secoes_(lista){
+  const real = $('corpo'); S.det = S.det || {};
+  real.innerHTML = lista.map(x => '<details id="sec_' + x[0] + '" class="card sec"' + (S.det[x[0]] || x[3] ? ' open' : '') + ' ontoggle="rvDet(\'' + x[0] + '\', this.open)"><summary><b>' + x[1] + '</b></summary><div id="secc_' + x[0] + '"></div></details>').join('');
+  lista.forEach(x => { const alvo = $('secc_' + x[0]); real.id = 'corpo_x'; alvo.id = 'corpo'; try{ x[2](); }finally{ alvo.id = 'secc_' + x[0]; real.id = 'corpo'; } });
+}
+function abaDadosTudo(){ secoes_([['dados', 'Dados e contrato', abaDados, true], ['lig', 'Ligações (banco, site, planilhas)', abaLig], ['marca', 'Marca', abaMarca], ['mod', 'Módulos contratados', abaMod], ['exc', 'Excluir restaurante', abaExcluir_]]); }
+function abaSituacao(){ secoes_([['saude', 'Saúde e uso', abaSaude, true], ['hist', 'Histórico', abaHist]]); }
+function abaContrato(){ secoes_([['cob', 'Cobrança e acesso', abaCob, true], ['termos', 'Termos de uso e entrega', abaTermos]]); }
 function campoTxt(rot, k, o){ o = o || {}; const v = o.path ? get(S.rest, o.path) : S.rest[k]; return '<label for="f_' + k + '">' + rot + '</label><input id="f_' + k + '" data-k="' + (o.path || k) + '" type="' + (o.tipo || 'text') + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(o.ph || '') + '">'; }
 function get(o, p){ return p.split('.').reduce((a, k) => (a == null ? a : a[k]), o); }
 function set(o, p, v){ const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => { a = a[k] = a[k] || {}; }); a[ks[ks.length - 1]] = v; }
@@ -202,8 +214,11 @@ function abaDados(){
    + '<div class="cols"><div>' + campoTxt('Nome do contato', 'contato_nome') + '</div><div>' + campoTxt('Telefone/WhatsApp', 'contato_telefone') + '</div></div>' + campoTxt('E-mail do contato', 'contato_email', { tipo:'email' })
    + '<div class="cols"><div>' + campoTxt('Plano', 'plano', { ph:'Ex.: Básico' }) + '</div><div>' + campoTxt('Mensalidade (R$)', 'valor_mensal', { tipo:'number' }) + '</div></div>'
    + '<div class="cols"><div>' + campoTxt('Dia do vencimento (1 a 28)', 'dia_vencimento', { tipo:'number' }) + '</div><div>' + campoTxt('Início do contrato', 'inicio_em', { tipo:'date' }) + '</div></div>'
-   + '<label for="f_obs">Observações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar + '</div>'
-   + ((S.lista.find(x => x.id === r.id) || {}).situacao === 'encerrado' ? '<div class="card" style="border-color:var(--erro)"><h2 style="color:var(--erro)">Excluir permanentemente</h2>'
+   + '<label for="f_obs">Observações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar + '</div>';
+}
+function abaExcluir_(){
+  const r = S.rest;
+  $('corpo').innerHTML = ((S.lista.find(x => x.id === r.id) || {}).situacao === 'encerrado' ? '<div class="card" style="border-color:var(--erro)"><h2 style="color:var(--erro)">Excluir permanentemente</h2>'
      + '<p class="mudo" style="font-size:13px">Apaga do painel este restaurante e tudo ligado a ele (etapas, cobranças, histórico, promessas, termos aceitos, erros e saúde). <b>Não tem como desfazer.</b></p>'
      + '<p class="mudo" style="font-size:13px">Não apaga o que está fora do painel: o projeto no Supabase, o repositório no GitHub, o site e as planilhas dele continuam existindo e você apaga à mão.</p>'
      + '<label for="exNome">Digite o nome do restaurante: <b>' + esc(r.nome) + '</b></label><input id="exNome" autocomplete="off">'
@@ -275,30 +290,45 @@ function mostrarRes(box, ids){ const b = $(box); if(!b) return; b.innerHTML = id
 function sub(t){ const r = S.rest; return String(t).replace(/\{nome\}/g, r.nome).replace(/\{slug\}/g, r.slug).replace(/\{ref\}/g, refDe(r)).replace(/\{supabase_url\}/g, r.supabase_url || '(URL do Supabase)').replace(/\{site_url\}/g, r.site_url || '(endereço do site)').replace(/\{site_origem\}/g, (r.site_url || '(endereço do site)').replace(/\/+$/, '')); }
 const QUEM = { voce:'👤 Você faz', claude:'🤖 Peça ao Claude', cliente:'🍽️ O restaurante faz' };
 function abaPasso(){
-  const r = S.rest, e = r.etapas || {}; const prox = ETAPAS.find(x => !(e[x.id] && e[x.id].feita));
-  $('corpo').innerHTML = (prox ? '<div class="card"><small class="mudo">Próxima etapa</small><br><b>' + esc(prox.titulo) + '</b></div>' : '<div class="card">✅ Implantação completa.</div>')
-   + ETAPAS.map((x, i) => {
-     const f = e[x.id] && e[x.id].feita, ck = (e[x.id] && e[x.id].itens) || [];
-     return '<div class="card passo ' + (f ? 'feita' : '') + '"><div class="linha"><b>' + (i + 1) + '. ' + esc(x.titulo) + '</b><span>' + (f ? '✅' : '') + '</span></div><span class="quem">' + QUEM[x.quem] + '</span>'
-      + '<ol>' + x.passos.map(p => '<li>' + esc(sub(p)) + '</li>').join('') + '</ol>'
-      + (window.cdEtapa ? cdEtapa(x.id, { ref:refDe(r), cod:r.slug, chave:r.supabase_chave || '', feitos:ck }) : '')
-      + (x.pedido ? '<small class="mudo">Copie e cole na conversa com o Claude:</small><div class="copiar" id="pd_' + x.id + '">' + esc(sub(x.pedido)) + '</div><button class="mini" onclick="rvCopiar(\'pd_' + x.id + '\')">Copiar pedido</button> ' : '')
-      + (x.checklist ? x.checklist.map((c, k) => '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--txt);margin:6px 0"><input type="checkbox" ' + (ck.includes(k) ? 'checked ' : '') + 'onchange="rvItem(\'' + x.id + '\',' + k + ',this.checked)"> ' + esc(c) + '</label>').join('') : '')
-      + (x.teste ? '<button class="mini" onclick="rvTeste(\'' + x.teste + '\')">Testar</button><div id="res_' + x.teste + '"></div> ' : '')
-      + (x.campos ? '<button class="mini" onclick="rvAba(\'ligacoes\')">Ir para as ligações</button> ' : '')
-      + (x.id === 'marca' ? '<button class="mini" onclick="rvAba(\'marca\')">Ir para a marca</button> ' : '') + (x.id === 'modulos' ? '<button class="mini" onclick="rvAba(\'modulos\')">Ir para os módulos</button> ' : '')
-      + (x.id === 'entrega' ? '<button class="mini" onclick="rvAba(\'cobranca\')">Ir para a cobrança</button> ' : '')
-      + '<button class="mini ' + (f ? '' : 'principal') + '" onclick="rvEtapa(\'' + x.id + '\',' + (!f) + ')">' + (f ? 'Desmarcar' : 'Marcar como feita') + '</button></div>';
-   }).join('');
+  const r = S.rest, e = r.etapas || {}, feita = id => !!(e[id] && e[id].feita);
+  const prox = ETAPAS.find(x => !feita(x.id)), atual = ETAPAS.find(x => x.id === S.passoVer) || prox;
+  if(!atual){ $('corpo').innerHTML = '<div class="card">✅ Implantação completa. Veja a aba "Contrato" para a entrega e a cobrança.</div>' + listaPassos_(e, null); return; }
+  const i = ETAPAS.indexOf(atual), f = feita(atual.id), ck = (e[atual.id] && e[atual.id].itens) || [], fase = FASES.findIndex(x => x[1].includes(atual.id)), opc = OPCIONAIS.includes(atual.id);
+  const chips = FASES.map((x, k) => { const n = x[1].filter(feita).length, ok = n === x[1].length, alvo = x[1].find(id => !feita(id)) || x[1][0];
+    return '<button class="mini ' + (k === fase ? 'principal' : '') + '" onclick="rvVerPasso(\'' + alvo + '\')">' + (ok ? '✅ ' : '') + (k + 1) + '. ' + x[0] + '</button>'; }).join('');
+  $('corpo').innerHTML = '<div class="fases">' + chips + '</div>'
+   + '<div class="card passo ' + (f ? 'feita' : '') + '"><small class="mudo">Passo ' + (i + 1) + ' de ' + ETAPAS.length + ' · ' + esc(FASES[fase][0]) + (opc ? ' · opcional' : '') + '</small>'
+   + '<h2 style="margin:6px 0">' + esc(atual.titulo) + (f ? ' ✅' : '') + '</h2><span class="quem">' + QUEM[atual.quem] + '</span>'
+   + '<p style="margin:10px 0">' + esc(sub(atual.passos[0])) + '</p>'
+   + '<details open class="como"><summary class="mini" style="cursor:pointer;display:inline-block;list-style:none;padding:6px 10px;border:1px solid #2a2a2a;border-radius:8px">Como fazer ▾</summary>'
+   + '<ol>' + atual.passos.map(p => '<li>' + esc(sub(p)) + '</li>').join('') + '</ol>'
+   + (window.cdEtapa ? cdEtapa(atual.id, { ref:refDe(r), cod:r.slug, chave:r.supabase_chave || '', feitos:ck }) : '')
+   + (atual.pedido ? '<small class="mudo">Se quiser a ajuda do Claude, copie e cole na conversa com ele:</small><div class="copiar" id="pd_' + atual.id + '">' + esc(sub(atual.pedido)) + '</div><button class="mini" onclick="rvCopiar(\'pd_' + atual.id + '\')">Copiar pedido</button> ' : '')
+   + (atual.checklist ? atual.checklist.map((c, k) => '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--txt);margin:6px 0"><input type="checkbox" ' + (ck.includes(k) ? 'checked ' : '') + 'onchange="rvItem(\'' + atual.id + '\',' + k + ',this.checked)"> ' + esc(c) + '</label>').join('') : '')
+   + (atual.teste ? '<button class="mini" onclick="rvTeste(\'' + atual.teste + '\')">Testar</button><div id="res_' + atual.teste + '"></div> ' : '')
+   + (atual.campos ? '<button class="mini" onclick="rvAba(\'ligacoes\')">Ir para as ligações</button> ' : '')
+   + (atual.id === 'marca' ? '<button class="mini" onclick="rvAba(\'marca\')">Ir para a marca</button> ' : '') + (atual.id === 'modulos' ? '<button class="mini" onclick="rvAba(\'modulos\')">Ir para os módulos</button> ' : '')
+   + (atual.id === 'entrega' ? '<button class="mini" onclick="rvAba(\'cobranca\')">Ir para o contrato e a cobrança</button> ' : '')
+   + '</details>'
+   + '<div class="linha" style="margin-top:14px;justify-content:flex-start;flex-wrap:wrap;gap:8px">'
+   + (i > 0 ? '<button class="mini" onclick="rvVerPasso(\'' + ETAPAS[i - 1].id + '\')">← Voltar</button>' : '')
+   + (f ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',false)">Desmarcar</button>' + (i < ETAPAS.length - 1 ? '<button class="principal" onclick="rvVerPasso(\'' + ETAPAS[i + 1].id + '\')">Próximo →</button>' : '')
+       : (opc ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',true,true)">Pular</button>' : '') + '<button class="principal" onclick="rvEtapa(\'' + atual.id + '\',true)">Fiz, próximo →</button>')
+   + '</div></div>' + listaPassos_(e, atual.id);
   Object.keys(S.res || {}).forEach(k => mostrarRes('res_' + k, [k]));
 }
+function listaPassos_(e, atualId){
+  return '<details class="card"><summary><b>Ver todos os passos</b> <small class="mudo">(' + nEtapas(S.rest) + ' de ' + ETAPAS.length + ' feitos)</small></summary>'
+   + ETAPAS.map((x, k) => { const f = e[x.id] && e[x.id].feita; return '<div class="linha" style="padding:6px 0"><span>' + (f ? (e[x.id].pulada ? '⏭ ' : '✅ ') : '⬜ ') + (k + 1) + '. ' + esc(x.titulo) + '</span><button class="mini" onclick="rvVerPasso(\'' + x.id + '\')">' + (x.id === atualId ? 'Aqui' : 'Abrir') + '</button></div>'; }).join('') + '</details>';
+}
+window.rvVerPasso = id => { S.passoVer = id; telaRest(); };
 window.rvCopiar = async id => { try{ await navigator.clipboard.writeText($(id).textContent); aviso('Copiado.', 'ok'); }catch(e){ erro('Não deu para copiar. Selecione o texto e copie manualmente.'); } };
 window.rvItem = (id, k, v) => { const e = S.rest.etapas = S.rest.etapas || {}; const x = e[id] = e[id] || {}; x.itens = (x.itens || []).filter(i => i !== k); if(v) x.itens.push(k); salvar('Anotado.'); };
-window.rvEtapa = async (id, feita) => {
+window.rvEtapa = async (id, feita, pulada) => {
   const et = ETAPAS.find(x => x.id === id);
   if(feita && et.checklist){ const ck = ((S.rest.etapas || {})[id] || {}).itens || []; if(ck.length < et.checklist.length){ return erro('Marque todos os itens do teste antes de concluir.'); } }
-  S.rest.etapas = S.rest.etapas || {}; const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null)); S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, em:new Date().toISOString() });
-  if(await salvar(feita ? 'Etapa concluída.' : 'Etapa reaberta.')){ await hist(S.rest.id, feita ? 'Etapa concluída' : 'Etapa reaberta', et.titulo); telaRest(); }
+  S.rest.etapas = S.rest.etapas || {}; const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null)); S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, pulada:!!pulada, em:new Date().toISOString() }); if(feita) S.passoVer = null;
+  if(await salvar(feita ? (pulada ? 'Passo pulado.' : 'Passo concluído.') : 'Passo reaberto.')){ await hist(S.rest.id, feita ? (pulada ? 'Etapa pulada' : 'Etapa concluída') : 'Etapa reaberta', et.titulo); telaRest(); }
   else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; try{ telaRest(); }catch(e){} erro('NÃO foi salvo. Motivo: ' + (S.ultimoErro || 'sem resposta do banco') + ' — me mande este texto.'); }
 };
 
@@ -315,7 +345,7 @@ function abaMarca(){
    + botSalvar + '</div>';
   rvPrevia();
 }
-window.rvTema = id => { const t = TEMAS.find(x => x.id === id); lerForm(); const m = S.rest.marca; m.tema = id; m.cores = { destaque:t.destaque, botao:t.botao, fundo:t.fundo }; abaMarca(); };
+window.rvTema = id => { const t = TEMAS.find(x => x.id === id); lerForm(); const m = S.rest.marca; m.tema = id; m.cores = { destaque:t.destaque, botao:t.botao, fundo:t.fundo }; telaRest(); };
 window.rvPrevia = () => { const g = k => (document.querySelector('[data-k="marca.cores.' + k + '"]') || {}).value || '#000'; const p = $('previa'); if(!p) return;
   p.style.background = g('fundo'); p.innerHTML = '<b style="color:' + g('destaque') + ';font-size:18px">' + esc(S.rest.nome) + '</b><div style="color:#fff9">Prévia de um cartão do cardápio</div><span class="bt" style="background:' + g('botao') + ';color:#fff">Fazer pedido</span>'; };
 function reduzir(arq, max){ return new Promise((ok, no) => { const im = new Image(), u = URL.createObjectURL(arq); im.onload = () => { const e = Math.min(1, max / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.round(im.width * e); cv.height = Math.round(im.height * e); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); cv.toBlob(b => b ? ok(b) : no(new Error('Imagem inválida.')), 'image/png'); }; im.onerror = () => no(new Error('Não consegui ler essa imagem.')); im.src = u; }); }
@@ -324,7 +354,7 @@ window.rvLogo = async (tipo, inp) => {
   try{ lerForm(); const b = await reduzir(f, tipo === 'icone' ? 512 : 1024), cam = S.rest.slug + '/' + tipo + '-' + Date.now() + '.png';
     await req('/storage/v1/object/marcas/' + cam, { method:'POST', body:b, headers:{ 'Content-Type':'image/png', 'x-upsert':'true' } });
     S.rest.marca.logos = S.rest.marca.logos || {}; S.rest.marca.logos[tipo] = URL_ + '/storage/v1/object/public/marcas/' + cam;
-    if(await salvar('Logo enviada.')) abaMarca();
+    if(await salvar('Logo enviada.')) telaRest();
   }catch(e){ erro(e.message); }
 };
 
@@ -361,7 +391,7 @@ window.rvBloquear = async b => {
     await rest('restaurantes?id=eq.' + r.id, 'PATCH', dados);
     Object.assign(r, dados);
     await hist(r.id, b ? 'Acesso BLOQUEADO' : 'Acesso liberado', b ? msg : '');
-    aviso(b ? 'Acesso bloqueado.' : 'Acesso liberado.', 'ok'); abaCob();
+    aviso(b ? 'Acesso bloqueado.' : 'Acesso liberado.', 'ok'); telaRest();
   }catch(e){ erro(/bloqueado|bloqueio|column|schema/i.test(e.message) ? 'O banco ainda não tem o bloqueio. Rode o SQL "001-bloqueio.sql" no projeto revenda (peça ao Claude) e tente de novo.' : e.message); }
 };
 window.rvPromessa = async (id, ok) => {
@@ -374,7 +404,7 @@ window.rvPromessa = async (id, ok) => {
     ate = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
     if(ate < hoje()) return erro('Essa data já passou.');
   }else if(!confirm('Recusar o pedido de promessa?')) return;
-  try{ await rpc('decidir_promessa', { p_id:id, p_aprovar:ok, p_ate:ate }); await carregar(); await carregarRest(); aviso(ok ? 'Promessa aprovada. O acesso volta em até 4 minutos.' : 'Promessa recusada.', 'ok'); abaCob(); }
+  try{ await rpc('decidir_promessa', { p_id:id, p_aprovar:ok, p_ate:ate }); await carregar(); await carregarRest(); aviso(ok ? 'Promessa aprovada. O acesso volta em até 4 minutos.' : 'Promessa recusada.', 'ok'); telaRest(); }
   catch(e){ erro(e.message); }
 };
 
@@ -406,7 +436,7 @@ function abaTermos(){
 }
 window.rvSalvarTermos = async () => {
   const d = { fornecedor_nome:$('tNome').value.trim(), fornecedor_doc:$('tDoc').value.trim(), foro:$('tForo').value.trim(), contato:$('tCont').value.trim(), atualizado_em:new Date().toISOString() };
-  try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); abaTermos(); }catch(e){ erro(e.message); }
+  try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); telaRest(); }catch(e){ erro(e.message); }
 };
 window.rvVerTermos = async () => {
   try{ const t = (await rest('termos_uso?select=texto,versao,fornecedor_nome,fornecedor_doc,foro,contato') || [])[0] || {};

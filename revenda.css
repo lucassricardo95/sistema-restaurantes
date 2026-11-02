@@ -60,3 +60,8 @@ table{max-width:100%;display:block;overflow-x:auto}
 .topo .acoes button{padding:10px 12px;font-size:14px;line-height:1.2;}
 @media(max-width:420px){.topo .acoes .principal{font-size:13px;padding:10px;}}
 summary::-webkit-details-marker{display:none}
+
+.fases{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.sec>summary{cursor:pointer;list-style:none;padding:2px 0}.sec>summary::-webkit-details-marker{display:none}.sec>summary::after{content:' ▾';color:var(--mudo,#999)}
+.sec>div{margin-top:8px}.sec .card{margin:8px 0}
+.como ol{padding-left:20px}
