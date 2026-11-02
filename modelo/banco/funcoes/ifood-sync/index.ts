@@ -534,21 +534,26 @@ async function executarAcao(cred: any, a: any) {
   }
 }
 
+// v1.38: dados que a abertura da rodada já trouxe (null = buscar do jeito antigo)
+let PRE: any = null;
+let CONSULTA: any = null;
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false }, 405);
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const chaveVault = await seg("service_key");
+  const chaveVault = token === SVC ? SVC : await seg("service_key");   // v1.38: com a chave do próprio servidor não consulta o cofre (menos uma linha de log por rodada)
   if (!token || (token !== SVC && token !== chaveVault)) return json({ ok: false, message: "Só execução interna." }, 403);
   try {
     const dono = crypto.randomUUID();
     let ab: any = null;
-    try { ab = await rpc("ifood_abrir", { p_dono: dono, p_seg: 100 }); } catch { ab = null; }   // v1.36: credenciais + acesso recusado? + trava + token em UMA chamada (sem a função nova, usa o caminho antigo abaixo)
+    PRE = null; CONSULTA = null;
+    try { ab = await rpc("ifood_abrir2", { p_dono: dono, p_seg: 100 }); } catch { try { ab = await rpc("ifood_abrir", { p_dono: dono, p_seg: 100 }); } catch { ab = null; } }   // v1.38: abrir2 já traz tudo da rodada (2 chamadas ao banco em vez de ~10); sem ela usa a 121 e depois o jeito antigo   // v1.36: credenciais + acesso recusado? + trava + token em UMA chamada (sem a função nova, usa o caminho antigo abaixo)
     let cred: any;
     if (ab && typeof ab === "object" && "cred" in ab) {
       cred = ab.cred;
       if (!cred || !cred.ligado) return json({ ok: true, ligado: false });
       if (ab.pode === false) return json({ ok: true, aguardando: "acesso recusado: nova tentativa em até 5 min" });
       if (!ab.trava) return json({ ok: true, ocupado: true });
+      if (ab.eventos !== undefined && ab.reforcos) PRE = ab;
       if (ab.token && ab.token.token) tokenGuardado = { token: ab.token.token, ate: Date.now() + 90000 };
     } else {
       cred = await rpc("ifood_credenciais");
@@ -566,7 +571,7 @@ Deno.serve(async (req) => {
         await acompanharEntregas(cred);
         try {
           let pr: any = null;
-          try { pr = await rpc("ifood_reforcos"); } catch { pr = null; }   // v1.36: escalar + verificar loja + "precisa?" das 3 tarefas em UMA chamada
+          if (PRE && PRE.reforcos) pr = PRE.reforcos; else { try { pr = await rpc("ifood_reforcos"); } catch { pr = null; } }   // v1.36: escalar + verificar loja + "precisa?" das 3 tarefas em UMA chamada
           if (pr && typeof pr === "object" && "avaliacoes" in pr) {
             await atualizarLoja(cred);
             if (volta === 0 && pr.avaliacoes) await sincronizarAvaliacoes(cred);
@@ -579,11 +584,12 @@ Deno.serve(async (req) => {
             if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "lojas", p_minutos: 1440 })) await conferirLojas(cred);
           }
         } catch { /* reforços: não podem derrubar o ciclo */ }
-        try { await processarFinanceiro({ rpc, pegarToken, marcarModulo, BASE }, cred); } catch { /* financeiro: nunca derruba o ciclo */ }
+        try { await processarFinanceiro({ rpc, pegarToken, marcarModulo, BASE }, cred, 6, 20000, PRE ? PRE.fin : undefined); } catch { /* financeiro: nunca derruba o ciclo */ }
       }
     } finally {
       let fechou = false;
-      try { await rpc("ifood_fechar", { p_dono: dono, p_modulos: Object.keys(MODULOS).length ? MODULOS : null }); fechou = true; } catch { fechou = false; }   // v1.36: soltar a trava + registrar módulos em UMA chamada
+      try { await rpc("ifood_fechar2", { p_dono: dono, p_modulos: Object.keys(MODULOS).length ? MODULOS : null, p_consulta: CONSULTA }); fechou = true; CONSULTA = null; } catch { fechou = false; }
+      if (!fechou) { try { if (CONSULTA) { await rpc("ifood_marcar_consulta", { p_ok: !!CONSULTA.ok, p_erro: CONSULTA.erro || null, p_token_ok: CONSULTA.token_ok ?? null }); CONSULTA = null; } await rpc("ifood_fechar", { p_dono: dono, p_modulos: Object.keys(MODULOS).length ? MODULOS : null }); fechou = true; } catch { fechou = false; } }   // v1.36: soltar a trava + registrar módulos em UMA chamada
       if (!fechou) {
         await rpc("ifood_trava_soltar", { p_dono: dono });
         if (Object.keys(MODULOS).length) { try { await rpc("ifood_modulos_registrar", { p: MODULOS }); } catch { /* só painel */ } }
@@ -621,7 +627,8 @@ async function consultar(cred: any) {
     for (const ev of lista) { try { await rpc("ifood_evento_guardar", { p: ev }); guardados.push(ev); } catch { falhas++; } }   // guarda ANTES de confirmar: nunca perde evento; um que falhe não trava os outros
     if (falhas) { try { await rpc("ifood_log", { p_nivel: "erro", p_msg: `${falhas} evento(s) do iFood não puderam ser guardados nesta rodada (o iFood entrega de novo).` }); } catch { /* sem registro */ } }
     if (guardados.length) await confirmarEventos(cred, guardados.map((ev) => ev.id));
-    await rpc("ifood_marcar_consulta", { p_ok: true, p_token_ok: true });
+    CONSULTA = { ok: true, token_ok: true };   // v1.38: vai junto com o fechamento da rodada
+    if (guardados.length && PRE) { PRE.eventos = null; PRE.acoes = null; }   // chegou evento novo: busca de novo o que depende dele
   } catch (e) {
     const st = e instanceof HttpErro ? e.status : 0;
     const recusado = st === 401 || st === 403 || (e instanceof HttpErro && /faltam Client/.test(e.corpo));
@@ -633,11 +640,12 @@ async function consultar(cred: any) {
 // 2) trata os eventos guardados (criar venda, estado oficial...)
 async function processar(cred: any) {
   let pend: any[] = [];
-  try { pend = (await rpc("ifood_eventos_ciclo")) as any[]; }   // v1.36: fechar vencidos + listar pendentes em UMA chamada
+  try { pend = (PRE && PRE.eventos) ? PRE.eventos as any[] : (await rpc("ifood_eventos_ciclo")) as any[]; }   // v1.36 (v1.38: vem da abertura da rodada): fechar vencidos + listar pendentes em UMA chamada
   catch {
     try { await rpc("ifood_eventos_vencidos_fechar"); } catch { /* só limpeza: não pode travar o ciclo */ }
     try { pend = (await rpc("ifood_eventos_pendentes")) as any[]; } catch { return; }
   }
+  if (pend && pend.length && PRE) PRE.acoes = null;   // v1.38: tratar evento pode criar ação (ex.: confirmar): busca de novo
   for (const e of pend || []) {
     try {
       const r = await tratarEvento(cred, e);
@@ -651,7 +659,7 @@ async function processar(cred: any) {
 // 2b) rastreio do entregador (doc: só entrega do iFood, depois do entregador escalado, no máximo 1x a cada 30 s por pedido; 404 antes disso é normal)
 async function acompanharEntregas(cred: any) {
   let ids: string[] = [];
-  try { ids = ((await rpc("ifood_rastreio_pendentes")) as string[]) || []; } catch { return; }
+  try { ids = ((PRE && PRE.rastreio ? PRE.rastreio : await rpc("ifood_rastreio_pendentes")) as string[]) || []; } catch { return; }
   for (const id of ids.slice(0, 3)) {
     try {
       const r: any = await chamar(cred, "GET", `/order/v1.0/orders/${encodeURIComponent(id)}/tracking`);
@@ -665,6 +673,6 @@ async function acompanharEntregas(cred: any) {
 // 3) manda ao iFood o que a equipe fez no sistema (confirmar, preparo, pronto, despachar, cancelar)
 async function agir(cred: any) {
   let acoes: any[] = [];
-  try { acoes = (await rpc("ifood_acoes_pendentes")) as any[]; } catch { return; }
+  try { acoes = ((PRE && PRE.acoes) ? PRE.acoes : await rpc("ifood_acoes_pendentes")) as any[]; } catch { return; }
   for (const a of acoes || []) { try { await executarAcao(cred, a); } catch (er) { await rpc("ifood_acao_resultado", { p_id: a.id, p_estado: "duvida", p_erro: String(er).slice(0, 250) }); } }
 }

@@ -295,10 +295,11 @@ async function conciliacaoStatus(d: Dep, cred: any, rotas: any, t: any) {
 }
 
 // Chamado a cada rodada do ifood-sync. Nunca derruba o ciclo (cada tarefa tem o próprio try).
-export async function processarFinanceiro(d: Dep, cred: any, limite = 6, prazoMs = 20000) {
+export async function processarFinanceiro(d: Dep, cred: any, limite = 6, prazoMs = 20000, pacote0?: any) {
   const ini = Date.now();
   let pacote: any;
-  try { pacote = await d.rpc("ifood_fin_proximas", { p_limite: limite }); } catch { return; }
+  if (pacote0 !== undefined && pacote0 !== null) pacote = pacote0;   // v1.38: a abertura da rodada já trouxe
+  else { try { pacote = await d.rpc("ifood_fin_proximas", { p_limite: limite }); } catch { return; } }
   const tarefas: any[] = Array.isArray(pacote?.tarefas) ? pacote.tarefas : [];
   if (!tarefas.length) return;
   const rotas: Record<string, string> = { ...(pacote?.rotas || {}) };
