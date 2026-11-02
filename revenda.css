@@ -59,3 +59,4 @@ table{max-width:100%;display:block;overflow-x:auto}
 .topo .acoes{flex-shrink:1;min-width:0;}
 .topo .acoes button{padding:10px 12px;font-size:14px;line-height:1.2;}
 @media(max-width:420px){.topo .acoes .principal{font-size:13px;padding:10px;}}
+summary::-webkit-details-marker{display:none}
