@@ -46,3 +46,11 @@ label{display:block;font-weight:700;font-size:13px;color:var(--mudo);margin:12px
 .logo-box{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.logo-box img{max-height:70px;max-width:160px;background:#0006;border-radius:8px;padding:4px}
 .login{max-width:400px;margin:9vh auto}
 table{width:100%;border-collapse:collapse}td,th{padding:8px 6px;border-bottom:1px solid var(--linha);text-align:left;font-size:14px}
+
+/* nada de rolagem lateral: textos e endereços longos quebram linha; só a faixa de abas rola por dentro */
+html,body{max-width:100%;overflow-x:hidden}
+.card,li,p,h1,h2,h3,small,label,td,th{overflow-wrap:anywhere;word-break:break-word;min-width:0}
+.card,.grade>*,#corpo,#app{max-width:100%;min-width:0;box-sizing:border-box}
+.abas{max-width:100%;-webkit-overflow-scrolling:touch}
+table{max-width:100%;display:block;overflow-x:auto}
+.aviso{left:16px;right:16px;transform:none;margin:0 auto;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box}

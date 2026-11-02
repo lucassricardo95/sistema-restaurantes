@@ -86,7 +86,7 @@ window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], res
 function telaLista(){
   const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
   const mrr = at.reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0), atr = atrasadas();
-  $('app').innerHTML = '<div class="topo"><h1>Meus restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
+  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
    + '<div class="resumo"><div class="card"><small>Ativos</small><b>' + at.length + '</b></div><div class="card"><small>Em implantação / teste</small><b>' + im.length + '</b></div>'
    + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
    + (S.lista.length ? '<div class="grade">' + S.lista.map(r => {
@@ -225,8 +225,9 @@ window.rvItem = (id, k, v) => { const e = S.rest.etapas = S.rest.etapas || {}; c
 window.rvEtapa = async (id, feita) => {
   const et = ETAPAS.find(x => x.id === id);
   if(feita && et.checklist){ const ck = ((S.rest.etapas || {})[id] || {}).itens || []; if(ck.length < et.checklist.length){ return erro('Marque todos os itens do teste antes de concluir.'); } }
-  S.rest.etapas = S.rest.etapas || {}; S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, em:new Date().toISOString() });
+  S.rest.etapas = S.rest.etapas || {}; const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null)); S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, em:new Date().toISOString() });
   if(await salvar(feita ? 'Etapa concluída.' : 'Etapa reaberta.')){ await hist(S.rest.id, feita ? 'Etapa concluída' : 'Etapa reaberta', et.titulo); telaRest(); }
+  else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; try{ telaRest(); }catch(e){} erro('NÃO foi salvo. A etapa continua como estava. Confira a internet e toque de novo.'); }
 };
 
 /* ---------- marca ---------- */
