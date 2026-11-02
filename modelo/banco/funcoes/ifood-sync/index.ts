@@ -19,7 +19,11 @@ const svc = createClient(URL_, SVC, { auth: { persistSession: false } });
 const BASE = Deno.env.get("IFOOD_BASE_URL") || "https://merchant-api.ifood.com.br";
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const seg = async (nome: string) => { try { const { data } = await svc.rpc("api_segredo", { p_nome: nome }); return (data as string) || ""; } catch { return ""; } };
+const segGuardado: Record<string, { v: string; ate: number }> = {};
+const seg = async (nome: string) => {
+  const g = segGuardado[nome]; if (g && g.ate > Date.now()) return g.v;   // v1.36: o mesmo segredo não vai ao banco a cada rodada de 30 s
+  try { const { data } = await svc.rpc("api_segredo", { p_nome: nome }); const v = (data as string) || ""; if (v) segGuardado[nome] = { v, ate: Date.now() + 600000 }; return v; } catch { return ""; }
+};
 const rpc = async (fn: string, args: Record<string, unknown> = {}) => {
   const { data, error } = await svc.rpc(fn, args);
   if (error) throw new Error(fn + ": " + error.message);
@@ -78,13 +82,19 @@ async function http1(metodo: string, caminho: string, token: string | null, corp
 }
 
 // ---------- acesso (token OAuth guardado no banco; renova antes de vencer) ----------
+let tokenGuardado: { token: string; ate: number } | null = null;   // v1.36: cópia do token por 90 s (o 401 renova na hora e troca a cópia)
 async function pegarToken(cred: any, forcar = false): Promise<string> {
-  if (!forcar) { const t: any = await rpc("ifood_token_ler"); if (t && t.token) return t.token; }
+  if (forcar) tokenGuardado = null;
+  if (!forcar) {
+    if (tokenGuardado && tokenGuardado.ate > Date.now()) return tokenGuardado.token;
+    const t: any = await rpc("ifood_token_ler"); if (t && t.token) { tokenGuardado = { token: t.token, ate: Date.now() + 90000 }; return t.token; }
+  }
   if (!cred.clientId || !cred.clientSecret) throw new HttpErro(401, "faltam Client ID / Client Secret");
   const r: any = await http("POST", "/authentication/v1.0/oauth/token", null,
     new URLSearchParams({ grantType: "client_credentials", clientId: cred.clientId, clientSecret: cred.clientSecret }));
   const token = r?.accessToken || r?.access_token;
   if (!token) throw new HttpErro(401, "resposta sem token");
+  tokenGuardado = { token, ate: Date.now() + 90000 };
   await rpc("ifood_token_gravar", { p_token: token, p_seg: Math.max(60, Number(r?.expiresIn || r?.expires_in || 3600) - 30) });   // doc: renovar só ao expirar; 30 s é só margem de relógio (e o 401 renova sozinho)
   return token;
 }
@@ -299,16 +309,23 @@ async function executarLoja(cred: any, a: any) {
     await rpc("ifood_acao_resultado", { p_id: a.id, p_estado: st >= 400 && st < 500 ? "erro" : "duvida", p_erro: er instanceof HttpErro ? `${st} ${er.corpo}` : String(er) });
   }
 }
+let lojaPausaAte = 0;   // v1.36: se o iFood diz 403 (módulo não liberado para o app), tenta de novo só a cada 10 min (antes: a cada 30 s, gerando um aviso por rodada)
 async function atualizarLoja(cred: any, forcar = false) {
+  if (!forcar && !cred?.config?.homMerchant) return;   // v1.37: verificação automática só depois de marcar "Loja (Merchant) homologada" nos Ajustes do iFood
+  if (!forcar && Date.now() < lojaPausaAte) return;
   try {
     const l: any = await rpc("ifood_loja_estado");
     if (!forcar && l?.verificado_em && Date.now() - new Date(l.verificado_em).getTime() < 25000) return;   // C-03: a cada rodada (30 s), como pede a documentação
     const st: any = await chamar(cred, "GET", `/merchant/v1.0/merchants/${encodeURIComponent(cred.merchantId || "")}/status`);
     await rpc("ifood_loja_gravar", { p_status: Array.isArray(st) ? st : [st], p_interrupcao: null });
-  } catch (er) { try { await rpc("ifood_log", { p_nivel: "aviso", p_msg: "Estado da loja não carregou: " + textoErro(er).slice(0, 200) }); } catch { /* sem registro */ } }
+  } catch (er) {
+    if (er instanceof HttpErro && er.status === 403) lojaPausaAte = Date.now() + 600000;
+    try { await rpc("ifood_log", { p_nivel: "aviso", p_msg: "Estado da loja não carregou: " + textoErro(er).slice(0, 200) }); } catch { /* sem registro */ }
+  }
 }
 // C-02: lojas do app (1x por dia e quando ligar): confere se o merchantId configurado pertence ao app
 async function conferirLojas(cred: any) {
+  if (!cred?.config?.homMerchant) return;   // v1.37: só depois de homologado
   try {
     const r: any = await chamar(cred, "GET", "/merchant/v1.0/merchants");
     await rpc("ifood_lojas_gravar", { p_lista: Array.isArray(r) ? r : (r?.merchants || []), p_merchant: String(cred.merchantId || "") });
@@ -422,9 +439,11 @@ async function executarCatalogo(cred: any, a: any) {
 // v1.15: o financeiro completo (vendas, lançamentos, repasses, antecipações e arquivo mensal) fica em financeiro.ts, por fila.
 // A cada 6 h só agenda as buscas automáticas; as tarefas são feitas aos poucos em cada rodada (processarFinanceiro).
 async function sincronizarFinanceiro(_cred: any) {
+  if (!_cred?.config?.homFinanceiro) return;   // v1.37: buscas automáticas só depois de marcar "Financeiro homologado"
   try { await rpc("ifood_fin_agendar_auto"); } catch (er) { try { await rpc("ifood_log", { p_nivel: "aviso", p_msg: "Financeiro do iFood: não foi possível agendar as buscas: " + String(er).slice(0, 200) }); } catch { /* sem registro */ } }
 }
 async function sincronizarAvaliacoes(cred: any) {
+  if (!cred?.config?.homAvaliacoes) return;   // v1.37: só depois de marcar "Avaliações homologadas"
   const m = encodeURIComponent(cred.merchantId || "");
   // H6: pageSize 50 (máximo; acima disso o iFood dá 400), todas as páginas, últimos 10 dias (o prazo de resposta é de 5 dias; o padrão do iFood seria só 7 dias)
   try {
@@ -521,12 +540,23 @@ Deno.serve(async (req) => {
   const chaveVault = await seg("service_key");
   if (!token || (token !== SVC && token !== chaveVault)) return json({ ok: false, message: "Só execução interna." }, 403);
   try {
-    const cred: any = await rpc("ifood_credenciais");
-    if (!cred || !cred.ligado) return json({ ok: true, ligado: false });
-    // documentação oficial (Authentication): não repetir sem parar quando o iFood recusa o acesso (401/403): espera 5 min
-    try { if ((await rpc("ifood_pode_consultar")) === false) return json({ ok: true, aguardando: "acesso recusado: nova tentativa em até 5 min" }); } catch { /* sem a função: segue */ }
     const dono = crypto.randomUUID();
-    if (!(await rpc("ifood_trava_pegar", { p_dono: dono, p_seg: 100 }))) return json({ ok: true, ocupado: true });
+    let ab: any = null;
+    try { ab = await rpc("ifood_abrir", { p_dono: dono, p_seg: 100 }); } catch { ab = null; }   // v1.36: credenciais + acesso recusado? + trava + token em UMA chamada (sem a função nova, usa o caminho antigo abaixo)
+    let cred: any;
+    if (ab && typeof ab === "object" && "cred" in ab) {
+      cred = ab.cred;
+      if (!cred || !cred.ligado) return json({ ok: true, ligado: false });
+      if (ab.pode === false) return json({ ok: true, aguardando: "acesso recusado: nova tentativa em até 5 min" });
+      if (!ab.trava) return json({ ok: true, ocupado: true });
+      if (ab.token && ab.token.token) tokenGuardado = { token: ab.token.token, ate: Date.now() + 90000 };
+    } else {
+      cred = await rpc("ifood_credenciais");
+      if (!cred || !cred.ligado) return json({ ok: true, ligado: false });
+      // documentação oficial (Authentication): não repetir sem parar quando o iFood recusa o acesso (401/403): espera 5 min
+      try { if ((await rpc("ifood_pode_consultar")) === false) return json({ ok: true, aguardando: "acesso recusado: nova tentativa em até 5 min" }); } catch { /* sem a função: segue */ }
+      if (!(await rpc("ifood_trava_pegar", { p_dono: dono, p_seg: 100 }))) return json({ ok: true, ocupado: true });
+    }
     try {
       for (let volta = 0; volta < 1; volta++) {   // 1 rodada por chamada: o agendamento (pg_cron) chama a cada 30 s, que é o ritmo que o iFood pede
         if (volta > 0 && !(await rpc("ifood_trava_pegar", { p_dono: dono, p_seg: 100 }))) break;   // renova a trava a cada volta (mesmo dono); se perdeu, para
@@ -534,15 +564,31 @@ Deno.serve(async (req) => {
         await processar(cred);
         await agir(cred);
         await acompanharEntregas(cred);
-        try { await rpc("ifood_escalar"); await rpc("ifood_loja_verificar"); await atualizarLoja(cred);
-          if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "avaliacoes", p_minutos: 30 })) await sincronizarAvaliacoes(cred);
-          if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "financeiro", p_minutos: 360 })) await sincronizarFinanceiro(cred);
-          if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "lojas", p_minutos: 1440 })) await conferirLojas(cred); } catch { /* reforços: não podem derrubar o ciclo */ }
+        try {
+          let pr: any = null;
+          try { pr = await rpc("ifood_reforcos"); } catch { pr = null; }   // v1.36: escalar + verificar loja + "precisa?" das 3 tarefas em UMA chamada
+          if (pr && typeof pr === "object" && "avaliacoes" in pr) {
+            await atualizarLoja(cred);
+            if (volta === 0 && pr.avaliacoes) await sincronizarAvaliacoes(cred);
+            if (volta === 0 && pr.financeiro) await sincronizarFinanceiro(cred);
+            if (volta === 0 && pr.lojas) await conferirLojas(cred);
+          } else {
+            await rpc("ifood_escalar"); await rpc("ifood_loja_verificar"); await atualizarLoja(cred);
+            if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "avaliacoes", p_minutos: 30 })) await sincronizarAvaliacoes(cred);
+            if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "financeiro", p_minutos: 360 })) await sincronizarFinanceiro(cred);
+            if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "lojas", p_minutos: 1440 })) await conferirLojas(cred);
+          }
+        } catch { /* reforços: não podem derrubar o ciclo */ }
         try { await processarFinanceiro({ rpc, pegarToken, marcarModulo, BASE }, cred); } catch { /* financeiro: nunca derruba o ciclo */ }
       }
     } finally {
-      await rpc("ifood_trava_soltar", { p_dono: dono });
-      if (Object.keys(MODULOS).length) { try { await rpc("ifood_modulos_registrar", { p: MODULOS }); } catch { /* só painel */ } for (const k of Object.keys(MODULOS)) delete MODULOS[k]; }
+      let fechou = false;
+      try { await rpc("ifood_fechar", { p_dono: dono, p_modulos: Object.keys(MODULOS).length ? MODULOS : null }); fechou = true; } catch { fechou = false; }   // v1.36: soltar a trava + registrar módulos em UMA chamada
+      if (!fechou) {
+        await rpc("ifood_trava_soltar", { p_dono: dono });
+        if (Object.keys(MODULOS).length) { try { await rpc("ifood_modulos_registrar", { p: MODULOS }); } catch { /* só painel */ } }
+      }
+      for (const k of Object.keys(MODULOS)) delete MODULOS[k];
     }
     return json({ ok: true });
   } catch (e) {
@@ -587,8 +633,11 @@ async function consultar(cred: any) {
 // 2) trata os eventos guardados (criar venda, estado oficial...)
 async function processar(cred: any) {
   let pend: any[] = [];
-  try { await rpc("ifood_eventos_vencidos_fechar"); } catch { /* só limpeza: não pode travar o ciclo */ }
-  try { pend = (await rpc("ifood_eventos_pendentes")) as any[]; } catch { return; }
+  try { pend = (await rpc("ifood_eventos_ciclo")) as any[]; }   // v1.36: fechar vencidos + listar pendentes em UMA chamada
+  catch {
+    try { await rpc("ifood_eventos_vencidos_fechar"); } catch { /* só limpeza: não pode travar o ciclo */ }
+    try { pend = (await rpc("ifood_eventos_pendentes")) as any[]; } catch { return; }
+  }
   for (const e of pend || []) {
     try {
       const r = await tratarEvento(cred, e);
