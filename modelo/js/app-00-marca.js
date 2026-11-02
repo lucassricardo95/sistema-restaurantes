@@ -171,7 +171,7 @@
     setInterval(function(){ pintar(false); }, 400);
     // enquanto bloqueado, pergunta ao painel a cada minuto; liberou (ou promessa aprovada) = recarrega sozinho
     setInterval(function(){
-      FETCH(PAINEL + '/rest/v1/rpc/status_restaurante', { method:'POST', headers:{ apikey:CHAVE, 'Content-Type':'application/json' }, body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '' }) })
+      FETCH(PAINEL + '/rest/v1/rpc/verificar_restaurante', { method:'POST', headers:{ apikey:CHAVE, 'Content-Type':'application/json' }, body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '', p_host: location.hostname || '' }) })
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){ if(!j || typeof j.bloqueado !== 'boolean') return;
           if(!j.bloqueado){ gravar(null); setTimeout(function(){ location.reload(); }, 1500); return; }
@@ -212,7 +212,7 @@
     function usuario(){ try{ return (typeof currentUser !== 'undefined') ? currentUser : null; }catch(e){ return null; } }
     function html(txt){ return String(txt).split('\n').map(function(l){ return /^## /.test(l) ? '<h4 style="margin:16px 0 6px;color:#fff">' + esc(l.slice(3)) + '</h4>' : (l.trim() ? '<p style="margin:0 0 8px">' + esc(l) + '</p>' : ''); }).join(''); }
     function carregarTexto(cb){
-      FETCH(PAINEL + '/rest/v1/rpc/termos_texto', { method:'POST', headers:{ apikey:CHAVE, 'Content-Type':'application/json' }, body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '' }) })
+      FETCH(PAINEL + '/rest/v1/rpc/termos_texto', { method:'POST', headers:{ apikey:CHAVE, 'Content-Type':'application/json' }, body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '', p_host: location.hostname || '' }) })
         .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if(j && j.ok) { T = j; cb(); } else termosPedidos = false; }).catch(function(){ termosPedidos = false; });
     }
     function montar(){
@@ -300,8 +300,8 @@
   var t = null;
   try{
     var c = new AbortController(); t = setTimeout(function(){ c.abort(); }, 6000);
-    FETCH(PAINEL + '/rest/v1/rpc/status_restaurante', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE, 'Content-Type':'application/json' },
-      body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '' }) })
+    FETCH(PAINEL + '/rest/v1/rpc/verificar_restaurante', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE, 'Content-Type':'application/json' },
+      body: JSON.stringify({ p_slug: R.slug || '', p_url: R.supabaseUrl || '', p_host: location.hostname || '' }) })
       .then(function(r){ clearTimeout(t); return r.ok ? r.json() : null; })
       .then(function(j){
         if(!j || typeof j.bloqueado !== 'boolean') return;           // painel fora do ar ou sem a função: não mexe em nada
