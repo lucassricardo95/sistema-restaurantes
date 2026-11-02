@@ -101,7 +101,7 @@ window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], res
 function telaLista(){
   const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
   const mrr = at.reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0), atr = atrasadas();
-  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvCodigos()">Códigos</button><button onclick="rvSair()">Sair</button></div></div>'
+  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
    + '<div class="resumo"><div class="card"><small>Ativos</small><b>' + at.length + '</b></div><div class="card"><small>Em implantação / teste</small><b>' + im.length + '</b></div>'
    + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
    + '<div class="card"><div class="linha"><b>Erros do sistema</b><span class="selo" style="' + (S.erros.length ? 'background:var(--erro);color:#000' : '') + '">' + (S.erros.length ? S.erros.length + ' aberto(s)' : 'nenhum') + '</span></div><small class="mudo">Erros que apareceram na tela dos restaurantes.</small><p style="margin:8px 0 0"><button class="mini' + (S.erros.length ? ' principal' : '') + '" onclick="rvErros()">Ver erros</button></p></div>'
@@ -264,6 +264,7 @@ function abaPasso(){
      const f = e[x.id] && e[x.id].feita, ck = (e[x.id] && e[x.id].itens) || [];
      return '<div class="card passo ' + (f ? 'feita' : '') + '"><div class="linha"><b>' + (i + 1) + '. ' + esc(x.titulo) + '</b><span>' + (f ? '✅' : '') + '</span></div><span class="quem">' + QUEM[x.quem] + '</span>'
       + '<ol>' + x.passos.map(p => '<li>' + esc(sub(p)) + '</li>').join('') + '</ol>'
+      + (window.cdEtapa ? cdEtapa(x.id, { ref:refDe(r), cod:r.slug, chave:r.supabase_chave || '', feitos:ck }) : '')
       + (x.pedido ? '<small class="mudo">Copie e cole na conversa com o Claude:</small><div class="copiar" id="pd_' + x.id + '">' + esc(sub(x.pedido)) + '</div><button class="mini" onclick="rvCopiar(\'pd_' + x.id + '\')">Copiar pedido</button> ' : '')
       + (x.checklist ? x.checklist.map((c, k) => '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--txt);margin:6px 0"><input type="checkbox" ' + (ck.includes(k) ? 'checked ' : '') + 'onchange="rvItem(\'' + x.id + '\',' + k + ',this.checked)"> ' + esc(c) + '</label>').join('') : '')
       + (x.teste ? '<button class="mini" onclick="rvTeste(\'' + x.teste + '\')">Testar</button><div id="res_' + x.teste + '"></div> ' : '')
