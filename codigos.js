@@ -3,7 +3,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est1",
-   "titulo": "Estrutura · parte 1 de 29",
+   "titulo": "Estrutura · parte 1 de 30",
    "arq": "banco-restaurante/1-estrutura-01.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -15,7 +15,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est2",
-   "titulo": "Estrutura · parte 2 de 29",
+   "titulo": "Estrutura · parte 2 de 30",
    "arq": "banco-restaurante/1-estrutura-02.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -27,19 +27,19 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est3",
-   "titulo": "Estrutura · parte 3 de 29",
+   "titulo": "Estrutura · parte 3 de 30",
    "arq": "banco-restaurante/1-estrutura-03.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
    "id": "est4",
-   "titulo": "Estrutura · parte 4 de 29",
+   "titulo": "Estrutura · parte 4 de 30",
    "arq": "banco-restaurante/1-estrutura-04.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -51,7 +51,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est5",
-   "titulo": "Estrutura · parte 5 de 29",
+   "titulo": "Estrutura · parte 5 de 30",
    "arq": "banco-restaurante/1-estrutura-05.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -63,19 +63,19 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est6",
-   "titulo": "Estrutura · parte 6 de 29",
+   "titulo": "Estrutura · parte 6 de 30",
    "arq": "banco-restaurante/1-estrutura-06.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
    "id": "est7",
-   "titulo": "Estrutura · parte 7 de 29",
+   "titulo": "Estrutura · parte 7 de 30",
    "arq": "banco-restaurante/1-estrutura-07.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -87,19 +87,19 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est8",
-   "titulo": "Estrutura · parte 8 de 29",
+   "titulo": "Estrutura · parte 8 de 30",
    "arq": "banco-restaurante/1-estrutura-08.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
    "id": "est9",
-   "titulo": "Estrutura · parte 9 de 29",
+   "titulo": "Estrutura · parte 9 de 30",
    "arq": "banco-restaurante/1-estrutura-09.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -111,7 +111,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est10",
-   "titulo": "Estrutura · parte 10 de 29",
+   "titulo": "Estrutura · parte 10 de 30",
    "arq": "banco-restaurante/1-estrutura-10.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -123,7 +123,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est11",
-   "titulo": "Estrutura · parte 11 de 29",
+   "titulo": "Estrutura · parte 11 de 30",
    "arq": "banco-restaurante/1-estrutura-11.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -135,7 +135,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est12",
-   "titulo": "Estrutura · parte 12 de 29",
+   "titulo": "Estrutura · parte 12 de 30",
    "arq": "banco-restaurante/1-estrutura-12.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -147,7 +147,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est13",
-   "titulo": "Estrutura · parte 13 de 29",
+   "titulo": "Estrutura · parte 13 de 30",
    "arq": "banco-restaurante/1-estrutura-13.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -159,7 +159,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est14",
-   "titulo": "Estrutura · parte 14 de 29",
+   "titulo": "Estrutura · parte 14 de 30",
    "arq": "banco-restaurante/1-estrutura-14.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -171,7 +171,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est15",
-   "titulo": "Estrutura · parte 15 de 29",
+   "titulo": "Estrutura · parte 15 de 30",
    "arq": "banco-restaurante/1-estrutura-15.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -183,7 +183,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est16",
-   "titulo": "Estrutura · parte 16 de 29",
+   "titulo": "Estrutura · parte 16 de 30",
    "arq": "banco-restaurante/1-estrutura-16.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -195,7 +195,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est17",
-   "titulo": "Estrutura · parte 17 de 29",
+   "titulo": "Estrutura · parte 17 de 30",
    "arq": "banco-restaurante/1-estrutura-17.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -207,7 +207,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est18",
-   "titulo": "Estrutura · parte 18 de 29",
+   "titulo": "Estrutura · parte 18 de 30",
    "arq": "banco-restaurante/1-estrutura-18.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -219,7 +219,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est19",
-   "titulo": "Estrutura · parte 19 de 29",
+   "titulo": "Estrutura · parte 19 de 30",
    "arq": "banco-restaurante/1-estrutura-19.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -231,7 +231,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est20",
-   "titulo": "Estrutura · parte 20 de 29",
+   "titulo": "Estrutura · parte 20 de 30",
    "arq": "banco-restaurante/1-estrutura-20.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -243,7 +243,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est21",
-   "titulo": "Estrutura · parte 21 de 29",
+   "titulo": "Estrutura · parte 21 de 30",
    "arq": "banco-restaurante/1-estrutura-21.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -255,7 +255,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est22",
-   "titulo": "Estrutura · parte 22 de 29",
+   "titulo": "Estrutura · parte 22 de 30",
    "arq": "banco-restaurante/1-estrutura-22.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -267,7 +267,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est23",
-   "titulo": "Estrutura · parte 23 de 29",
+   "titulo": "Estrutura · parte 23 de 30",
    "arq": "banco-restaurante/1-estrutura-23.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -279,7 +279,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est24",
-   "titulo": "Estrutura · parte 24 de 29",
+   "titulo": "Estrutura · parte 24 de 30",
    "arq": "banco-restaurante/1-estrutura-24.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -291,7 +291,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est25",
-   "titulo": "Estrutura · parte 25 de 29",
+   "titulo": "Estrutura · parte 25 de 30",
    "arq": "banco-restaurante/1-estrutura-25.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -303,7 +303,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est26",
-   "titulo": "Estrutura · parte 26 de 29",
+   "titulo": "Estrutura · parte 26 de 30",
    "arq": "banco-restaurante/1-estrutura-26.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -315,7 +315,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est27",
-   "titulo": "Estrutura · parte 27 de 29",
+   "titulo": "Estrutura · parte 27 de 30",
    "arq": "banco-restaurante/1-estrutura-27.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -327,7 +327,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est28",
-   "titulo": "Estrutura · parte 28 de 29",
+   "titulo": "Estrutura · parte 28 de 30",
    "arq": "banco-restaurante/1-estrutura-28.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -339,14 +339,26 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est29",
-   "titulo": "Estrutura · parte 29 de 29",
+   "titulo": "Estrutura · parte 29 de 30",
    "arq": "banco-restaurante/1-estrutura-29.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 58
+   "kb": 59
+  },
+  {
+   "etapa": "banco",
+   "id": "est30",
+   "titulo": "Estrutura · parte 30 de 30",
+   "arq": "banco-restaurante/1-estrutura-30.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 1
   },
   {
    "etapa": "banco",
@@ -393,7 +405,7 @@ window.CODIGOS = {
    "quando": "Depois do cofre de chaves.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "As tarefas agendadas só funcionam com o cofre preenchido.",
-   "kb": 10
+   "kb": 9
   }
  ],
  "admin": [
