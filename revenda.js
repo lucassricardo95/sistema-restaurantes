@@ -580,12 +580,22 @@ const lum = h => { h = String(h || '#000').replace('#', ''); return parseInt(h.s
 function marcaHtml(){
   const m = S.rest.marca, c = m.cores = m.cores || {};
   return '<h3>Tema pronto</h3><div class="temas">' + TEMAS.map(t => '<button class="tema ' + (m.tema === t.id ? 'on' : '') + '" onclick="rvTema(\'' + t.id + '\')" style="background:' + t.fundo + ';color:' + (lum(t.fundo) > 150 ? '#1b1b1b' : '#f5efe6') + '"><i style="background:' + t.destaque + '"></i><i style="background:' + t.botao + '"></i><br>' + t.nome + '</button>').join('') + '</div>'
-   + '<h3>Ou escolha as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botões'],['fundo','Fundo']].map(k => '<label class="cor-item"><input type="color" data-k="marca.cores.' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '" oninput="rvPrevia()"><span>' + k[1] + '</span></label>').join('') + '</div>'
+   + '<h3>Ou escolha as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botões'],['fundo','Fundo']].map(k => '<div class="cor-item"><input type="hidden" data-k="marca.cores.' + k[0] + '" id="mc_' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '"><button type="button" class="cor-bt" id="mcb_' + k[0] + '" style="background:' + esc(c[k[0]] || '#000000') + '" onclick="rvPaleta(\'' + k[0] + '\',\'' + k[1] + '\')" aria-label="Escolher a cor"></button><span>' + k[1] + '</span></div>').join('') + '</div>'
    + '<div class="previa" id="previa"></div>'
    + '<div class="cols"><div>' + campo('marca.slogan', { rot:'Slogan (frase curta)', ph:'Ex.: Feito com carinho' }) + '</div><div>' + campo('marca.assistente', { rot:'Nome do atendente virtual', ph:'Ex.: Atendente da Pizzaria' }) + '</div></div>'
    + '<label for="f_jogos">Jogos do cliente (enquanto espera o pedido)</label><select id="f_jogos" data-k="marca.jogos.tema">' + [['generico','Comida em geral'],['burger','Hambúrguer'],['churros','Churros e doces']].map(o => '<option value="' + o[0] + '"' + (((m.jogos || {}).tema || 'generico') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>'
    + botSalvar('💾 Salvar cores');
 }
+/* paleta: escolher a cor tocando, sem código de cor */
+function hslHex(h, sa, l){ sa /= 100; l /= 100; const f = n => { const k = (n + h / 30) % 12, a = sa * Math.min(l, 1 - l), c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(255 * c).toString(16).padStart(2, '0'); }; return '#' + f(0) + f(8) + f(4); }
+const PALETA = [['Vermelho',0,78],['Laranja',24,85],['Amarelo',44,90],['Verde-limão',80,65],['Verde',140,60],['Turquesa',175,65],['Azul',210,75],['Anil',235,60],['Roxo',270,60],['Rosa',330,70],['Marrom',22,40]]
+  .map(t => ({ nome:t[0], cores:[86, 72, 58, 46, 34, 22, 12].map(l => hslHex(t[1], t[2], l)) })).concat([{ nome:'Cinzas', cores:[100, 90, 74, 55, 36, 18, 7].map(l => hslHex(0, 0, l)) }]);
+window.rvPaleta = (k, rot) => { const at = ((($('mc_' + k) || {}).value) || '').toLowerCase();
+  fecharJanela(); const d = document.createElement('div'); d.className = 'modal';
+  d.innerHTML = '<div class="modal-c"><div class="linha"><h2>Cor: ' + esc(rot) + '</h2><button class="mini" onclick="rvFecharJ()">✕</button></div><p class="mudo pequeno">Toque numa cor. Em cada linha, do mais claro ao mais escuro.</p>'
+    + PALETA.map(g => '<div class="pal-linha">' + g.cores.map(c => '<button class="pal-cor' + (c === at ? ' on' : '') + '" style="background:' + c + '" aria-label="' + g.nome + '" onclick="rvEscolherCor(\'' + k + '\',\'' + c + '\')"></button>').join('') + '</div>').join('') + '</div>';
+  d.addEventListener('click', e => { if(e.target === d) fecharJanela(); }); document.body.appendChild(d); };
+window.rvEscolherCor = (k, c) => { const i = $('mc_' + k), b = $('mcb_' + k); if(i) i.value = c; if(b) b.style.background = c; const m = S.rest.marca; m.cores = m.cores || {}; m.cores[k] = c; m.tema = ''; document.querySelectorAll('.tema.on').forEach(x => x.classList.remove('on')); fecharJanela(); rvPrevia(); };
 window.rvTema = id => { const t = TEMAS.find(x => x.id === id); lerForm(); const m = S.rest.marca; m.tema = id; m.cores = { destaque:t.destaque, botao:t.botao, fundo:t.fundo }; refazerMarca(); };
 function refazerMarca(){ if(S.aba === 'marca') abaMarcaTudo(); else abaPasso(); }
 window.rvPrevia = () => { const g = k => (document.querySelector('[data-k="marca.cores.' + k + '"]') || {}).value || '#000'; const p = $('previa'); if(!p) return; const lg = (S.rest.marca.logos || {}).cardapio;
@@ -974,7 +984,7 @@ function apkValores(r){
   const c = (r.marca && r.marca.cores) || {}, nomeCurto = r.nome.length > 12 ? r.nome.split(' ')[0].slice(0, 12) : r.nome;
   return [['Package ID', 'io.github.' + gh.replace(/[^a-z0-9_]/g, '_') + '.' + pkg, 'único para este restaurante'], ['App name', r.nome, ''], ['Launcher name', nomeCurto, 'nome curto embaixo do ícone'],
     ['App version', '1.0.0.0', ''], ['App version code', '1', ''], ['Host', host, ''], ['Start URL', caminho || '/', ''],
-    ['Theme color', c.fundo || '#14100c', ''], ['Background color', c.fundo || '#14100c', ''], ['Icon URL', (r.marca && r.marca.logos && r.marca.logos.icone) || '(envie o ícone na etapa Cores e logos)', ''], ['Display mode', 'Standalone', '']];
+['Icon URL', (r.marca && r.marca.logos && r.marca.logos.icone) || '(envie o ícone na etapa Cores e logos)', ''], ['Display mode', 'Standalone', '']];
 }
 function apkHtml(){
   const r = S.rest; if(!r.site_url) return '<div class="res erro">Antes, coloque o site no ar (etapa "Colocar o site no ar").</div>';
