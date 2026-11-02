@@ -30,3 +30,6 @@ insert into public.ai_config (id) values (true) on conflict (id) do nothing;
 insert into public.caixa_config (id) values (true) on conflict (id) do nothing;
 insert into public.ifood_estado (id) values (true) on conflict (id) do nothing;
 insert into public.ifood_token (id) values (true) on conflict (id) do nothing;
+
+-- IA já ligada: assim que o dono digitar as chaves em Integrações e contas, ela funciona
+update public.ai_config set ia_ligada = true where id;
