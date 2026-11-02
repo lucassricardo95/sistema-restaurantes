@@ -54,9 +54,14 @@ function especial(k){
    + "select vault.create_secret('https://" + q(r) + ".supabase.co', 'supabase_url');\n"
    + "select vault.create_secret('" + q(pub) + "', 'publishable_key');\n"
    + "select vault.create_secret('COLE_AQUI_service_role', 'service_key');\n";
-  if(k === 'segredos2') return '-- Cofre de chaves (parte 2: planilhas). Troque COLE_AQUI pelo valor real e rode UMA vez.\n'
+  if(k === 'segredos2') return '-- Cofre de chaves (parte 2: planilhas). Troque COLE_AQUI_url_exec pelo endereço /exec e rode UMA vez.\n'
    + "select vault.create_secret('COLE_AQUI_url_exec_da_planilha_principal', 'sheets_main_url');\n"
-   + "select vault.create_secret('COLE_AQUI_chave_do_servidor_da_planilha', 'chave_servidor_planilha');\n";
+   + "select vault.create_secret('rstsb-' || replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'chave_servidor_planilha');\n"
+   + "-- COPIE o valor abaixo para a propriedade SB_CHAVE_SERVIDOR do Apps Script:\n"
+   + "select decrypted_secret as copie_para_SB_CHAVE_SERVIDOR from vault.decrypted_secrets where name = 'chave_servidor_planilha';\n";
+  if(k === 'google') return "-- Credenciais do Google (Drive). Cole o ID e a chave secreta como TEXTO e rode UMA vez.\n"
+   + "select vault.create_secret('COLE_AQUI_ID_DO_CLIENTE', 'google_client_id');\n"
+   + "select vault.create_secret('COLE_AQUI_CHAVE_SECRETA', 'google_client_secret');\n";
   if(k === 'admin2') return "-- Cria o primeiro Administrador. Troque os três valores.\nselect public.instalar_admin_inicial('COLE_AQUI_login', 'COLE_AQUI_senha_minimo_8', 'Administrador');\n";
   throw new Error('Código especial desconhecido.');
 }

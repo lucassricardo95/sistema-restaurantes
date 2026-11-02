@@ -446,13 +446,26 @@ window.CODIGOS = {
   {
    "etapa": "planilhas",
    "id": "segredos2",
-   "titulo": "Cofre de chaves · parte 2 (planilhas)",
+   "titulo": "Cofre de chaves · parte 2 (planilhas) e criar a chave",
    "arq": null,
    "especial": "segredos2",
-   "desc": "Guarda no cofre do Supabase o endereço /exec da planilha principal e a chave que o Supabase usa para falar com ela.",
+   "desc": "Guarda no cofre o endereço /exec da planilha principal, CRIA a chave que liga o Supabase à planilha e mostra o valor dela no resultado.",
    "quando": "Depois de implantar o Apps Script da planilha principal.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Troque COLE_AQUI_url pelo endereço que termina em /exec e COLE_AQUI_chave pela mesma chave que você cadastrou na propriedade SB_CHAVE_SERVIDOR do script."
+   "cuidado": "Troque COLE_AQUI_url_exec pelo endereço que termina em /exec. Rode UMA vez. No resultado, copie o valor da última linha e cadastre no Apps Script: Configurações do projeto > Propriedades do script > Adicionar propriedade: nome SB_CHAVE_SERVIDOR, valor = a chave copiada. Depois reimplante (Implantar > Gerenciar implantações > lápis > Nova versão). Não mostre a chave a ninguém."
+  }
+ ],
+ "drive": [
+  {
+   "etapa": "drive",
+   "id": "google",
+   "titulo": "Guardar as credenciais do Google no cofre",
+   "arq": null,
+   "especial": "google",
+   "desc": "Guarda o ID do cliente e a chave secreta do Google Cloud no cofre, que é de onde o Drive os lê (nunca ficam no site).",
+   "quando": "Depois de criar o cliente OAuth no Google Cloud (etapa Login com Google).",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Cole o ID e a chave como TEXTO, copiados pelo ícone de copiar do Google, nunca digitados nem lidos de foto: l, I e 1 se confundem. A chave só aparece inteira uma vez."
   }
  ]
 };
