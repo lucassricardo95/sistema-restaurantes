@@ -202,8 +202,25 @@ function abaDados(){
    + '<div class="cols"><div>' + campoTxt('Nome do contato', 'contato_nome') + '</div><div>' + campoTxt('Telefone/WhatsApp', 'contato_telefone') + '</div></div>' + campoTxt('E-mail do contato', 'contato_email', { tipo:'email' })
    + '<div class="cols"><div>' + campoTxt('Plano', 'plano', { ph:'Ex.: Básico' }) + '</div><div>' + campoTxt('Mensalidade (R$)', 'valor_mensal', { tipo:'number' }) + '</div></div>'
    + '<div class="cols"><div>' + campoTxt('Dia do vencimento (1 a 28)', 'dia_vencimento', { tipo:'number' }) + '</div><div>' + campoTxt('Início do contrato', 'inicio_em', { tipo:'date' }) + '</div></div>'
-   + '<label for="f_obs">Observações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar + '</div>';
+   + '<label for="f_obs">Observações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar + '</div>'
+   + ((S.lista.find(x => x.id === r.id) || {}).situacao === 'encerrado' ? '<div class="card" style="border-color:var(--erro)"><h2 style="color:var(--erro)">Excluir permanentemente</h2>'
+     + '<p class="mudo" style="font-size:13px">Apaga do painel este restaurante e tudo ligado a ele (etapas, cobranças, histórico, promessas, termos aceitos, erros e saúde). <b>Não tem como desfazer.</b></p>'
+     + '<p class="mudo" style="font-size:13px">Não apaga o que está fora do painel: o projeto no Supabase, o repositório no GitHub, o site e as planilhas dele continuam existindo e você apaga à mão.</p>'
+     + '<label for="exNome">Digite o nome do restaurante: <b>' + esc(r.nome) + '</b></label><input id="exNome" autocomplete="off">'
+     + '<label for="exSenha">Sua senha do painel</label><input id="exSenha" type="password" autocomplete="current-password">'
+     + '<p><button style="background:var(--erro);color:#000" onclick="rvExcluir()">Excluir permanentemente</button></p><div id="exRes"></div></div>'
+     : '<p class="mudo" style="font-size:13px">Para excluir permanentemente, mude a situação para "Encerrado" e salve.</p>');
 }
+window.rvExcluir = async () => {
+  const r = S.rest, nome = ($('exNome').value || '').trim(), senha = $('exSenha').value || '';
+  if(!nome || !senha){ erro('Digite o nome do restaurante e a sua senha.'); return; }
+  if(!confirm('Excluir "' + r.nome + '" para sempre? Não tem como desfazer.')) return;
+  try{
+    const x = await rpc('revenda_excluir_restaurante', { p_id:r.id, p_nome:nome, p_senha:senha });
+    if(!x || !x.ok){ $('exRes').innerHTML = '<div class="res erro">⚠️ ' + esc((x && x.erro) || 'Não foi possível excluir.') + '</div>'; return; }
+    S.rest = null; await carregar(); telaLista(); aviso('Restaurante excluído do painel. Lembre de apagar à mão o Supabase, o GitHub e as planilhas dele.', 'ok');
+  }catch(e){ $('exRes').innerHTML = '<div class="res erro">⚠️ ' + esc(e.message) + '</div>'; }
+};
 function abaLig(){
   $('corpo').innerHTML = '<div class="card"><h2>Ligações do restaurante</h2><p class="mudo">É aqui que o app descobre com qual banco e planilhas falar. Só endereços e chaves PÚBLICAS: senhas e chaves secretas nunca entram aqui.</p>'
    + campoTxt('Endereço do banco (Project URL do Supabase)', 'supabase_url', { ph:'https://xxxx.supabase.co' }) + campoTxt('Chave pública (publishable)', 'supabase_chave', { ph:'sb_publishable_…' })
