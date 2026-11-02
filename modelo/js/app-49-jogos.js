@@ -12,10 +12,10 @@
 (function(){
   'use strict';
   const ARQ = {   // carimbados pelo empacotamento (?v=)
-    burger:  'js/jogo-burger.js?v=d67a1a42',
-    chuva:   'js/jogo-chuva.js?v=c0a88274',
-    memoria: 'js/jogo-memoria.js?v=5246b144',
-    cobra:   'js/jogo-cobra.js?v=651a89f6'
+    burger:  'js/jogo-burger.js?v=8172a384',
+    chuva:   'js/jogo-chuva.js?v=b780d4ec',
+    memoria: 'js/jogo-memoria.js?v=f57612ce',
+    cobra:   'js/jogo-cobra.js?v=c1815289'
   };
   const J = window.Jogos = window.Jogos || {};
   J.registrados = J.registrados || {};
