@@ -469,7 +469,12 @@
     const novas = ms.filter(m => m.autor === 'cliente' && m.id > (IN.notifId || 0));
     if(novas.length){ IN.notifId = Math.max.apply(null, novas.map(m => m.id)); notificarChat_('💬 Nova mensagem', 'Mensagem de ' + (IN.conv.nome || 'cliente') + ' na conversa em andamento.'); }
   }
-  setInterval(() => { if(!document.hidden && equipe_() && navigator.onLine !== false){ carregarFila_(); vigiarConvFechada_(); } }, 10000);
+  /* Menos chamadas: sem nenhuma conversa na fila nem em andamento, confere a cada 60 s (antes 10 s); com conversa, continua a cada 10 s. */
+  let _tqOcioso_ = 0;
+  setInterval(() => { if(!document.hidden && equipe_() && navigator.onLine !== false){
+    const ocioso = !IN.conv && !(IN.fila && IN.fila.length);
+    if(ocioso && (++_tqOcioso_ % 6)) return;
+    carregarFila_(); vigiarConvFechada_(); } }, 10000);
   document.addEventListener('visibilitychange', () => { if(!document.hidden && equipe_() && navigator.onLine !== false){ carregarFila_(); vigiarConvFechada_(); } });
   setTimeout(atualizarFab_, 3000);
 })();

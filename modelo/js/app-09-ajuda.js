@@ -192,6 +192,7 @@ Admin:{ nome:'Administrador', secoes:[
     'Na fila (seguem sozinhos na volta): cadastro de cliente, fidelidade, feedback e ocorrência.',
     'Espera a volta (aparece "indisponível até o Supabase voltar" e nada é gravado): mudar status, estoque, compras, relatórios, avisos e Assistente. Anote à mão o que precisar.',
     'A "Saúde do sistema" fica dentro de "Conexão e servidores" (toque na bolinha colorida do topo): bolinha verde, amarela ou vermelha e cada item: cópia para a planilha, backup (diário às 04:00), cópia no Drive, conferência diária de vendas, tarefas automáticas e Assistente.',
+    'Plano grátis do Supabase: em "Conexão e servidores" as barras mostram banco, arquivos, usuários, chamadas às funções e uma ESTIMATIVA dos logs do mês (o número oficial dos logs só existe em Supabase → Settings → Usage). A estimativa vem do ritmo das últimas 24 h e fica amarela a partir de 70% e vermelha a partir de 90% de 1 GB, para dar tempo de agir antes de estourar. Também vai para o Painel de revenda.',
     'Desenvolvedor: o botão "🧪 Simular queda (treino)" em "Conexão e servidores" finge a queda só neste aparelho, para treinar a equipe. "Encerrar simulação" volta ao normal.' ],
     comuns:['O Guia de operação tem o passo a passo de queda, volta e restauração.'] },
 
@@ -1210,19 +1211,35 @@ function abrirAjuda(){
   document.getElementById('ajudaModal').classList.add('open');
   appEquipeCartao_();
 }
-/* App da equipe (Android): só aparece para a equipe, no Android, e só se o arquivo downloads/texas-equipe.apk estiver publicado.
-   Nenhum link disso existe no cardápio do cliente. Dentro do próprio app da equipe o cartão não aparece. */
+/* App da equipe: aparece em todo restaurante, só para a equipe (o cardápio do cliente não tem link disto).
+   1) Android com o arquivo downloads/equipe.apk publicado no site do restaurante (ou downloads/texas-equipe.apk, nome antigo): botão "Baixar o app da equipe".
+   2) Sem o .apk (ou no iPhone): botão "Instalar o app", que usa a instalação do navegador (ícone e tela cheia) com o passo a passo.
+   Dentro do próprio app (Android/TWA ou já instalado) o cartão não aparece. */
 async function appEquipeCartao_(){
   try{
     const box = document.getElementById('ajudaAppEquipe'); if(!box) return;
-    if(!/android/i.test(navigator.userAgent || '')) return;
     if(String(document.referrer || '').indexOf('android-app://') === 0) return;
-    const r = await fetch('downloads/texas-equipe.apk', { method:'HEAD', cache:'no-store' });
-    if(!r || !r.ok) return;
-    box.innerHTML = '<div class="card" style="margin:0 0 12px;"><h3 style="margin:0 0 4px;">📲 App da equipe (Android)</h3>'
-      + '<p class="sub" style="margin:0 0 8px;">Instala como um app de verdade, com ícone e tela cheia. Só para a equipe.</p>'
-      + '<a class="small-gold" style="display:block;text-align:center;padding:10px;text-decoration:none;" href="downloads/texas-equipe.apk" download>Baixar o app da equipe</a>'
-      + '<p class="obs-line" style="margin:8px 0 0;">Depois de baixar, abra o arquivo e toque em Instalar. Se o Android pedir, permita instalar apps desta fonte.</p></div>';
+    if((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true) return;
+    const android = /android/i.test(navigator.userAgent || '');
+    let apk = '';
+    /* o .apk fica no site do próprio restaurante (não no motor): o endereço é montado a partir da página aberta */
+    const site = location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '');
+    if(android){
+      for(const f of [site + 'downloads/equipe.apk', site + 'downloads/texas-equipe.apk']){
+        try{ const r = await fetch(f, { method:'HEAD', cache:'no-store' }); if(r && r.ok && !/text\/html/i.test(r.headers.get('content-type') || '')){ apk = f; break; } }catch(e){}
+      }
+    }
+    if(apk){
+      box.innerHTML = '<div class="card" style="margin:0 0 12px;"><h3 style="margin:0 0 4px;">📲 App da equipe (Android)</h3>'
+        + '<p class="sub" style="margin:0 0 8px;">Instala como um app de verdade, com ícone e tela cheia. Só para a equipe.</p>'
+        + '<a class="small-gold" style="display:block;text-align:center;padding:10px;text-decoration:none;" href="' + apk + '" download>Baixar o app da equipe</a>'
+        + '<p class="obs-line" style="margin:8px 0 0;">Depois de baixar, abra o arquivo e toque em Instalar. Se o Android pedir, permita instalar apps desta fonte.</p></div>';
+      return;
+    }
+    if(typeof window.instalarApp !== 'function') return;
+    box.innerHTML = '<div class="card" style="margin:0 0 12px;"><h3 style="margin:0 0 4px;">📲 App da equipe</h3>'
+      + '<p class="sub" style="margin:0 0 8px;">Instala no celular com ícone e tela cheia, sem baixar arquivo. Só para a equipe.</p>'
+      + '<button type="button" class="small-gold" style="display:block;width:100%;text-align:center;padding:10px;" onclick="instalarApp()">Instalar o app</button></div>';
   }catch(e){}
 }
 function fecharAjuda(){ document.getElementById('ajudaModal').classList.remove('open'); }

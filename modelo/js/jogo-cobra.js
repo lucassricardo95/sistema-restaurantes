@@ -1,4 +1,4 @@
-/* v1.15 (P-07) — Cobra Smash: deslize o dedo (ou use as setas) para a cobra comer os lanches do cardápio.
+/* v1.15 (P-07) — Cobra (tema do restaurante): deslize o dedo (ou use as setas) para a cobra comer os lanches do cardápio.
    Cada lanche = +1 e a cobra cresce e acelera. Bateu na parede ou nela mesma, acabou. */
 (function(){
   'use strict';
@@ -31,7 +31,7 @@
     const c = st.corpo[0], n = { x:c.x + st.dir.x, y:c.y + st.dir.y };
     if(n.x < 0 || n.y < 0 || n.x >= st.cols || n.y >= st.lins || st.corpo.slice(0, -1).some(k => k.x === n.x && k.y === n.y)){
       st.fim = true; o.J.bip(140, 300, 'sawtooth'); o.J.vibrar(90);
-      setTimeout(() => o.fim(st.pts, false, 'A cobra comeu ' + st.pts + ' lanche(s)!'), 500); return;
+      setTimeout(() => o.fim(st.pts, false, 'A cobra comeu ' + st.pts + ' ' + window.Jogos.tema().comeu + '!'), 500); return;
     }
     st.corpo.unshift(n);
     if(n.x === st.comida.x && n.y === st.comida.y){ st.pts++; o.pontos(st.pts); o.J.bip(784, 60, 'sine'); o.J.vibrar(15); st.intervalo = Math.max(75, st.intervalo - 5); comida_(); }
@@ -48,17 +48,17 @@
     c.fillStyle = '#1d140c'; c.fillRect(0, 0, o.w, o.h);
     c.fillStyle = '#251a0f';
     for(let y = 0; y < st.lins; y++) for(let x = 0; x < st.cols; x++) if((x + y) % 2) c.fillRect(st.ox + x * T, st.oy + y * T, T, T);
-    c.strokeStyle = '#d9a21b'; c.lineWidth = 2; c.strokeRect(st.ox - 1, st.oy - 1, st.cols * T + 2, st.lins * T + 2);
-    const f = st.comida; o.J.desenharItem(c, st.ox + f.x * T + T / 2, st.oy + f.y * T + T / 2, T * 0.6, f.foto, '🍔');
+    c.strokeStyle = window.Jogos.tema().cor; c.lineWidth = 2; c.strokeRect(st.ox - 1, st.oy - 1, st.cols * T + 2, st.lins * T + 2);
+    const f = st.comida; o.J.desenharItem(c, st.ox + f.x * T + T / 2, st.oy + f.y * T + T / 2, T * 0.6, f.foto, window.Jogos.tema().comida);
     st.corpo.forEach((k, i) => {
-      c.fillStyle = i === 0 ? '#f2c230' : (i % 2 ? '#c9981a' : '#d9a21b');
+      c.fillStyle = i === 0 ? '#f2c230' : (i % 2 ? '#c9981a' : window.Jogos.tema().cor);
       c.beginPath(); if(c.roundRect) c.roundRect(st.ox + k.x * T + 1, st.oy + k.y * T + 1, T - 2, T - 2, i === 0 ? 7 : 4); else c.rect(st.ox + k.x * T + 1, st.oy + k.y * T + 1, T - 2, T - 2); c.fill();
     });
     const h = st.corpo[0]; c.fillStyle = '#111';
     c.beginPath(); c.arc(st.ox + h.x * T + T / 2 + st.dir.x * 3 - st.dir.y * 4, st.oy + h.y * T + T / 2 + st.dir.y * 3 + st.dir.x * -4, 2.2, 0, 7); c.fill();
     c.beginPath(); c.arc(st.ox + h.x * T + T / 2 + st.dir.x * 3 + st.dir.y * 4, st.oy + h.y * T + T / 2 + st.dir.y * 3 + st.dir.x * 4, 2.2, 0, 7); c.fill();
     c.fillStyle = 'rgba(255,255,255,.7)'; c.font = '13px sans-serif'; c.textAlign = 'left'; c.fillText('Tamanho: ' + st.corpo.length, 10, 18);
-    if(st.comeco){ c.fillStyle = '#d9a21b'; c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.fillText('Deslize o dedo para começar', o.w / 2, o.h / 2 - 30); }
+    if(st.comeco){ c.fillStyle = window.Jogos.tema().cor; c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.fillText('Deslize o dedo para começar', o.w / 2, o.h / 2 - 30); }
   }
   let ini = null;
   const baixo = e => { e.preventDefault(); ini = { x:e.clientX, y:e.clientY }; };

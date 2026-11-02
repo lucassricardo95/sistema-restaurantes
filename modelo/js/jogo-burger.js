@@ -1,27 +1,19 @@
-/* v1.15 (P-07) — Monte o Burger: a camada anda de um lado para o outro; toque para soltar em cima da pilha.
+/* v1.15 (P-07) — Monte o Burger/Churros/Prato (o tema vem do restaurante): a camada anda de um lado para o outro; toque para soltar em cima da pilha.
    O que passar da borda cai fora e a próxima camada fica menor. Soltou certinho = camada perfeita (+2). */
 (function(){
   'use strict';
-  const CAMADAS = [
-    { n:'Carne',   c:'#6b3a1e', b:'#4a2410', h:16 },
-    { n:'Queijo',  c:'#f2c230', b:'#c9981a', h:8 },
-    { n:'Alface',  c:'#58a83a', b:'#3d7a26', h:9 },
-    { n:'Tomate',  c:'#d8432f', b:'#a52d1f', h:10 },
-    { n:'Bacon',   c:'#b8513a', b:'#7e2f20', h:8 },
-    { n:'Cebola',  c:'#e8d9c4', b:'#b8a68c', h:7 },
-    { n:'Picles',  c:'#7aa33a', b:'#56782a', h:7 }
-  ];
+  const TM = () => window.Jogos.tema();
   let o, raf = 0, pausado = false, ultimo = 0, st;
   function novo_(){
     const larg0 = Math.round(o.w * 0.62);
-    st = { pilha:[{ x:(o.w - larg0) / 2, w:larg0, y:o.h - 40, h:22, c:'#d79a3c', b:'#a8701f', pao:true }],
+    st = { pilha:[{ x:(o.w - larg0) / 2, w:larg0, y:o.h - 40, h:22, c:TM().base.c, b:TM().base.b, pao:true }],
       atual:null, dir:1, vel:1.6, pts:0, perfeitas:0, cam:0, caindo:[], fim:false, brilho:0 };
     proxima_();
     o.pontos(0);
   }
   function topo_(){ return st.pilha[st.pilha.length - 1]; }
   function proxima_(){
-    const t = topo_(), k = CAMADAS[(st.pilha.length - 1) % CAMADAS.length];
+    const t = topo_(), k = TM().camadas[(st.pilha.length - 1) % TM().camadas.length];
     st.atual = { x: st.dir > 0 ? -t.w * 0.2 : o.w - t.w * 0.8, w:t.w, y:t.y - k.h, h:k.h, c:k.c, b:k.b, n:k.n };
     st.vel = Math.min(6, 1.6 + st.pilha.length * 0.12);
   }
@@ -64,7 +56,7 @@
     c.beginPath();
     if(c.roundRect) c.roundRect(p.x, y, p.w, p.h, r); else c.rect(p.x, y, p.w, p.h);
     c.fill(); c.stroke();
-    if(p.n === 'Alface'){ c.fillStyle = 'rgba(255,255,255,.15)'; for(let x = p.x + 6; x < p.x + p.w - 4; x += 12) c.fillRect(x, y + 2, 5, 2); }
+    if(p.n === 'Alface' || p.n === 'Folhas'){ c.fillStyle = 'rgba(255,255,255,.15)'; for(let x = p.x + 6; x < p.x + p.w - 4; x += 12) c.fillRect(x, y + 2, 5, 2); }
   }
   function desenhar_(){
     const c = o.ctx;
@@ -74,10 +66,10 @@
     st.pilha.forEach(p => camada_(c, p));
     if(st.atual) camada_(c, st.atual);
     st.caindo.forEach(p => { c.globalAlpha = 0.8; camada_(c, p); c.globalAlpha = 1; });
-    if(st.brilho > 0){ c.fillStyle = 'rgba(217,162,27,' + (st.brilho * 0.5) + ')'; c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.fillText('PERFEITA! +3', o.w / 2, 60); }
+    if(st.brilho > 0){ c.fillStyle = 'rgba(255,255,255,' + (st.brilho * 0.6) + ')'; c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.fillText('PERFEITA! +3', o.w / 2, 60); }
     c.fillStyle = 'rgba(255,255,255,.7)'; c.font = '13px sans-serif'; c.textAlign = 'left';
     c.fillText('Camadas: ' + (st.pilha.length - 1) + (st.atual ? '  ·  agora: ' + st.atual.n : ''), 10, 22);
-    if(st.pilha.length === 1 && !st.fim){ c.textAlign = 'center'; c.fillStyle = '#d9a21b'; c.font = 'bold 16px sans-serif'; c.fillText('Toque na tela para soltar', o.w / 2, o.h / 2); }
+    if(st.pilha.length === 1 && !st.fim){ c.textAlign = 'center'; c.fillStyle = window.Jogos.tema().cor; c.font = 'bold 16px sans-serif'; c.fillText('Toque na tela para soltar', o.w / 2, o.h / 2); }
   }
   const toque = e => { e.preventDefault(); soltar_(); };
   const tecla = e => { if(e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown'){ e.preventDefault(); soltar_(); } };

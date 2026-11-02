@@ -919,7 +919,7 @@ async function ifoodUniaoDesfazer_(sId){
     try{
       const s = document.querySelector('section.tab.active');
       document.querySelectorAll('section.tab').forEach(x => { if(x !== s) limpar(x); });
-      if(!s || FIXAS.indexOf(s.id) < 0){ document.documentElement.classList.remove('tela-fixa'); return; }
+      if(!s || FIXAS.indexOf(s.id) < 0 || !s.getClientRects().length){ document.documentElement.classList.remove('tela-fixa'); return; }
       document.documentElement.classList.add('tela-fixa');
       limpar(s);
       const nav = document.getElementById('navInf'), navH = nav && nav.offsetHeight ? nav.offsetHeight : 0;

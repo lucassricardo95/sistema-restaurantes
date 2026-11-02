@@ -251,7 +251,7 @@ function abaLig(){
 function configTexto(r){
   const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {}, mo = (r.motor || 'https://lucassricardo95.github.io/motor/estavel/').replace(/texas-estavel\/$/, 'estavel/').replace(/texas-(v[\d.]+)\/$/, '$1/');
   const o = { motor:r.motor || 'https://lucassricardo95.github.io/motor/estavel/', slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
-    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
+    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', jogos:{ tema:(m.jogos && m.jogos.tema) || 'generico' }, cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
   return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Para mudar, gere de novo no painel. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
 }
 window.rvGerarConfig = async () => {
@@ -340,6 +340,7 @@ function abaMarca(){
    + '<h3>Ou ajuste as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botão principal'],['fundo','Fundo']].map(k => '<div class="cor-item"><input type="color" data-k="marca.cores.' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '" oninput="rvPrevia()"><br>' + k[1] + '</div>').join('') + '</div>'
    + '<div class="previa" id="previa"></div>'
    + '<div class="cols"><div>' + campoTxt('Slogan', 'slogan', { path:'marca.slogan' }) + '</div><div>' + campoTxt('Nome do assistente virtual', 'assist', { path:'marca.assistente' }) + '</div></div>'
+   + '<h3>Jogos do cliente (enquanto espera o pedido)</h3><label for="f_jogos">Tema dos jogos</label><select id="f_jogos" data-k="marca.jogos.tema">' + [['generico','Comida em geral'],['burger','Hambúrguer'],['churros','Churros e doces']].map(o => '<option value="' + o[0] + '"' + ((m.jogos || {}).tema === o[0] || (!(m.jogos || {}).tema && o[0] === 'generico') ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>'
    + '<h3>Logos</h3>' + [['cardapio','Logo principal (cardápio, login e cabeçalho)'],['impressao','Logo de impressão (comanda e recibo)'],['icone','Ícone do app (quadrado)']].map(l =>
       '<div class="logo-box" style="margin:10px 0"><div style="min-width:70px">' + (lg[l[0]] ? '<img src="' + esc(lg[l[0]]) + '" alt="">' : '<small class="mudo">sem imagem</small>') + '</div><div><b style="font-size:14px">' + l[1] + '</b><br><input type="file" accept="image/*" onchange="rvLogo(\'' + l[0] + '\',this)"></div></div>').join('')
    + botSalvar + '</div>';

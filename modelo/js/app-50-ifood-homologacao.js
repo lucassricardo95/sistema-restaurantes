@@ -139,6 +139,7 @@
   let codigos = [], codEm = 0, codBusy = false, codFalha = 0;
   async function atualizarCodigos_(forcar){
     if(codBusy) return;
+    if(!forcar && !(window.INTEG_ && window.INTEG_.ifood)) return;   // iFood desligado: nenhuma chamada ao servidor
     if(!forcar && Date.now() - codEm < 20000){ desenharCodigos_(); return; }
     codBusy = true;
     try{ const r = await apiCall('ifoodCodigosPendentes', {}); if(r && r.ok){ codigos = r.lista || []; codEm = Date.now(); codFalha = 0; } else codFalha++; }

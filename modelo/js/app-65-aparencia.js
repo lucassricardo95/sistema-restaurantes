@@ -79,11 +79,14 @@
     try{
       if(f.size > 12 * 1024 * 1024) throw new Error('A imagem é muito grande (máximo 12 MB).');
       const s = typeof sbSessaoLer_ === 'function' ? sbSessaoLer_() : null; if(!s) throw new Error('Entre no sistema de novo para enviar imagens.');
-      const b = await reduzir_(f, tipo === 'icone' ? 512 : 1024), cam = tipo + '-' + Date.now() + '.png';
-      const r = await fetch(SUPABASE_URL_ + '/storage/v1/object/marca/' + cam, { method:'POST', headers:{ apikey:SUPABASE_CHAVE_, Authorization:'Bearer ' + s.access_token, 'Content-Type':'image/png' }, body:b });
-      if(!r.ok){ const j = await r.json().catch(() => ({})); throw new Error('Não foi possível enviar a imagem (' + (j.message || j.error || r.status) + ').'); }
-      F.logos[tipo] = SUPABASE_URL_ + '/storage/v1/object/public/marca/' + cam; ap_pintar_();
-      showMsg('apMsg', 'Imagem enviada. Toque em "Salvar aparência" para valer.', 'ok');
+      const b = await reduzir_(f, tipo === 'icone' ? 512 : 1024);
+      showMsg('apMsg', 'Enviando a imagem para o Google Drive…', 'ok');
+      const b64 = await new Promise((ok, no) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1] || ''); rd.onerror = () => no(new Error('Não consegui ler a imagem.')); rd.readAsDataURL(b); });
+      let j; try{ j = await sb410Edge_('upload-foto', { marca:tipo, nomeBase:'logo-' + tipo, base64Data:b64, mimeType:'image/png', destino:'ambos' }, 90000); }
+      catch(e){ throw new Error('Sem conexão para enviar ao Drive. Tente de novo.'); }
+      if(!j || !j.ok || !j.id_principal) throw new Error('Não foi possível enviar para o Drive (' + ((j && (j.message || j.erro)) || 'sem resposta') + ').');
+      F.logos[tipo] = sbFotoUrl_(j.id_principal); ap_pintar_();
+      showMsg('apMsg', 'Imagem enviada ao Drive. Toque em "Salvar aparência" para valer.', 'ok');
     }catch(e){ showMsg('apMsg', '⚠️ ' + (e.message || 'Falha ao enviar a imagem.'), 'warn'); }
   };
   async function enviar_(corpo, okMsg){

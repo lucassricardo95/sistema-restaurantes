@@ -1,7 +1,7 @@
-/* v1.15 (P-07) — Memória Texas: 12 cartas (6 pares) com as fotos dos lanches do cardápio. Menos jogadas = melhor recorde. */
+/* v1.15 (P-07) — Jogo da Memória (tema do restaurante): 12 cartas (6 pares) com as fotos dos lanches do cardápio. Menos jogadas = melhor recorde. */
 (function(){
   'use strict';
-  const EMOJIS = ['🍔', '🍟', '🌭', '🥤', '🧀', '🥓', '🍕', '🍦'];
+  const EMOJIS = window.Jogos.tema().memoria;
   let o, raf = 0, pausado = false, st;
   function embaralhar_(a){ for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   function novo_(){
@@ -37,10 +37,10 @@
     const alvo = (k.aberta || k.achada) ? 1 : 0; k.giro += (alvo - k.giro) * 0.25;
     const esc = Math.abs(k.giro * 2 - 1), frente = k.giro > 0.5;
     c.save(); c.translate(k.x + k.w / 2, k.y + k.h / 2); c.scale(Math.max(0.02, esc), 1);
-    c.fillStyle = frente ? (k.achada ? '#2f2416' : '#f6ead2') : '#8a1f17'; c.strokeStyle = '#d9a21b'; c.lineWidth = 2;
+    c.fillStyle = frente ? (k.achada ? '#2f2416' : '#f6ead2') : '#8a1f17'; c.strokeStyle = window.Jogos.tema().cor; c.lineWidth = 2;
     c.beginPath(); if(c.roundRect) c.roundRect(-k.w / 2, -k.h / 2, k.w, k.h, 10); else c.rect(-k.w / 2, -k.h / 2, k.w, k.h); c.fill(); c.stroke();
     if(frente){ c.globalAlpha = k.achada ? 0.75 : 1; o.J.desenharItem(c, 0, 0, Math.min(k.w, k.h) * 0.38, k.face.foto, k.face.emoji); c.globalAlpha = 1; }
-    else { c.fillStyle = '#d9a21b'; c.font = 'bold ' + Math.round(k.w * 0.22) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('TB', 0, 1); }
+    else { c.fillStyle = window.Jogos.tema().cor; c.font = 'bold ' + Math.round(k.w * 0.22) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(window.Jogos.tema().verso, 0, 1); }
     c.restore();
   }
   function passo_(){

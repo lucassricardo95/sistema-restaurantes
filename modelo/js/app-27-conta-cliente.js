@@ -223,8 +223,9 @@ window.contaGoogle_ = function(abrir){ entrarGoogle(typeof abrir === 'string' ? 
 window.abrirContaEntrar = abrirEntrar;
 
 /* ---------- início: reconhece o cliente, cria a conta no banco e pede o aceite ---------- */
-async function iniciar(manual){
+async function iniciar(manual, tentativa){
   if(estado.iniciando) return; estado.iniciando = true;
+  tentativa = tentativa || 0;
   try{
     var ind = ''; try{ ind = localStorage.getItem(IND_KEY) || ''; }catch(e){}
     var r = await rpc('api_conta_iniciar', { p:{ indicacao: ind } });
@@ -232,6 +233,9 @@ async function iniciar(manual){
     if(!r.ok){
       if(/equipe/i.test(r.message || '')){ toast(r.message); sair(true); return; }
       if(manual) toast(r.message || 'Não foi possível abrir sua conta agora.');
+      /* falhou ao carregar a conta (rede oscilando, app acabando de atualizar): tenta de novo sozinho e, se não der, avisa na tela */
+      else if(tentativa < 3) setTimeout(function(){ iniciar(false, tentativa + 1); }, [3000, 8000, 20000][tentativa]);
+      else toast('Não foi possível carregar a sua conta agora. Toque em "Minha conta" para tentar de novo.');
       return;
     }
     try{ localStorage.removeItem(IND_KEY); }catch(e){}

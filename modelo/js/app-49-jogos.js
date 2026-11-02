@@ -4,7 +4,7 @@
    - Tela própria, por cima do acompanhamento, com a BARRA DO PEDIDO no topo (nº e etapa). O acompanhamento
      continua atualizando por baixo; quando a etapa muda, o jogo PAUSA e aparece o aviso grande.
    - 4 jogos, cada um num arquivo, carregado só quando o cliente escolhe (não pesa o cardápio):
-     Monte o Burger · Chuva de Ingredientes · Memória Texas · Cobra Smash.
+     os nomes, os desenhos e os ingredientes vêm do TEMA do restaurante (marca.jogos.tema: 'generico', 'burger' ou 'churros').
    - Usam as fotos reais do cardápio (miniaturas). Sem foto, usam desenhos.
    - Recorde pessoal guardado só neste aparelho. Som começa DESLIGADO.
    - Se um jogo não carregar, aparece o aviso na tela (nada falha calado).
@@ -17,15 +17,50 @@
     memoria: 'js/jogo-memoria.js?v=5246b144',
     cobra:   'js/jogo-cobra.js?v=651a89f6'
   };
-  const LISTA = [
-    { id:'burger',  ico:'🍔', nome:'Monte o Burger',        dica:'Toque para soltar cada camada em cima da outra.' },
-    { id:'chuva',   ico:'🧺', nome:'Chuva de Ingredientes', dica:'Arraste a bandeja: pegue os ingredientes, fuja das bombas.' },
-    { id:'memoria', ico:'🃏', nome:'Jogo da Memória',         dica:'Ache os pares de lanches com o menor número de jogadas.' },
-    { id:'cobra',   ico:'🐍', nome:'Cobra Smash',           dica:'Deslize o dedo (ou use as setas) para comer os lanches.' }
-  ];
   const J = window.Jogos = window.Jogos || {};
   J.registrados = J.registrados || {};
   J.registrar = function(id, jogo){ J.registrados[id] = jogo; };
+
+  /* ---------- tema dos jogos (cada restaurante tem o seu; nada de outro restaurante aparece) ---------- */
+  const TEMAS = {
+    generico: {
+      cor:'#d9a21b', verso:null,
+      nomes:{ burger:'Monte o Prato', chuva:'Chuva de Ingredientes', memoria:'Jogo da Memória', cobra:'Cobra Gulosa' },
+      icos:{ burger:'🍽️', chuva:'🧺', memoria:'🃏', cobra:'🐍' },
+      dicas:{ burger:'Toque para soltar cada camada em cima da outra.', chuva:'Arraste a bandeja: pegue os ingredientes, fuja das bombas.', memoria:'Ache os pares com o menor número de jogadas.', cobra:'Deslize o dedo (ou use as setas) para comer.' },
+      base:{ n:'Base', c:'#d9b26a', b:'#a8803a' },
+      camadas:[ { n:'Molho', c:'#b8432f', b:'#862a1b', h:9 }, { n:'Queijo', c:'#f2c230', b:'#c9981a', h:8 }, { n:'Folhas', c:'#58a83a', b:'#3d7a26', h:9 }, { n:'Tomate', c:'#d8432f', b:'#a52d1f', h:10 }, { n:'Carne', c:'#8a4a2a', b:'#5e2f17', h:14 }, { n:'Cebola', c:'#e8d9c4', b:'#b8a68c', h:7 } ],
+      bons:['🥬','🍅','🧀','🥕','🌽','🍗','🍞'], memoria:['🍕','🍟','🥗','🍰','🥤','🍦','🍝','🍜'], comida:'🍕', comeu:'prato(s)', comidaPl:'pratos'
+    },
+    burger: {
+      cor:'#d9a21b', verso:null,
+      nomes:{ burger:'Monte o Burger', chuva:'Chuva de Ingredientes', memoria:'Jogo da Memória', cobra:'Cobra Smash' },
+      icos:{ burger:'🍔', chuva:'🧺', memoria:'🃏', cobra:'🐍' },
+      dicas:{ burger:'Toque para soltar cada camada em cima da outra.', chuva:'Arraste a bandeja: pegue os ingredientes, fuja das bombas.', memoria:'Ache os pares de lanches com o menor número de jogadas.', cobra:'Deslize o dedo (ou use as setas) para comer os lanches.' },
+      base:{ n:'Pão', c:'#d79a3c', b:'#a8701f' },
+      camadas:[ { n:'Carne', c:'#6b3a1e', b:'#4a2410', h:16 }, { n:'Queijo', c:'#f2c230', b:'#c9981a', h:8 }, { n:'Alface', c:'#58a83a', b:'#3d7a26', h:9 }, { n:'Tomate', c:'#d8432f', b:'#a52d1f', h:10 }, { n:'Bacon', c:'#b8513a', b:'#7e2f20', h:8 }, { n:'Cebola', c:'#e8d9c4', b:'#b8a68c', h:7 }, { n:'Picles', c:'#7aa33a', b:'#56782a', h:7 } ],
+      bons:['🥬','🍅','🧀','🥓','🧅','🥩','🍞'], memoria:['🍔','🍟','🌭','🥤','🧀','🥓','🍕','🍦'], comida:'🍔', comeu:'lanche(s)', comidaPl:'lanches'
+    },
+    churros: {
+      cor:'#e8a33d', verso:null,
+      nomes:{ burger:'Monte o Churros', chuva:'Chuva de Recheios', memoria:'Memória Doce', cobra:'Cobra Doce' },
+      icos:{ burger:'🥖', chuva:'🍫', memoria:'🃏', cobra:'🐍' },
+      dicas:{ burger:'Toque para soltar cada churros em cima do outro.', chuva:'Arraste a bandeja: pegue os recheios, fuja das bombas.', memoria:'Ache os pares de doces com o menor número de jogadas.', cobra:'Deslize o dedo (ou use as setas) para comer os churros.' },
+      base:{ n:'Churros', c:'#d9923a', b:'#a8631b' },
+      camadas:[ { n:'Doce de leite', c:'#c9843a', b:'#8f5719', h:10 }, { n:'Chocolate', c:'#5a2e1a', b:'#3a1c0e', h:12 }, { n:'Brigadeiro', c:'#6b3a26', b:'#44210f', h:11 }, { n:'Goiabada', c:'#b83a3a', b:'#862424', h:9 }, { n:'Açúcar e canela', c:'#d9b27a', b:'#a8803a', h:7 }, { n:'Morango', c:'#e04a5f', b:'#a8283c', h:9 }, { n:'Leite ninho', c:'#f3ead7', b:'#c4b697', h:8 } ],
+      bons:['🍫','🍯','🍓','🥛','🍬','🍪','🧁'], memoria:['🍫','🍯','🍦','☕','🍓','🍩','🥛','🍬'], comida:'🍩', comeu:'churros', comidaPl:'churros'
+    }
+  };
+  const iniciais_ = () => { const n = String((window.RESTAURANTE || {}).nome || '').split(/\s+/).filter(w => w && !/^(de|da|do|das|dos|e|&)$/i.test(w)); return (n.slice(0, 2).map(w => w[0]).join('') || '★').toUpperCase(); };
+  J.tema = function(){
+    if(J._tema) return J._tema;
+    const cfg = ((window.RESTAURANTE || {}).marca || {}).jogos || {};
+    const base = TEMAS[cfg.tema] || TEMAS.generico;
+    J._tema = Object.assign({}, base, { nomes:Object.assign({}, base.nomes, cfg.nomes || {}), icos:Object.assign({}, base.icos, cfg.icos || {}), dicas:Object.assign({}, base.dicas, cfg.dicas || {}), cor: /^#[0-9a-fA-F]{6}$/.test(cfg.cor || '') ? cfg.cor : base.cor, verso: base.verso || iniciais_() });
+    return J._tema;
+  };
+  const LISTA = ['burger', 'chuva', 'memoria', 'cobra'].map(id => ({ id, get ico(){ return J.tema().icos[id]; }, get nome(){ return J.tema().nomes[id]; }, get dica(){ return J.tema().dicas[id]; } }));
+
 
   /* ---------- recorde (só neste aparelho) e som ---------- */
   const CH = 'tb_jogos_v1';
@@ -80,7 +115,7 @@
       ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, x - r, y - r, r * 2, r * 2);
       ctx.restore(); ctx.lineWidth = 2; ctx.strokeStyle = '#d9a21b'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
     } else {
-      ctx.font = Math.round(r * 1.7) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(emoji || '🍔', x, y + 1);
+      ctx.font = Math.round(r * 1.7) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(emoji || J.tema().comida, x, y + 1);
     }
   };
 
@@ -207,7 +242,7 @@
     const rec = J.novoRecorde(id, pts, menorMelhor);
     J.bip(rec ? 880 : 220, 220, 'triangle'); J.vibrar(rec ? [40, 40, 40] : 60);
     const r = document.getElementById('jgRec'); if(r) r.textContent = '🏆 ' + (J.recorde(id) || '—');
-    sobre_('<div class="jg-sobre-box"><div style="font-size:34px;">' + (rec ? '🏆' : '🍔') + '</div><b>' + escH(texto || ('Fim de jogo: ' + pts + ' pts')) + '</b>'
+    sobre_('<div class="jg-sobre-box"><div style="font-size:34px;">' + (rec ? '🏆' : J.tema().comida) + '</div><b>' + escH(texto || ('Fim de jogo: ' + pts + ' pts')) + '</b>'
       + (rec ? '<div class="txt-ouro">Novo recorde!</div>' : (J.recorde(id) ? '<div class="txt-muted">Recorde: ' + J.recorde(id) + '</div>' : ''))
       + '<div class="btnrow mt-2"><button type="button" class="primary" onclick="Jogos.jogar(\'' + id + '\')">▶ Jogar de novo</button><button type="button" class="ghost" onclick="Jogos.menu()">Outros jogos</button></div></div>');
   }

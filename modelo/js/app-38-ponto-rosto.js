@@ -180,7 +180,7 @@ async function prEnviar_(pendente){
   if(r && r.ok){
     prMsg_((r.message || 'Registrado.'), r.rosto === 'pendente' ? '' : 'ok');
     prBotoes_([{ t:'Fechar', cls:'small-gold', f:prFechar_ }]);
-    try{ minhaExtrasCarregar_(); }catch(e){}
+    try{ minhaExtrasCarregar_(true); }catch(e){}
     if(r.registroId && c.foto) prSubirFoto_(r.registroId, r.lado, c.foto);
     return;
   }

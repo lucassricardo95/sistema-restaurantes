@@ -3,15 +3,20 @@
    Relógio no topo (todos os perfis ligados a um funcionário) → janela com a minha escala dos próximos 7 dias,
    bater entrada/saída (com localização) e trocas de turno. Usa as mesmas chamadas do cartão "Minha escala" do Início.
    ============================================================ */
-var prVinculado_ = null, prAberto_ = false;
+var prVinculado_ = null, prAberto_ = false, prUltimaConsulta_ = 0;
+/* Menos chamadas ao servidor (cada uma vira linha de log no plano grátis): o estado do ponto só é consultado de novo a cada 90 s,
+   a não ser que a pessoa abra a janela do ponto ou bata o ponto (aí é na hora). A tela Início redesenha muitas vezes e chamava toda vez. */
 function prBotao_(){ return document.getElementById('prBtnTopo'); }
-async function prVisibilidade_(){
+async function prVisibilidade_(forcar){
   const b = prBotao_(); if(!b) return;
   if(typeof currentUser === 'undefined' || !currentUser || typeof apiConfigurada === 'function' && !apiConfigurada()){ b.style.display = 'none'; return; }
-  try{
-    const e = await apiCall('pontoEstado', {});
-    prVinculado_ = !!(e && e.ok && e.vinculado); prAberto_ = prVinculado_ && !!e.aberto;
-  }catch(err){ prVinculado_ = null; }
+  if(forcar === true || prVinculado_ === null || Date.now() - prUltimaConsulta_ > (prVinculado_ === false ? 600000 : 90000)){   // sem vínculo com funcionário: confere a cada 10 min
+    prUltimaConsulta_ = Date.now();
+    try{
+      const e = await apiCall('pontoEstado', {});
+      prVinculado_ = !!(e && e.ok && e.vinculado); prAberto_ = prVinculado_ && !!e.aberto;
+    }catch(err){ prVinculado_ = null; prUltimaConsulta_ = 0; }
+  }
   b.style.display = prVinculado_ ? '' : 'none';
   b.classList.toggle('pr-on', prAberto_);
   b.title = prAberto_ ? 'Escala e ponto (você está em turno)' : 'Escala e ponto';
@@ -27,9 +32,9 @@ function prHtmlDias_(m){
   }
   return h;
 }
-async function prAtualizar_(){
+async function prAtualizar_(forcar){
   const corpo = document.getElementById('prCorpo'), m = document.getElementById('prModal');
-  prVisibilidade_();
+  prVisibilidade_(forcar === true || !!(m && m.classList.contains('open')));
   if(!corpo || !m || !m.classList.contains('open')) return;
   try{
     const r = await minhaExtrasHtml_();
@@ -48,6 +53,6 @@ async function prAbrir(){
 }
 /* depois de bater o ponto, atualiza a janela e o selo do botão */
 (function(){
-  if(typeof pontoBater === 'function'){ const orig = pontoBater; pontoBater = async function(){ const r = await orig.apply(this, arguments); try{ prAtualizar_(); }catch(e){} return r; }; }
+  if(typeof pontoBater === 'function'){ const orig = pontoBater; pontoBater = async function(){ const r = await orig.apply(this, arguments); try{ prAtualizar_(true); }catch(e){} return r; }; }
   if(typeof renderInicio === 'function'){ const o2 = renderInicio; renderInicio = function(){ const r = o2.apply(this, arguments); try{ prVisibilidade_(); }catch(e){} return r; }; }
 })();

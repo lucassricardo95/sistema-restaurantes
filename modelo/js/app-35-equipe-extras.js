@@ -53,11 +53,16 @@ async function minhaExtrasHtml_(){
     if(minhaTurnos_.some(x => x.tipo === 'Trabalho' && x.id)) h += '<button type="button" class="ghost small mt-3" onclick="trocaPedir()">Pedir troca de turno</button>';
   return { h, m, e };
 }
-async function minhaExtrasCarregar_(){
+var minhaExtrasUlt_ = 0;
+/* Menos chamadas ao servidor: a tela Início redesenha muitas vezes e recarregava ponto, escala e trocas toda vez (3 chamadas).
+   Agora só recarrega a cada 90 s; depois de bater ponto ou responder uma troca (forcar = true) recarrega na hora. */
+async function minhaExtrasCarregar_(forcar){
   const ex = document.getElementById('minhaEscalaExtra'), card = document.getElementById('minhaEscalaCard');
-  try{ if(typeof prAtualizar_ === 'function') prAtualizar_(); }catch(err){}
+  try{ if(typeof prAtualizar_ === 'function') prAtualizar_(forcar === true); }catch(err){}
   if(!ex || !card || card.style.display === 'none') return;
-  try{ const r = await minhaExtrasHtml_(); ex.innerHTML = r.h; }catch(err){ ex.innerHTML = ''; }
+  if(forcar !== true && Date.now() - minhaExtrasUlt_ < (typeof prVinculado_ !== 'undefined' && prVinculado_ === false ? 600000 : 90000) && (ex.innerHTML || prVinculado_ === false)) return;
+  minhaExtrasUlt_ = Date.now();
+  try{ const r = await minhaExtrasHtml_(); ex.innerHTML = r.h; }catch(err){ ex.innerHTML = ''; minhaExtrasUlt_ = 0; }
 }
 function pontoPosicao_(){
   return new Promise(res => {
@@ -73,7 +78,7 @@ async function pontoBater(){
   try{
     avisar('Conferindo sua localização…');
     const pos = await pontoPosicao_();
-    const r = await apiCall('pontoBater', pos || {}); avisar((r && r.message) || 'Não foi possível registrar.'); minhaExtrasCarregar_();
+    const r = await apiCall('pontoBater', pos || {}); avisar((r && r.message) || 'Não foi possível registrar.'); minhaExtrasCarregar_(true);
   }
   catch(e){ avisar('Não foi possível registrar o ponto agora. Tente de novo.'); }
 }
@@ -103,11 +108,11 @@ async function trocaPedir(){
     { id:'colega', rotulo:'Quem vai assumir', tipo:'escolha', valor:colegas[0].id, opcoes: colegas.map(c => ({ v:c.id, t:c.nome })) },
     { id:'motivo', rotulo:'Motivo (opcional)', tipo:'texto' } ] });
   if(!f) return;
-  try{ const r = await apiCall('trocaSolicitar', { turnoId:f.turno, paraFuncionarioId:f.colega, motivo:f.motivo || '' }); avisar((r && r.message) || 'Não foi possível pedir.'); minhaExtrasCarregar_(); }
+  try{ const r = await apiCall('trocaSolicitar', { turnoId:f.turno, paraFuncionarioId:f.colega, motivo:f.motivo || '' }); avisar((r && r.message) || 'Não foi possível pedir.'); minhaExtrasCarregar_(true); }
   catch(e){ avisar('Não foi possível pedir agora.'); }
 }
 async function trocaResponder(id, acao){
-  try{ const r = await apiCall('trocaResponder', { id, acao }); avisar((r && r.message) || 'Não foi possível.'); minhaExtrasCarregar_(); }
+  try{ const r = await apiCall('trocaResponder', { id, acao }); avisar((r && r.message) || 'Não foi possível.'); minhaExtrasCarregar_(true); }
   catch(e){ avisar('Não foi possível agora.'); }
 }
 (function(){
