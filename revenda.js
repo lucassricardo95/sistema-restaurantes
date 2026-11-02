@@ -1,13 +1,28 @@
-/* PAINEL DE REVENDA — cadastro e implantação dos restaurantes. Sem biblioteca externa. */
+/* PAINEL DE REVENDA — seus restaurantes, a criação de restaurantes novos, a saúde de todos e o seu dinheiro. Sem biblioteca externa. */
 (function(){
 'use strict';
 const URL_ = window.REVENDA_URL, CHAVE_ = window.REVENDA_CHAVE;
+const MOTOR_PADRAO = 'https://lucassricardo95.github.io/motor/estavel/';
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL = v => 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const num = v => { if(v == null || v === '') return null; const n = Number(String(v).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isFinite(n) ? n : null; };
+const pad = n => String(n).padStart(2, '0');
+const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+const mesDe = d => String(d || '').slice(0, 7);
+const dataBr = d => d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—';
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const mesNome = m => { const [a, b] = m.split('-'); return MESES[Number(b) - 1] + ' de ' + a; };
+const mesCurto = m => MESES[Number(m.slice(5, 7)) - 1].slice(0, 3);
+const somaMes = (m, k) => { const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + k, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
 const SIT = { implantacao:'Em implantação', teste:'Em teste', ativo:'Ativo', suspenso:'Suspenso', encerrado:'Encerrado' };
-let S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[], saude:{} };
-let timerAviso = null;
+const CAT_DESP = ['Supabase / servidores','Domínio e site','Ferramentas e IA','Marketing','Impostos','Transporte','Equipamentos','Outros'];
+const ST_PROP = { novo:'Novo contato', conversando:'Conversando', proposta:'Proposta enviada', fechado:'Fechou ✅', perdido:'Perdido' };
+const FORMAS = ['Pix','Dinheiro','Transferência','Cartão','Boleto','Outro'];
+const SAUDE_COR = { ok:'#3ccf7a', atencao:'#f0b429', problema:'#ff5c5c', sem:'#7d7480' }, SAUDE_ROT = { ok:'Tudo certo', atencao:'Atenção', problema:'Com problema', sem:'Sem sinal' };
+let S = novoEstado();
+function novoEstado(){ return { sess:null, dono:null, view:'inicio', lista:[], cob:[], desp:[], prop:[], aj:{}, termos:null, prom:[], erros:[], saude:{}, rest:null, aba:'passo', cobR:[], hist:[], aceite:null, res:{}, parte:{}, cdIdx:{}, filtro:'todos', busca:'', mes:hoje().slice(0, 7), filtroProp:'abertas', tudoAberto:{} }; }
+let timerAviso = null, timerAuto = null;
 function aviso(m, t){ const a = $('aviso'); a.textContent = m; a.className = 'aviso ' + (t || ''); a.hidden = false; clearTimeout(timerAviso); timerAviso = setTimeout(() => { a.hidden = true; }, t === 'erro' ? 9000 : 3500); }
 const erro = m => aviso('⚠️ ' + m, 'erro');
 
@@ -27,14 +42,13 @@ async function req(caminho, o){
   if(S.sess && Date.now() > S.sess.exp){ if(!await renovar()){ sessGravar(null); tela(); throw new Error('Sua sessão expirou. Entre de novo.'); } }
   const h = Object.assign({ apikey:CHAVE_, 'Content-Type':'application/json' }, o.headers || {});
   if(S.sess) h.Authorization = 'Bearer ' + S.sess.access_token;
-  let r; try{ r = await fetch(URL_ + caminho, { method:o.method || 'GET', headers:h, body:o.body }); }catch(e){ throw new Error('Sem conexão com o banco central. Confira a internet e tente de novo.'); }
+  let r; try{ r = await fetch(URL_ + caminho, { method:o.method || 'GET', headers:h, body:o.body }); }catch(e){ throw new Error('Sem conexão com o banco do painel. Confira a internet e tente de novo.'); }
   const txt = await r.text(); let j = null; try{ j = txt ? JSON.parse(txt) : null; }catch(e){}
   if(!r.ok){ throw new Error((j && (j.message || j.msg || j.error_description || j.hint)) || ('Erro ' + r.status)); }
   return j;
 }
 const rest = (q, m, b, extra) => req('/rest/v1/' + q, { method:m, body: b ? JSON.stringify(b) : undefined, headers:Object.assign({ Prefer:'return=representation' }, extra || {}) });
 const rpc = (fn, a) => req('/rest/v1/rpc/' + fn, { method:'POST', body:JSON.stringify(a || {}) });
-
 async function entrar(email, senha, criar){
   if(!email || !senha) throw new Error('Preencha o e-mail e a senha' + (criar ? ' que você quer usar como dono e toque em "Criar a conta do dono".' : '.'));
   if(criar && senha.length < 8) throw new Error('Use uma senha de pelo menos 8 caracteres.');
@@ -46,159 +60,558 @@ async function entrar(email, senha, criar){
 }
 
 /* ---------- dados ---------- */
+const tenta = async (f, pad) => { try{ return (await f()) || pad; }catch(e){ return pad; } };
 async function carregar(){
-  const [l, c] = await Promise.all([ rest('restaurantes?select=*&order=nome.asc'), rest('cobrancas?select=*&order=competencia.desc') ]);
-  S.lista = l || []; S.cob = c || [];
-  try{ S.termos = (await rest('termos_uso?select=id,versao,fornecedor_nome,fornecedor_doc,foro,contato,atualizado_em') || [])[0] || null; }catch(e){ S.termos = null; }
-  try{ S.prom = await rest('promessas?select=*&order=criada_em.desc') || []; }catch(e){ S.prom = []; }
-  try{ S.erros = await rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=200') || []; }catch(e){ S.erros = []; }
-  try{ S.saude = {}; (await rest('saude_app?select=*') || []).forEach(x => { S.saude[x.slug] = x; }); }catch(e){ S.saude = {}; }
+  const [l, c] = await Promise.all([ rest('restaurantes?select=*&order=nome.asc'), rest('cobrancas?select=*&order=vencimento.desc.nullslast') ]);
+  S.lista = (l || []).map(normalizar); S.cob = c || [];
+  const [d, p, a, t, pr] = await Promise.all([
+    tenta(() => rest('despesas_revenda?select=*&order=data.desc'), []), tenta(() => rest('propostas?select=*&order=atualizado_em.desc'), []),
+    tenta(() => rest('revenda_ajustes?select=dados'), []), tenta(() => rest('termos_uso?select=id,versao,fornecedor_nome,fornecedor_doc,foro,contato,atualizado_em'), []),
+    tenta(() => rest('promessas?select=*&order=criada_em.desc'), []) ]);
+  S.desp = d; S.prop = p; S.aj = (a[0] && a[0].dados) || {}; S.termos = t[0] || null; S.prom = pr;
+  await carregarSaude();
 }
-/* ---------- saúde e uso do Supabase (enviados pelos restaurantes a cada 15 minutos) ---------- */
-const SAUDE_COR = { ok:'#2f9e44', atencao:'#f0a500', problema:'#e5484d', sem:'#777' }, SAUDE_ROT = { ok:'Tudo certo', atencao:'Atenção', problema:'Precisa de cuidado', sem:'Sem sinal' };
+async function carregarSaude(){
+  S.erros = await tenta(() => rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=300'), []);
+  S.saude = {}; (await tenta(() => rest('saude_app?select=*'), [])).forEach(x => { S.saude[x.slug] = x; });
+  S.saudeEm = Date.now();
+}
+function normalizar(r){ const e = r.etapas || {}; Object.keys(e).forEach(k => { if(!e[k] || typeof e[k] !== 'object') e[k] = { feita: !!e[k] && e[k] !== 'pendente' }; }); r.etapas = e; r.marca = r.marca || {}; r.modulos = r.modulos || {}; return r; }
+async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
+async function salvarAjustes(novo, msg){ try{ const d = Object.assign({}, S.aj, novo); await rest('revenda_ajustes?id=eq.true', 'PATCH', { dados:d, atualizado_em:new Date().toISOString() }); S.aj = d; aviso(msg || 'Salvo.', 'ok'); return true; }catch(e){ erro(e.message); return false; } }
+
+/* ---------- contas: implantação, saúde e dinheiro ---------- */
+const etapaFeita = (r, id) => !!(r.etapas && r.etapas[id] && r.etapas[id].feita);
+const nEtapas = r => ETAPAS.filter(e => etapaFeita(r, e.id)).length;
+const proxEtapa = r => ETAPAS.find(e => !etapaFeita(r, e.id));
+const refDe = r => (r.supabase_url || '').replace(/^https?:\/\//, '').split('.')[0] || '';
+const nomeRest = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
 function saudeDe(slug){ const h = S.saude && S.saude[slug]; if(!h) return { geral:'sem', min:null, h:null }; const min = Math.round((Date.now() - new Date(h.atualizado_em).getTime()) / 60000); return { geral: min > 45 ? 'sem' : (h.geral || 'ok'), min, h }; }
 const haTempo = m => m == null ? 'nunca' : m < 1 ? 'agora' : m < 60 ? 'há ' + m + ' min' : m < 1440 ? 'há ' + Math.round(m / 60) + ' h' : 'há ' + Math.round(m / 1440) + ' d';
 function usoDe(h){ return ((h && h.itens) || []).filter(i => /^Plano grátis:/i.test(i.titulo || '')).map(i => {
   const m = String(i.texto || '').match(/^(?:Cerca de\s+)?([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s+por mês)?,?\s+de\s+([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s*\(([\d.,]+)%\))?/i); if(!m) return null;
-  const num = x => parseFloat(String(x).replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')), uso = m[1].replace(/[.,]$/, ''), lim = m[2].replace(/[.,]$/, '');
-  const pct = m[3] ? parseFloat(m[3].replace(',', '.')) : num(uso) / num(lim) * 100; if(!isFinite(pct)) return null;
+  const nn = x => parseFloat(String(x).replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')), uso = m[1].replace(/[.,]$/, ''), lim = m[2].replace(/[.,]$/, '');
+  const pct = m[3] ? parseFloat(m[3].replace(',', '.')) : nn(uso) / nn(lim) * 100; if(!isFinite(pct)) return null;
   return { id:i.id, tit:String(i.titulo).replace(/^Plano grátis:\s*/i, '').replace(/^./, c => c.toUpperCase()), uso, lim, pct:Math.round(pct * 10) / 10 }; }).filter(Boolean); }
-function barraUso(u){ const cor = u.pct >= 90 ? SAUDE_COR.problema : u.pct >= 70 ? SAUDE_COR.atencao : SAUDE_COR.ok;
-  return '<div style="margin:10px 0 2px"><div class="linha" style="gap:8px"><b style="font-size:14px">' + esc(u.tit) + '</b><small>' + esc(u.uso) + ' de ' + esc(u.lim) + ' · <b style="color:' + cor + '">' + String(u.pct).replace('.', ',') + '%</b></small></div><div class="barra"><i style="width:' + Math.min(100, u.pct) + '%;background:' + cor + '"></i></div></div>'; }
-const nEtapas = r => ETAPAS.filter(e => r.etapas && r.etapas[e.id] && r.etapas[e.id].feita).length;
-const hoje = () => new Date().toISOString().slice(0, 10);
+const corPct = p => p >= 90 ? SAUDE_COR.problema : p >= 70 ? SAUDE_COR.atencao : SAUDE_COR.ok;
+function barraUso(u){ return '<div class="uso"><div class="linha"><b>' + esc(u.tit) + '</b><small>' + esc(u.uso) + ' de ' + esc(u.lim) + ' · <b style="color:' + corPct(u.pct) + '">' + String(u.pct).replace('.', ',') + '%</b></small></div><div class="barra"><i style="width:' + Math.min(100, u.pct) + '%;background:' + corPct(u.pct) + '"></i></div></div>'; }
+const ponto = c => '<span class="ponto" style="background:' + c + '"></span>';
+const errosDe = slug => S.erros.filter(e => e.slug === slug);
+const pagoValor = c => Number(c.valor_pago != null ? c.valor_pago : c.valor) || 0;
 const atrasadas = id => S.cob.filter(c => (!id || c.restaurante_id === id) && !c.pago_em && c.vencimento && c.vencimento < hoje());
-const refDe = r => (r.supabase_url || '').replace(/^https?:\/\//, '').split('.')[0] || '(ainda não criado)';
+const mrr = () => S.lista.filter(r => r.situacao === 'ativo').reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0);
+function finMes(m){
+  const cob = S.cob.filter(c => mesDe(c.vencimento || c.competencia) === m), rec = S.cob.filter(c => mesDe(c.pago_em) === m);
+  const desp = S.desp.filter(d => mesDe(d.data) === m);
+  const recebido = rec.reduce((s, c) => s + pagoValor(c), 0), aReceber = cob.filter(c => !c.pago_em).reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const despPagas = desp.filter(d => d.pago).reduce((s, d) => s + (Number(d.valor) || 0), 0), despAbertas = desp.filter(d => !d.pago).reduce((s, d) => s + (Number(d.valor) || 0), 0);
+  return { cob, rec, desp, recebido, aReceber, despPagas, despAbertas, despTotal:despPagas + despAbertas, lucro:recebido - despPagas };
+}
+const waLink = (tel, txt) => { let d = String(tel || '').replace(/\D/g, ''); if(!d) return ''; if(d.length <= 11) d = '55' + d; return 'https://wa.me/' + d + (txt ? '?text=' + encodeURIComponent(txt) : ''); };
+function msgCobranca(c){
+  const r = S.lista.find(x => x.id === c.restaurante_id) || {}, a = S.aj;
+  const mod = a.msg_cobranca || 'Olá{contato}! Tudo bem? Passando para lembrar da {tipo} do sistema do {restaurante}: {valor}, com vencimento em {vencimento}.{pix}\nQualquer dúvida, estou à disposição. Obrigado!';
+  return mod.replace(/\{contato\}/g, r.contato_nome ? ' ' + r.contato_nome.split(' ')[0] : '').replace(/\{restaurante\}/g, r.nome || '').replace(/\{valor\}/g, BRL(c.valor)).replace(/\{vencimento\}/g, dataBr(c.vencimento))
+    .replace(/\{tipo\}/g, c.tipo === 'implantacao' ? 'taxa de implantação' : c.tipo === 'avulsa' ? (c.descricao || 'cobrança') : 'mensalidade de ' + mesNome(mesDe(c.competencia)))
+    .replace(/\{pix\}/g, a.pix ? '\nPix: ' + a.pix + (a.pix_nome ? ' (' + a.pix_nome + ')' : '') : '');
+}
 
 /* ---------- telas ---------- */
 function tela(){
+  clearInterval(timerAuto);
   if(!S.sess) return telaLogin();
   if(S.dono === null) return donoVerificar();
   if(!S.dono) return telaSemDono();
-  S.rest ? telaRest() : telaLista();
+  desenhar();
 }
 async function donoVerificar(){
-  $('app').innerHTML = '<div class="carregando">Carregando…</div>';
+  $('app').innerHTML = '<div class="carregando"><div class="giro"></div>Carregando…</div>';
   try{
     const a = await rest('admins?select=user_id'); S.dono = !!(a && a.length);
     if(!S.dono){ const tem = await rpc('revenda_tem_dono'); if(!tem){ const r = await rpc('revenda_primeiro_acesso'); S.dono = !!(r && r.ok); } }
-    if(S.dono){ await carregar(); }
+    if(S.dono) await carregar();
     tela();
   }catch(e){ erro(e.message); $('app').innerHTML = '<div class="login card"><p>Não foi possível abrir o painel.</p><button onclick="location.reload()">Tentar de novo</button> <button onclick="rvSair()">Sair</button></div>'; }
 }
 function telaSemDono(){ $('app').innerHTML = '<div class="login card"><h2>Acesso negado</h2><p>Este painel já tem um dono e a sua conta não é essa.</p><button onclick="rvSair()">Sair</button></div>'; }
 function telaLogin(){
-  $('app').innerHTML = '<div class="login card"><h1>Painel de Revenda</h1><p class="mudo">Gerencie seus restaurantes e crie novos.</p>'
+  $('app').innerHTML = '<div class="login"><div class="marca-painel">🍽️</div><h1>Painel de Revenda</h1><p class="mudo">Seus restaurantes, num lugar só.</p><div class="card">'
    + '<label for="lgE">E-mail</label><input id="lgE" type="email" autocomplete="username"><label for="lgS">Senha</label><input id="lgS" type="password" autocomplete="current-password">'
-   + '<p style="margin-top:14px"><button class="principal" id="lgB" style="width:100%">Entrar</button></p>'
-   + '<p class="mudo" style="font-size:13px">Primeiro acesso? <a href="#" id="lgC" style="color:var(--cor)">Criar a conta do dono</a> (só funciona enquanto o painel não tem dono).</p></div>';
+   + '<p style="margin-top:14px"><button class="principal grande" id="lgB">Entrar</button></p>'
+   + '<p class="mudo pequeno">Primeiro acesso? <a href="#" id="lgC">Criar a conta do dono</a> (só funciona enquanto o painel não tem dono).</p></div></div>';
   const go = async criar => { const b = $('lgB'); b.disabled = true; try{ await entrar($('lgE').value.trim(), $('lgS').value, criar); S.dono = null; tela(); }catch(e){ erro(e.message); } b.disabled = false; };
   $('lgB').onclick = () => go(false); $('lgC').onclick = ev => { ev.preventDefault(); go(true); };
   $('lgS').onkeydown = ev => { if(ev.key === 'Enter') go(false); };
 }
-window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[], saude:{} }; tela(); };
+window.rvSair = () => { sessGravar(null); S = novoEstado(); tela(); };
 
-function telaLista(){
-  const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
-  const mrr = at.reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0), atr = atrasadas();
-  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
-   + '<div class="resumo"><div class="card"><small>Ativos</small><b>' + at.length + '</b></div><div class="card"><small>Em implantação / teste</small><b>' + im.length + '</b></div>'
-   + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
-   + '<div class="card"><div class="linha"><b>Erros do sistema</b><span class="selo" style="' + (S.erros.length ? 'background:var(--erro);color:#000' : '') + '">' + (S.erros.length ? S.erros.length + ' aberto(s)' : 'nenhum') + '</span></div><small class="mudo">Erros que apareceram na tela dos restaurantes.</small><p style="margin:8px 0 0"><button class="mini' + (S.erros.length ? ' principal' : '') + '" onclick="rvErros()">Ver erros</button></p></div>'
-   + (S.lista.length ? '<div class="grade">' + S.lista.map(r => {
-      const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), a = atrasadas(r.id).length;
-      return '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><div class="linha"><b>' + esc(r.nome) + '</b>' + (r.bloqueado ? '<span class="selo" style="background:var(--erro);color:#000">⛔ Bloqueado</span>' + ((S.prom || []).some(x => x.restaurante_id === r.id && x.status === 'pendente') ? ' <span class="selo" style="background:#f0a500;color:#000">🤝 Promessa pendente</span>' : '') : '<span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span>') + '</div>'
-       + '<small class="mudo">' + esc(r.dominio || r.slug) + '</small>'
-       + '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + n + ' de ' + ETAPAS.length + ' · ' + p + '%</small>' + (() => { const px = ETAPAS.find(x => !(r.etapas && r.etapas[x.id] && r.etapas[x.id].feita)); return px ? '<small style="display:block;margin-top:4px"><b>Próximo passo:</b> ' + esc(px.titulo) + '</small>' : '<small style="display:block;margin-top:4px">✅ Implantação completa</small>'; })()
-       + (() => { const sd = saudeDe(r.slug), banco = usoDe(sd.h).find(u => u.id === 'uso_banco'), ruins = sd.h ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')).length : 0;
-          return '<div style="margin-top:10px"><div class="linha"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + SAUDE_COR[sd.geral] + ';margin-right:6px"></span><b style="font-size:14px">' + SAUDE_ROT[sd.geral] + '</b>' + (ruins ? ' <small class="mudo">· ' + ruins + (ruins === 1 ? ' item pede' : ' itens pedem') + ' atenção</small>' : '') + '</span><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small></div>' + (banco ? barraUso({ tit:'Banco', uso:banco.uso, lim:banco.lim, pct:banco.pct }) : '') + '</div>'
-            + '<details style="margin-top:8px"><summary class="mini" style="cursor:pointer;display:inline-block;list-style:none;padding:6px 10px;border:1px solid #2a2a2a;border-radius:8px">Ver tudo ▾</summary>' + saudeHtml(r, true) + '</details>'; })()
-       + '<p class="mudo" style="margin:8px 0 10px;font-size:13px">' + (r.valor_mensal ? BRL(r.valor_mensal) + '/mês' : 'Sem mensalidade definida') + (a ? ' · <b style="color:var(--erro)">' + a + ' em atraso</b>' : '') + '</p>'
-       + '<button class="mini principal" onclick="rvAbrir(\'' + r.id + '\')">Gerenciar</button> '
-       + (r.site_url ? '<a class="btn mini" style="text-decoration:none;display:inline-block;padding:6px 10px" href="' + esc(r.site_url) + '" target="_blank" rel="noopener">Abrir site</a>' : '') + '</div>';
-     }).join('') + '</div>' : '<div class="card">Nenhum restaurante ainda. Toque em "+ Novo restaurante".</div>');
-  medirContingencia_(S.lista);
+const NAV = [['inicio','🏠','Início'],['restaurantes','🍽️','Restaurantes'],['saude','🩺','Saúde'],['dinheiro','💰','Dinheiro'],['mais','☰','Mais']];
+function desenhar(){
+  clearInterval(timerAuto);
+  const v = S.view, alertaSaude = S.erros.length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
+  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia }[v] || vInicio;
+  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais' }[v] || v;
+  $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a"><button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
+    + '<main id="tela"></main>'
+    + '<nav class="nav">' + NAV.map(n => '<button class="' + (navOn === n[0] ? 'on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('') + '</nav>';
+  corpo();
+  if(['inicio','saude'].includes(v)) timerAuto = setInterval(async () => { if(document.hidden) return; await carregarSaude(); if(['inicio','saude'].includes(S.view) && !document.querySelector('.modal')) desenhar(); }, 120000);
+  window.scrollTo(0, 0);
 }
-window.rvNovo = async () => {
-  const nome = (prompt('Nome do restaurante:') || '').trim(); if(!nome) return;
-  let slug = (prompt('Código do restaurante (letras minúsculas, números e hífen; vai no endereço):', nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)) || '').trim().toLowerCase();
-  if(!slug) return;
-  try{
-    const mod = {}; MODULOS.forEach(m => { mod[m.id] = m.pad; });
-    const r = await rest('restaurantes', 'POST', { slug, nome, modulos:mod, marca:{ tema:'brasa', slogan:'', assistente:'Assistente', cores:{ destaque:TEMAS[0].destaque, botao:TEMAS[0].botao, fundo:TEMAS[0].fundo } }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
-    await hist(r[0].id, 'Restaurante criado', nome); await carregar(); window.rvAbrir(r[0].id);
-  }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
+window.rvIr = v => { S.view = v; if(v !== 'rest') S.rest = null; desenhar(); };
+window.rvRecarregar = async () => { try{ await carregar(); if(S.rest){ S.rest = normalizar(JSON.parse(JSON.stringify(S.lista.find(r => r.id === S.rest.id) || S.rest))); await carregarRest(); } aviso('Atualizado.', 'ok'); desenhar(); }catch(e){ erro(e.message); } };
+const T = h => { $('tela').innerHTML = h; };
+
+/* ---------- INÍCIO ---------- */
+function alertas(){
+  const L = [], h = hoje(), em3 = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
+  S.lista.filter(r => r.situacao !== 'encerrado').forEach(r => {
+    const sd = saudeDe(r.slug), er = errosDe(r.slug).length;
+    if(er) L.push([3, '🐞', r.nome + ': ' + er + (er === 1 ? ' erro aberto' : ' erros abertos'), 'Erros que apareceram na tela do restaurante.', "rvIr('saude')"]);
+    if(sd.geral === 'problema') L.push([3, '🔴', r.nome + ': sistema com problema', 'Veja o que está errado na Saúde.', "rvIr('saude')"]);
+    else if(sd.geral === 'sem' && nEtapas(r) >= 8) L.push([2, '📡', r.nome + ': sem sinal ' + (sd.h ? haTempo(sd.min) : 'ainda'), 'O banco dele pode estar pausado ou o site fora do ar.', "rvIr('saude')"]);
+    usoDe(sd.h).filter(u => u.pct >= 70).forEach(u => L.push([u.pct >= 90 ? 3 : 2, '📊', r.nome + ': ' + u.tit + ' em ' + String(u.pct).replace('.', ',') + '%', 'Plano grátis do Supabase perto do limite.', "rvIr('saude')"]));
+    if(r.bloqueado) L.push([1, '⛔', r.nome + ': acesso bloqueado', 'Libere quando ele pagar.', "rvAbrir('" + r.id + "','dinheiro')"]);
+    const px = proxEtapa(r); if(px && ['implantacao','teste'].includes(r.situacao)) L.push([1, '🛠️', r.nome + ': próximo passo', px.titulo, "rvAbrir('" + r.id + "','passo')"]);
+  });
+  const atr = atrasadas(); if(atr.length) L.push([3, '💸', atr.length + (atr.length === 1 ? ' cobrança atrasada' : ' cobranças atrasadas') + ' · ' + BRL(atr.reduce((s, c) => s + (Number(c.valor) || 0), 0)), 'Toque para cobrar pelo WhatsApp.', "rvIr('dinheiro')"]);
+  const vence = S.cob.filter(c => !c.pago_em && c.vencimento >= h && c.vencimento <= em3); if(vence.length) L.push([2, '📅', vence.length + ' vence(m) nos próximos 3 dias', vence.map(c => nomeRest(c.restaurante_id)).join(', '), "rvIr('dinheiro')"]);
+  const pp = (S.prom || []).filter(x => x.status === 'pendente'); if(pp.length) L.push([3, '🤝', pp.length + ' pedido(s) de promessa de pagamento', 'Aprove ou recuse.', "rvAbrir('" + pp[0].restaurante_id + "','dinheiro')"]);
+  const dv = S.desp.filter(d => !d.pago && d.data <= h); if(dv.length) L.push([2, '🧾', dv.length + ' despesa(s) sua(s) a pagar', BRL(dv.reduce((s, d) => s + Number(d.valor), 0)), "rvIr('dinheiro')"]);
+  const pa = S.prop.filter(p => !['fechado','perdido'].includes(p.status) && p.proxima_acao && p.proxima_acao <= h); if(pa.length) L.push([2, '📞', pa.length + ' proposta(s) para retornar hoje', pa.map(p => p.nome).join(', '), "rvIr('vendas')"]);
+  return L.sort((a, b) => b[0] - a[0]);
+}
+function vInicio(){
+  const m = hoje().slice(0, 7), f = finMes(m), A = alertas(), meta = Number(S.aj.meta) || 0, hr = new Date().getHours();
+  const ativos = S.lista.filter(r => r.situacao === 'ativo').length, impl = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao)).length;
+  T('<h1 class="ola">' + (hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ' 👋</h1><p class="mudo">' + new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' }) + '</p>'
+   + '<button class="principal grande acao-novo" onclick="rvNovo()">＋ Criar restaurante novo</button>'
+   + '<div class="kpis">' + kpi('Recebido em ' + MESES[Number(m.slice(5)) - 1], BRL(f.recebido), 'ok') + kpi('Falta receber', BRL(f.aReceber), f.aReceber ? 'aviso' : '') + kpi('Lucro do mês', BRL(f.lucro), f.lucro < 0 ? 'erro' : 'ok') + kpi('Receita mensal fixa', BRL(mrr()), '') + '</div>'
+   + (meta ? '<div class="card"><div class="linha"><b>🎯 Meta do mês</b><small>' + BRL(f.recebido) + ' de ' + BRL(meta) + '</small></div><div class="barra grossa"><i style="width:' + Math.min(100, f.recebido / meta * 100) + '%;background:var(--ok)"></i></div></div>' : '')
+   + '<h2 class="sec-t">Precisa de você ' + (A.length ? '<span class="selo erro">' + A.length + '</span>' : '') + '</h2>'
+   + (A.length ? '<div class="lista-alertas">' + A.slice(0, 12).map(a => '<button class="alerta n' + a[0] + '" onclick="' + a[4] + '"><span class="ic">' + a[1] + '</span><span><b>' + esc(a[2]) + '</b><small>' + esc(a[3]) + '</small></span><span class="seta">›</span></button>').join('') + '</div>'
+      : '<div class="card vazio">✅ Tudo em dia. Nada pede a sua atenção agora.</div>')
+   + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', S.erros.length, S.erros.length ? 'erro' : '') + '</div>'
+   + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>');
+}
+const kpi = (t, v, c) => '<div class="kpi ' + (c ? 'k-' + c : '') + '"><small>' + esc(t) + '</small><b>' + v + '</b></div>';
+function grafico(n){
+  const atual = hoje().slice(0, 7), ms = []; for(let k = n - 1; k >= 0; k--) ms.push(somaMes(atual, -k));
+  const d = ms.map(m => { const f = finMes(m); return { m, a:f.recebido, b:f.despTotal }; }), mx = Math.max(1, ...d.map(x => Math.max(x.a, x.b)));
+  const W = 320, H = 130, bw = W / n;
+  return '<svg class="graf" viewBox="0 0 ' + W + ' ' + (H + 22) + '" role="img" aria-label="Recebido e despesas por mês">' + d.map((x, i) => { const ha = x.a / mx * H, hb = x.b / mx * H, x0 = i * bw + bw * .18;
+      return '<rect x="' + x0 + '" y="' + (H - ha) + '" width="' + bw * .3 + '" height="' + ha + '" rx="3" fill="var(--ok)"><title>' + mesNome(x.m) + ': recebido ' + BRL(x.a) + '</title></rect><rect x="' + (x0 + bw * .33) + '" y="' + (H - hb) + '" width="' + bw * .3 + '" height="' + hb + '" rx="3" fill="var(--erro)" opacity=".8"><title>despesas ' + BRL(x.b) + '</title></rect><text x="' + (i * bw + bw / 2) + '" y="' + (H + 16) + '" text-anchor="middle" font-size="11" fill="var(--mudo)">' + mesCurto(x.m) + '</text>'; }).join('')
+    + '</svg><div class="legenda"><span><i style="background:var(--ok)"></i>Recebido</span><span><i style="background:var(--erro)"></i>Despesas</span></div>';
+}
+
+/* ---------- RESTAURANTES ---------- */
+function vRestaurantes(){
+  const F = { todos:'Todos', ativo:'Ativos', implantacao:'Em implantação', atencao:'Com alerta', atraso:'Em atraso' };
+  const q = (S.busca || '').toLowerCase(), passa = r => {
+    if(q && !(r.nome + ' ' + r.slug + ' ' + (r.contato_nome || '') + ' ' + (r.cidade || '')).toLowerCase().includes(q)) return false;
+    if(S.filtro === 'ativo') return r.situacao === 'ativo'; if(S.filtro === 'implantacao') return ['implantacao','teste'].includes(r.situacao);
+    if(S.filtro === 'atencao') return saudeDe(r.slug).geral !== 'ok' || errosDe(r.slug).length; if(S.filtro === 'atraso') return atrasadas(r.id).length > 0; return true; };
+  const L = S.lista.filter(passa);
+  T('<div class="topo"><h1>Restaurantes</h1><button class="principal" onclick="rvNovo()">＋ Novo</button></div>'
+   + '<input type="search" placeholder="🔎 Buscar por nome, dono ou cidade" value="' + esc(S.busca) + '" oninput="rvBusca(this.value)">'
+   + '<div class="chips">' + Object.keys(F).map(k => '<button class="chip ' + (S.filtro === k ? 'on' : '') + '" onclick="rvFiltro(\'' + k + '\')">' + F[k] + '</button>').join('') + '</div>'
+   + '<div id="listaR" class="grade">' + (L.length ? L.map(cartaoRest).join('') : '<div class="card vazio">' + (S.lista.length ? 'Nenhum restaurante neste filtro.' : 'Nenhum restaurante ainda. Toque em "＋ Novo" para criar o primeiro.') + '</div>') + '</div>');
+}
+window.rvBusca = v => { S.busca = v; const a = document.activeElement, p = a && a.selectionStart; vRestaurantes(); const i = document.querySelector('input[type=search]'); if(i){ i.focus(); try{ i.setSelectionRange(p, p); }catch(e){} } };
+window.rvFiltro = f => { S.filtro = f; vRestaurantes(); };
+function cartaoRest(r){
+  const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), sd = saudeDe(r.slug), er = errosDe(r.slug).length, at = atrasadas(r.id), px = proxEtapa(r);
+  return '<div class="card cr' + (r.bloqueado ? ' bloq' : '') + '" onclick="rvAbrir(\'' + r.id + '\')"><div class="linha"><b class="cr-n">' + esc(r.nome) + '</b><span class="selo ' + esc(r.situacao) + '">' + (r.bloqueado ? '⛔ Bloqueado' : esc(SIT[r.situacao] || r.situacao)) + '</span></div>'
+   + '<small class="mudo">' + esc([r.contato_nome, r.cidade].filter(Boolean).join(' · ') || r.slug) + '</small>'
+   + '<div class="cr-s">' + ponto(SAUDE_COR[sd.geral]) + '<b>' + SAUDE_ROT[sd.geral] + '</b><small class="mudo"> · ' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small>' + (er ? ' <span class="selo erro">🐞 ' + er + '</span>' : '') + '</div>'
+   + (n < ETAPAS.length ? '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + p + '% · próximo: <b>' + esc(px.titulo) + '</b></small>' : '')
+   + '<div class="linha cr-d"><small>' + (r.valor_mensal ? BRL(r.valor_mensal) + '/mês' : 'Sem mensalidade') + '</small>' + (at.length ? '<small class="txt-erro">💸 ' + at.length + ' em atraso</small>' : '') + '</div></div>';
+}
+
+/* ---------- NOVO RESTAURANTE (assistente de 3 perguntas) ---------- */
+const slugDe = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+window.rvNovo = (prop) => { const p = prop || {}; S.novo = { passo:0, nome:p.nome || '', slug:slugDe(p.nome), slugMexido:false, contato_nome:p.contato_nome || '', contato_telefone:p.telefone || '', contato_email:p.email || '', cidade:p.cidade || '', plano:p.plano || '', valor_mensal:p.valor_mensal || '', taxa_implantacao:p.taxa_implantacao || '', dia_vencimento:S.aj.dia_padrao || 10, modulos:Object.keys(p.modulos || {}).length ? p.modulos : null, proposta:p.id || null }; S.view = 'novo'; desenhar(); };
+function vNovo(){
+  const n = S.novo, P = ['Como se chama o restaurante?','Quem é o dono?','Quanto ele vai pagar?'], planos = S.aj.planos || [];
+  let c = '';
+  if(n.passo === 0) c = '<label for="nNome">Nome do restaurante</label><input id="nNome" value="' + esc(n.nome) + '" placeholder="Ex.: Pizzaria do João" oninput="rvNovoNome(this.value)" autofocus>'
+    + '<label for="nSlug">Código (vai no endereço do site)</label><input id="nSlug" value="' + esc(n.slug) + '" oninput="S_novoSlug(this.value)"><small class="mudo">Só letras minúsculas, números e hífen. Ex.: pizzaria-do-joao</small>';
+  if(n.passo === 1) c = '<label for="nCn">Nome do dono</label><input id="nCn" value="' + esc(n.contato_nome) + '" placeholder="Ex.: João Silva">'
+    + '<label for="nCt">WhatsApp</label><input id="nCt" type="tel" value="' + esc(n.contato_telefone) + '" placeholder="(16) 99999-9999">'
+    + '<label for="nCe">E-mail (opcional)</label><input id="nCe" type="email" value="' + esc(n.contato_email) + '">'
+    + '<label for="nCi">Cidade</label><input id="nCi" value="' + esc(n.cidade) + '" placeholder="Ex.: Jaboticabal/SP">';
+  if(n.passo === 2) c = (planos.length ? '<p class="mudo">Escolha um dos seus planos:</p><div class="planos">' + planos.map((p, i) => '<button class="plano ' + (n.plano === p.nome ? 'on' : '') + '" onclick="rvNovoPlano(' + i + ')"><b>' + esc(p.nome) + '</b><span>' + BRL(p.valor) + '/mês</span>' + (p.implantacao ? '<small>+ ' + BRL(p.implantacao) + ' implantação</small>' : '') + '</button>').join('') + '</div>' : '<p class="mudo pequeno">Dica: cadastre seus planos em Mais → Planos e preços para escolher com um toque.</p>')
+    + '<div class="cols"><div><label for="nVm">Mensalidade (R$)</label><input id="nVm" inputmode="decimal" value="' + esc(n.valor_mensal) + '"></div><div><label for="nTx">Taxa de implantação (R$)</label><input id="nTx" inputmode="decimal" value="' + esc(n.taxa_implantacao) + '"></div></div>'
+    + '<label for="nDv">Dia do vencimento (1 a 28)</label><input id="nDv" type="number" min="1" max="28" value="' + esc(n.dia_vencimento) + '">';
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'restaurantes\')">✕ Cancelar</button><small class="mudo">Pergunta ' + (n.passo + 1) + ' de 3</small></div>'
+   + '<div class="pontos">' + P.map((x, i) => '<i class="' + (i <= n.passo ? 'on' : '') + '"></i>').join('') + '</div>'
+   + '<div class="card wizard"><h1>' + P[n.passo] + '</h1>' + c + '</div>'
+   + '<div class="rodape-acoes">' + (n.passo ? '<button onclick="rvNovoPasso(-1)">← Voltar</button>' : '<span></span>') + '<button class="principal grande" onclick="rvNovoPasso(1)">' + (n.passo < 2 ? 'Continuar →' : '✅ Criar restaurante') + '</button></div>');
+}
+window.rvNovoNome = v => { S.novo.nome = v; if(!S.novo.slugMexido){ S.novo.slug = slugDe(v); const s = $('nSlug'); if(s) s.value = S.novo.slug; } };
+window.S_novoSlug = v => { S.novo.slug = v; S.novo.slugMexido = true; };
+window.rvNovoPlano = i => { lerNovo(); const p = S.aj.planos[i]; Object.assign(S.novo, { plano:p.nome, valor_mensal:p.valor, taxa_implantacao:p.implantacao || '', modulos:p.modulos || null }); vNovo(); };
+function lerNovo(){ const n = S.novo, v = id => ($(id) || {}).value; if(n.passo === 0){ n.nome = (v('nNome') || '').trim(); n.slug = slugDe(v('nSlug')); } if(n.passo === 1){ n.contato_nome = (v('nCn') || '').trim(); n.contato_telefone = (v('nCt') || '').trim(); n.contato_email = (v('nCe') || '').trim(); n.cidade = (v('nCi') || '').trim(); } if(n.passo === 2){ n.valor_mensal = v('nVm'); n.taxa_implantacao = v('nTx'); n.dia_vencimento = v('nDv'); } }
+window.rvNovoPasso = async d => {
+  lerNovo(); const n = S.novo;
+  if(d > 0 && n.passo === 0){ if(!n.nome) return erro('Escreva o nome do restaurante.'); if(!n.slug || n.slug.length < 3) return erro('O código precisa de pelo menos 3 letras.'); if(S.lista.some(r => r.slug === n.slug)) return erro('Já existe um restaurante com esse código. Mude o código.'); }
+  if(d > 0 && n.passo === 1 && !n.contato_nome) return erro('Escreva o nome do dono (pode mudar depois).');
+  if(d > 0 && n.passo === 2) return criarRest();
+  n.passo = Math.max(0, n.passo + d); vNovo();
 };
-async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
-window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); const et0 = S.rest.etapas || {}; Object.keys(et0).forEach(k => { if(!et0[k] || typeof et0[k] !== 'object') et0[k] = { feita: !!et0[k] && et0[k] !== 'pendente' }; }); S.rest.etapas = et0; S.aba = nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'; S.passoVer = null; S.det = {}; S.res = {}; await carregarRest(); telaRest(); };
-window.rvVoltar = async () => { S.rest = null; try{ await carregar(); }catch(e){ erro(e.message); } telaLista(); };
-async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); try{ S.aceite = (await rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1') || [])[0] || null; }catch(e){ S.aceite = null; } }catch(e){ erro(e.message); } }
+async function criarRest(){
+  const n = S.novo, mod = {}; MODULOS.forEach(m => { mod[m.id] = n.modulos && n.modulos[m.id] != null ? !!n.modulos[m.id] : m.pad; });
+  const t = TEMAS.find(x => x.id === 'classico');
+  const dia = Math.min(28, Math.max(1, parseInt(n.dia_vencimento, 10) || 10));
+  try{
+    const r = await rest('restaurantes', 'POST', { slug:n.slug, nome:n.nome, situacao:'implantacao', contato_nome:n.contato_nome || null, contato_telefone:n.contato_telefone || null, contato_email:n.contato_email || null, cidade:n.cidade || null, plano:n.plano || null, valor_mensal:num(n.valor_mensal), taxa_implantacao:num(n.taxa_implantacao), dia_vencimento:dia, inicio_em:hoje(), motor:MOTOR_PADRAO, modulos:mod,
+      marca:{ tema:t.id, slogan:'', assistente:'Assistente', jogos:{ tema:'generico' }, cores:{ destaque:t.destaque, botao:t.botao, fundo:t.fundo }, logos:{} }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
+    await hist(r[0].id, 'Restaurante criado', n.nome);
+    if(n.proposta){ try{ await rest('propostas?id=eq.' + n.proposta, 'PATCH', { status:'fechado', restaurante_id:r[0].id, atualizado_em:new Date().toISOString() }); }catch(e){} }
+    await carregar(); aviso('Restaurante criado! Agora é seguir o passo a passo.', 'ok'); window.rvAbrir(r[0].id, 'passo');
+  }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
+}
 
-const ABAS = [['passo','Implantação'],['saude','Situação'],['dados','Dados'],['cobranca','Contrato']];
-const ALIAS = { ligacoes:'dados', marca:'dados', modulos:'dados', termos:'cobranca', hist:'saude' };
-const FASES = [['Banco e site',['cadastro','supabase','repositorio','banco','funcoes']],['Entrada e Drive',['entrada','drive','admin']],['IA e avisos',['ia','planilhas','push']],['Marca e módulos',['marca','modulos','publicar']],['Teste',['app','contas','teste']],['Entrega',['entrega']]];
-const OPCIONAIS = ['planilhas','app'];
-function telaRest(){
-  const r = S.rest, n = nEtapas(r);
-  $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span></div>'
-   + '<h1>' + esc(r.nome) + '</h1><small class="mudo">' + esc(r.slug) + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small><div class="barra"><i style="width:' + Math.round(n / ETAPAS.length * 100) + '%"></i></div>'
-   + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>';
-  ({ passo:abaPasso, saude:abaSituacao, dados:abaDadosTudo, cobranca:abaContrato })[S.aba]();
+/* ---------- UM RESTAURANTE ---------- */
+window.rvAbrir = async (id, aba) => {
+  const r = S.lista.find(x => x.id === id); if(!r) return;
+  S.rest = normalizar(JSON.parse(JSON.stringify(r))); S.view = 'rest'; S.aba = aba || (nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'); S.passoVer = null; S.res = {};
+  await carregarRest(); desenhar();
+};
+async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; }catch(e){ erro(e.message); } }
+const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
+function vRest(){
+  const r = S.rest, n = nEtapas(r), sd = saudeDe(r.slug), sb = refDe(r);
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'restaurantes\')">← Restaurantes</button><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao] || r.situacao) + '</span></div>'
+   + '<h1>' + esc(r.nome) + '</h1><div class="linha" style="justify-content:flex-start;gap:6px"><small class="mudo">' + ponto(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small></div>'
+   + '<div class="atalhos">' + (r.site_url ? '<a class="btn mini" href="' + esc(r.site_url) + '" target="_blank" rel="noopener">🌐 Site</a>' : '') + (r.contato_telefone ? '<a class="btn mini" href="' + esc(waLink(r.contato_telefone)) + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '')
+     + (sb ? '<a class="btn mini" href="https://supabase.com/dashboard/project/' + esc(sb) + '" target="_blank" rel="noopener">🗄️ Supabase</a>' : '') + (r.github_url ? '<a class="btn mini" href="' + esc(r.github_url) + '" target="_blank" rel="noopener">🐙 GitHub</a>' : '') + '</div>'
+   + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>');
+  ({ passo:abaPasso, saude:abaSaude, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
 }
-window.rvAba = a => { if(ALIAS[a]){ (S.det = S.det || {})[a] = true; a = ALIAS[a]; } S.aba = a; telaRest(); };
-window.rvDet = (id, ab) => { (S.det = S.det || {})[id] = !!ab; };
-function secoes_(lista){
-  const real = $('corpo'); S.det = S.det || {};
-  real.innerHTML = lista.map(x => '<details id="sec_' + x[0] + '" class="card sec"' + (S.det[x[0]] || x[3] ? ' open' : '') + ' ontoggle="rvDet(\'' + x[0] + '\', this.open)"><summary><b>' + x[1] + '</b></summary><div id="secc_' + x[0] + '"></div></details>').join('');
-  lista.forEach(x => { const alvo = $('secc_' + x[0]); real.id = 'corpo_x'; alvo.id = 'corpo'; try{ x[2](); }finally{ alvo.id = 'secc_' + x[0]; real.id = 'corpo'; } });
-}
-function abaDadosTudo(){ secoes_([['dados', 'Dados e contrato', abaDados, true], ['lig', 'Ligações (banco, site, planilhas)', abaLig], ['marca', 'Marca', abaMarca], ['mod', 'Módulos contratados', abaMod], ['exc', 'Excluir restaurante', abaExcluir_]]); }
-function abaSituacao(){ secoes_([['saude', 'Saúde e uso', abaSaude, true], ['hist', 'Histórico', abaHist]]); }
-function abaContrato(){ secoes_([['cob', 'Cobrança e acesso', abaCob, true], ['termos', 'Termos de uso e entrega', abaTermos]]); }
-function campoTxt(rot, k, o){ o = o || {}; const v = o.path ? get(S.rest, o.path) : S.rest[k]; return '<label for="f_' + k + '">' + rot + '</label><input id="f_' + k + '" data-k="' + (o.path || k) + '" type="' + (o.tipo || 'text') + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(o.ph || '') + '">'; }
+window.rvAba = a => { S.aba = a; vRest(); };
+const C = h => { $('corpo').innerHTML = h; };
+
+/* formulário do restaurante */
 function get(o, p){ return p.split('.').reduce((a, k) => (a == null ? a : a[k]), o); }
 function set(o, p, v){ const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => { a = a[k] = a[k] || {}; }); a[ks[ks.length - 1]] = v; }
-function lerForm(){ document.querySelectorAll('#corpo [data-k]').forEach(el => { let v = el.type === 'checkbox' ? el.checked : el.value.trim(); if(el.type === 'number') v = v === '' ? null : Number(v); else if(v === '' && !el.type.match(/checkbox/) && !/^(marca|modulos)\./.test(el.dataset.k)) v = null; set(S.rest, el.dataset.k, v); }); }
-const COLS = ['nome','situacao','dominio','site_url','supabase_url','supabase_chave','api_url','contingencia_url','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','plano','valor_mensal','dia_vencimento','motor','inicio_em','observacoes'];
+const ROT = { nome:'Nome do restaurante', contato_nome:'Nome do dono', contato_telefone:'WhatsApp do dono', contato_email:'E-mail do dono', cidade:'Cidade', documento:'CPF ou CNPJ do cliente', plano:'Plano', valor_mensal:'Mensalidade (R$)', taxa_implantacao:'Taxa de implantação (R$)', dia_vencimento:'Dia do vencimento (1 a 28)', inicio_em:'Início do contrato',
+  supabase_url:'Endereço do banco (Project URL)', supabase_chave:'Chave pública (começa com sb_publishable_)', site_url:'Endereço do site', github_url:'Endereço do repositório no GitHub', dominio:'Domínio próprio (opcional, só o nome)', api_url:'Planilha principal (endereço /exec)', contingencia_url:'Planilha de contingência (endereço /exec)', push_chave_publica:'Chave pública dos avisos', motor:'Versão do sistema (deixe em branco para receber as atualizações)' };
+const PH = { supabase_url:'https://xxxx.supabase.co', supabase_chave:'sb_publishable_…', site_url:'https://usuario.github.io/codigo/', github_url:'https://github.com/usuario/codigo', contato_telefone:'(16) 99999-9999', dominio:'cardapio.meurestaurante.com.br', motor:MOTOR_PADRAO, api_url:'https://script.google.com/…/exec', contingencia_url:'https://script.google.com/…/exec' };
+const NUMS = ['valor_mensal','taxa_implantacao','dia_vencimento'];
+function campo(k, o){ o = o || {}; const v = get(S.rest, k); const tipo = k === 'inicio_em' ? 'date' : k === 'contato_email' ? 'email' : k === 'contato_telefone' ? 'tel' : 'text';
+  return '<label for="f_' + k.replace(/\./g, '_') + '">' + esc(o.rot || ROT[k] || k) + '</label><input id="f_' + k.replace(/\./g, '_') + '" data-k="' + k + '" type="' + tipo + '"' + (NUMS.includes(k) ? ' inputmode="decimal"' : '') + ' value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(PH[k] || o.ph || '') + '">'; }
+function lerForm(){ document.querySelectorAll('#tela [data-k]').forEach(el => { const k = el.dataset.k; let v = el.type === 'checkbox' ? el.checked : el.value.trim(); if(NUMS.includes(k)) v = num(v); else if(v === '' && el.type !== 'checkbox' && !/^(marca|modulos)\./.test(k)) v = null; set(S.rest, k, v); }); }
+const COLS = ['nome','situacao','dominio','site_url','github_url','supabase_url','supabase_chave','api_url','contingencia_url','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','motor','inicio_em','observacoes'];
 async function salvar(msg){
   lerForm();
-  const corpo = {}; COLS.forEach(c => { corpo[c] = S.rest[c]; });
-  ['dominio','site_url'].forEach(k => { if(corpo[k]) corpo[k] = String(corpo[k]).replace(/^https?:\/\//, k === 'dominio' ? '' : '$&').replace(/\/+$/, k === 'dominio' ? '' : '/'); });
-  if(corpo.site_url && !/^https?:\/\//.test(corpo.site_url)) corpo.site_url = 'https://' + corpo.site_url;
-  if(corpo.site_url && !corpo.site_url.endsWith('/')) corpo.site_url += '/';
-  try{ const local = corpo.etapas; const r = await rest('restaurantes?id=eq.' + S.rest.id, 'PATCH', corpo); if(!r || !r[0]) throw new Error('O banco não confirmou a gravação (nenhuma linha alterada). Saia e entre de novo no painel.'); S.rest = r[0]; if(local){ const igual = (a, b) => Object.keys(local).every(k => !!(a && a[k] && a[k].feita) === !!(local[k] && local[k].feita) && ((a && a[k] && a[k].itens || []).length === (local[k].itens || []).length)); if(!igual(S.rest.etapas)){ S.rest.etapas = local; const conf = await rest('restaurantes?id=eq.' + S.rest.id + '&select=etapas'); if(!igual(conf && conf[0] && conf[0].etapas)) throw new Error('O banco recebeu mas NÃO guardou a etapa. Peça ao Claude para conferir a coluna etapas do banco do painel.'); } } const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = S.rest; aviso(msg || 'Salvo.', 'ok'); return true; }
-  catch(e){ S.ultimoErro = /unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message; erro(S.ultimoErro); return false; }
+  const corpo = {}; COLS.forEach(c => { if(S.rest[c] !== undefined) corpo[c] = S.rest[c]; });
+  if(corpo.dominio) corpo.dominio = String(corpo.dominio).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  ['site_url','github_url','supabase_url'].forEach(k => { if(corpo[k]){ let u = String(corpo[k]).trim(); if(!/^https?:\/\//.test(u)) u = 'https://' + u; if(k === 'site_url' && !u.endsWith('/')) u += '/'; if(k !== 'site_url') u = u.replace(/\/+$/, ''); corpo[k] = u; } });
+  if(corpo.dia_vencimento != null) corpo.dia_vencimento = Math.min(28, Math.max(1, Math.round(corpo.dia_vencimento)));
+  try{
+    const r = await rest('restaurantes?id=eq.' + S.rest.id, 'PATCH', corpo);
+    if(!r || !r[0]) throw new Error('O banco não confirmou a gravação. Saia e entre de novo no painel.');
+    const etLocal = S.rest.etapas; S.rest = normalizar(r[0]);
+    const igual = (a, b) => Object.keys(b || {}).every(k => !!(a && a[k] && a[k].feita) === !!(b[k] && b[k].feita));
+    if(!igual(S.rest.etapas, etLocal)) throw new Error('O banco recebeu, mas não guardou a etapa. Tente de novo.');
+    const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = JSON.parse(JSON.stringify(S.rest));
+    aviso(msg || 'Salvo.', 'ok'); return true;
+  }catch(e){ S.ultimoErro = /unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message; erro(S.ultimoErro); return false; }
 }
-window.rvSalvar = async () => { if(await salvar()) { await hist(S.rest.id, 'Dados salvos', S.aba); telaRest(); } };
-const botSalvar = '<p><button class="principal" onclick="rvSalvar()">Salvar</button></p>';
+window.rvSalvar = async (aba) => { if(await salvar()){ await hist(S.rest.id, 'Dados salvos', aba || S.aba); vRest(); } };
+const botSalvar = (txt) => '<p><button class="principal" onclick="rvSalvar()">' + (txt || '💾 Salvar') + '</button></p>';
 
-/* Bloco de saúde completo (igual à tela "Conexão e servidores" do app). Usado na lista e na aba Saúde. */
+/* ---------- PASSO A PASSO (uma parte por vez) ---------- */
+function sub(t){ const r = S.rest, so = (r.site_url || '(endereço do site)').replace(/\/+$/, '');
+  return String(t).replace(/\{nome\}/g, r.nome).replace(/\{slug\}/g, r.slug).replace(/\{ref\}/g, refDe(r) || '(projeto do Supabase)').replace(/\{supabase_url\}/g, r.supabase_url || '(endereço do Supabase)').replace(/\{site_url\}/g, r.site_url || '(endereço do site)').replace(/\{site_origem\}/g, so.replace(/^(https?:\/\/[^/]+).*$/, '$1')).replace(/\{github_url\}/g, r.github_url || 'https://github.com'); }
+const moduloDesligado = e => e.modulo && S.rest.modulos && S.rest.modulos[e.modulo] === false;
+function abaPasso(){
+  const r = S.rest, prox = proxEtapa(r), atual = ETAPAS.find(x => x.id === S.passoVer) || prox;
+  const fases = FASES.map((x, k) => { const n = x[1].filter(id => etapaFeita(r, id)).length, ok = n === x[1].length, alvo = x[1].find(id => !etapaFeita(r, id)) || x[1][0], on = atual && x[1].includes(atual.id);
+    return '<button class="fase ' + (on ? 'on' : '') + (ok ? ' ok' : '') + '" onclick="rvVerPasso(\'' + alvo + '\')"><b>' + (ok ? '✓' : k + 1) + '</b><span>' + x[0] + '</span><small>' + n + '/' + x[1].length + '</small></button>'; }).join('');
+  if(!atual){ C('<div class="fases">' + fases + '</div><div class="card vazio grande-ok">🎉<h2>Implantação completa!</h2><p class="mudo">Acompanhe a saúde dele na aba Saúde e as cobranças na aba Cobrança.</p></div>' + listaEtapas()); return; }
+  const i = ETAPAS.indexOf(atual), f = etapaFeita(r, atual.id), N = atual.partes.length, todas = !!S.tudoAberto[atual.id];
+  let k = S.parte[atual.id]; if(k == null || k >= N) k = 0;
+  const parteHtml = (p, j) => '<div class="parte"><div class="parte-n">' + (j + 1) + '</div><div class="parte-t"><p>' + esc(sub(p.t)) + '</p>'
+     + (p.link ? '<a class="btn mini" href="' + esc(sub(p.link)) + '" target="_blank" rel="noopener">Abrir ↗</a>' : '')
+     + (p.copiar ? '<div class="copiar" id="cp_' + atual.id + '_' + j + '">' + esc(sub(p.copiar)) + '</div><button class="mini" onclick="rvCopiar(\'cp_' + atual.id + '_' + j + '\')">📋 Copiar</button>' : '')
+     + (p.extra ? '<div class="extra" id="ex_' + atual.id + '_' + j + '"></div>' : '') + '</div></div>';
+  C('<div class="fases">' + fases + '</div>'
+   + '<div class="card etapa' + (f ? ' feita' : '') + '"><div class="linha"><small class="mudo">Etapa ' + (i + 1) + ' de ' + ETAPAS.length + (atual.opcional ? ' · opcional' : '') + ' · ⏱️ ' + esc(atual.tempo || '') + '</small>' + (f ? '<span class="selo ativo">✓ Feita</span>' : '') + '</div>'
+   + '<h2 class="etapa-t">' + esc(atual.titulo) + '</h2>'
+   + '<div class="porque">💡 <b>Para que serve:</b> ' + esc(sub(atual.porque)) + '</div>'
+   + (atual.precisa ? '<div class="precisa"><b>Você vai precisar:</b><ul>' + atual.precisa.map(x => '<li>' + esc(sub(x)) + '</li>').join('') + '</ul></div>' : '')
+   + (moduloDesligado(atual) ? '<div class="res aviso">Este módulo está desligado para este restaurante: pode tocar em "Pular".</div>' : '')
+   + '<div class="partes-cab"><b>' + (todas ? 'Todas as partes' : 'Parte ' + (k + 1) + ' de ' + N) + '</b>' + (N > 1 ? '<button class="mini" onclick="rvTodas(\'' + atual.id + '\')">' + (todas ? 'Uma por vez' : 'Ver todas') + '</button>' : '') + '</div>'
+   + (todas ? atual.partes.map(parteHtml).join('') : '<div class="pontos">' + atual.partes.map((p, j) => '<i class="' + (j <= k ? 'on' : '') + '" onclick="rvParte(\'' + atual.id + '\',' + j + ')"></i>').join('') + '</div>' + parteHtml(atual.partes[k], k))
+   + (atual.pedido ? '<details class="claude"><summary>🤖 Prefere que o Claude faça? Toque aqui</summary><p class="mudo pequeno">Copie e cole na conversa com o Claude. Ele faz e te avisa.</p><div class="copiar" id="pd_' + atual.id + '">' + esc(sub(atual.pedido)) + '</div><button class="mini" onclick="rvCopiar(\'pd_' + atual.id + '\')">📋 Copiar pedido</button></details>' : '')
+   + '<div class="rodape-acoes">'
+   + (!todas && k > 0 ? '<button onclick="rvParte(\'' + atual.id + '\',' + (k - 1) + ')">← Parte anterior</button>' : (i > 0 ? '<button onclick="rvVerPasso(\'' + ETAPAS[i - 1].id + '\')">← Etapa anterior</button>' : '<span></span>'))
+   + (!todas && k < N - 1 ? '<button class="principal grande" onclick="rvParte(\'' + atual.id + '\',' + (k + 1) + ')">Próxima parte →</button>'
+      : f ? '<span class="dir"><button class="mini" onclick="rvEtapa(\'' + atual.id + '\',false)">Desmarcar</button>' + (i < ETAPAS.length - 1 ? ' <button class="principal" onclick="rvVerPasso(\'' + ETAPAS[i + 1].id + '\')">Próxima etapa →</button>' : '') + '</span>'
+      : '<span class="dir">' + (atual.opcional || moduloDesligado(atual) || atual.id === 'drive' || atual.id === 'ia' ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',true,true)">Pular</button> ' : '') + '<button class="principal grande" onclick="rvEtapa(\'' + atual.id + '\',true)">✅ Fiz esta etapa</button></span>')
+   + '</div></div>' + listaEtapas(atual.id));
+  (todas ? atual.partes.map((p, j) => [p, j]) : [[atual.partes[k], k]]).forEach(([p, j]) => { if(p.extra) desenharExtra(atual, p.extra, $('ex_' + atual.id + '_' + j)); });
+}
+function listaEtapas(atualId){
+  return '<details class="card"><summary><b>📋 Ver todas as etapas</b> <small class="mudo">(' + nEtapas(S.rest) + ' de ' + ETAPAS.length + ' feitas)</small></summary>'
+   + ETAPAS.map((x, k) => { const e = S.rest.etapas[x.id], f = e && e.feita; return '<button class="item-etapa' + (x.id === atualId ? ' on' : '') + '" onclick="rvVerPasso(\'' + x.id + '\')"><span>' + (f ? (e.pulada ? '⏭️' : '✅') : '⬜') + '</span><span><b>' + (k + 1) + '. ' + esc(x.titulo) + '</b><small>' + esc(x.curto || '') + '</small></span><span class="seta">›</span></button>'; }).join('') + '</details>';
+}
+window.rvVerPasso = id => { S.passoVer = id; abaPasso(); window.scrollTo(0, 0); };
+window.rvParte = (id, k) => { S.parte[id] = k; abaPasso(); const e = document.querySelector('.etapa'); if(e) e.scrollIntoView({ behavior:'smooth', block:'start' }); };
+window.rvTodas = id => { S.tudoAberto[id] = !S.tudoAberto[id]; abaPasso(); };
+window.rvCopiar = async id => { const el = $(id); if(!el) return; const t = el.dataset.txt != null ? el.dataset.txt : el.textContent; if(await copiarTxt(t)) aviso('Copiado! Agora é só colar.', 'ok'); else erro('Não deu para copiar. Toque e segure no texto para copiar manualmente.'); };
+async function copiarTxt(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ try{ const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; }catch(e2){ return false; } } }
+window.rvItem = (id, k, v) => { const e = S.rest.etapas, x = e[id] = e[id] || {}; x.itens = (x.itens || []).filter(i => i !== k); if(v) x.itens.push(k); return salvar(v ? 'Anotado ✓' : 'Desmarcado.'); };
+window.rvEtapa = async (id, feita, pulada) => {
+  const et = ETAPAS.find(x => x.id === id);
+  if(feita && !pulada && et.checklist){ const ck = (S.rest.etapas[id] || {}).itens || []; if(ck.length < et.checklist.length) return erro('Marque todos os testes antes de concluir (' + ck.length + ' de ' + et.checklist.length + ').'); }
+  const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null));
+  S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, pulada:!!pulada, em:new Date().toISOString() });
+  if(await salvar(feita ? (pulada ? 'Etapa pulada.' : '🎉 Etapa concluída!') : 'Etapa reaberta.')){ await hist(S.rest.id, feita ? (pulada ? 'Etapa pulada' : 'Etapa concluída') : 'Etapa reaberta', et.titulo); if(feita){ S.passoVer = null; } abaPasso(); window.scrollTo(0, 0); }
+  else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; abaPasso(); erro('NÃO foi salvo. Motivo: ' + (S.ultimoErro || 'sem resposta do banco') + '.'); }
+};
+
+/* o que aparece embaixo de cada parte */
+function desenharExtra(et, tipo, box){
+  if(!box) return; const r = S.rest;
+  const ex = {
+    cadastro: () => '<div class="cols">' + ['nome','contato_nome','contato_telefone','cidade','plano','valor_mensal','taxa_implantacao','dia_vencimento'].map(k => '<div>' + campo(k) + '</div>').join('') + '</div>' + botSalvar(),
+    contas: () => '<div class="contas">' + CONTAS.map(c => '<div><b>' + esc(c[0]) + '</b><small>' + esc(c[1]) + '</small></div>').join('') + '</div>',
+    campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
+    teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
+    codigos: () => codigosHtml(et.id),
+    push: () => pushHtml(),
+    marca: () => marcaHtml(),
+    logos: () => logosHtml(),
+    modulos: () => modulosHtml(),
+    publicar: () => publicarHtml(),
+    checklist: () => et.checklist.map((c, j) => { const ck = ((r.etapas[et.id] || {}).itens || []).includes(j); return '<label class="check"><input type="checkbox" ' + (ck ? 'checked ' : '') + 'onchange="rvItem(\'' + et.id + '\',' + j + ',this.checked)"><span>' + esc(c) + '</span></label>'; }).join(''),
+    contrato: () => '<button class="mini" onclick="rvAba(\'contrato\')">📄 Abrir a aba Contrato</button>',
+    workflow: () => workflowHtml(),
+    privacidade: () => '<button class="principal" onclick="rvPrivacidade()">⬇️ Gerar e baixar privacidade.html</button><p class="pequeno mudo">Onde colocar: <b>na raiz do repositório</b> (junto do index.html). Endereço depois de subir: <code class="quebra">' + esc((r.site_url || '(site)') + 'privacidade.html') + '</code></p><div id="privRes"></div>',
+    conferir: () => '<button class="principal" onclick="rvConferir()">🔎 Conferir o site</button><div id="confRes"></div>',
+    cobranca: () => '<div class="linha" style="justify-content:flex-start">' + (r.taxa_implantacao ? '<button class="mini" onclick="rvCobRest(\'implantacao\')">Gerar taxa de implantação (' + BRL(r.taxa_implantacao) + ')</button>' : '') + '<button class="mini" onclick="rvCobRest(\'mensalidade\')">Gerar mensalidade deste mês</button>' + (r.situacao !== 'ativo' ? '<button class="principal mini" onclick="rvAtivar()">Mudar para Ativo</button>' : '<span class="selo ativo">✓ Ativo</span>') + '</div>'
+  };
+  box.innerHTML = (ex[tipo] || (() => ''))();
+  if(tipo === 'marca') rvPrevia();
+  Object.keys(S.res || {}).forEach(t => mostrarRes('res_' + t, [t]));
+}
+window.rvSalvarTestar = async id => { const et = ETAPAS.find(x => x.id === id); if(await salvar()){ await hist(S.rest.id, 'Dados salvos', et.titulo); if(et.teste) await rvTeste(et.teste); } };
+window.rvAtivar = async () => { S.rest.situacao = 'ativo'; if(await salvar('Restaurante ativo! 🎉')){ await hist(S.rest.id, 'Situação: Ativo', ''); abaPasso(); } };
+
+/* códigos: um de cada vez */
+function codigosHtml(etapa){
+  const L = (window.CODIGOS || {})[etapa] || [], r = S.rest; if(!L.length) return '';
+  const feitos = (r.etapas[etapa] || {}).itens || [];
+  if(window.cdCtx) cdCtx({ ref:/^[a-z0-9]{20}$/.test(refDe(r)) ? refDe(r) : '', cod:r.slug, chave:r.supabase_chave || '', feitos });
+  let k = S.cdIdx[etapa]; if(k == null){ k = L.findIndex(c => !feitos.includes('cd:' + c.id)); if(k < 0) k = L.length - 1; }
+  const c = L[k], f = feitos.includes('cd:' + c.id), nf = L.filter(x => feitos.includes('cd:' + x.id)).length;
+  if(c.subRef && !refDe(r)) return '<div class="res erro">Antes, preencha o endereço do Supabase na etapa "Criar o banco de dados".</div>';
+  return '<div class="cod"><div class="linha"><b>Código ' + (k + 1) + ' de ' + L.length + '</b><small class="mudo">' + nf + ' aplicado(s)</small></div>'
+   + '<div class="barra"><i style="width:' + Math.round(nf / L.length * 100) + '%;background:var(--ok)"></i></div>'
+   + '<h3>' + esc(c.titulo) + (f ? ' <span class="selo ativo">✓ aplicado</span>' : '') + '</h3><p class="pequeno">' + esc(c.desc) + '</p>' + (c.cuidado ? '<p class="pequeno mudo">⚠️ ' + esc(c.cuidado) + '</p>' : '')
+   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="cdCopiar(\'' + c.id + '\')">📋 Copiar código</button><button class="mini" onclick="cdVer(\'' + c.id + '\')">Ver</button><button class="mini" onclick="cdBaixar(\'' + c.id + '\')">Baixar</button></div><div id="cd-ver-' + c.id + '"></div>'
+   + '<div class="linha cod-nav">' + (k > 0 ? '<button class="mini" onclick="rvCod(\'' + etapa + '\',' + (k - 1) + ')">← Anterior</button>' : '<span></span>')
+   + (f ? (k < L.length - 1 ? '<button class="mini" onclick="rvCod(\'' + etapa + '\',' + (k + 1) + ')">Próximo →</button>' : '<span class="selo ativo">Todos aplicados 🎉</span>') : '<button class="principal" onclick="rvCodFeito(\'' + etapa + '\',' + k + ')">✅ Já colei e rodei' + (k < L.length - 1 ? ', próximo →' : '') + '</button>') + '</div></div>';
+}
+window.rvCod = (etapa, k) => { S.cdIdx[etapa] = k; abaPasso(); };
+window.rvCodFeito = async (etapa, k) => { const L = CODIGOS[etapa]; if(await rvItem(etapa, 'cd:' + L[k].id, true)){ S.cdIdx[etapa] = Math.min(k + 1, L.length - 1); abaPasso(); } };
+
+/* avisos no celular: o painel gera as chaves */
+const b64url = u8 => btoa(String.fromCharCode.apply(null, Array.from(u8))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function pushHtml(){
+  const r = S.rest;
+  return (r.push_chave_publica ? '<div class="res ok">✓ Este restaurante já tem chave pública: <code class="quebra">' + esc(r.push_chave_publica.slice(0, 24)) + '…</code></div>' : '')
+   + '<button class="principal" onclick="rvGerarPush()">🔑 ' + (r.push_chave_publica ? 'Gerar chaves novas' : 'Gerar chaves agora') + '</button>'
+   + (S.pushSQL && S.pushSQL.id === r.id ? '<p class="pequeno">Copie e rode no SQL Editor do Supabase do restaurante (só aparece agora; se perder, gere de novo):</p><div class="copiar" id="pushSql">' + esc(S.pushSQL.sql) + '</div><button class="principal" onclick="rvCopiar(\'pushSql\')">📋 Copiar código</button>' : '');
+}
+window.rvGerarPush = async () => {
+  const r = S.rest; if(r.push_chave_publica && !confirm('Gerar chaves NOVAS? Os celulares já cadastrados vão precisar ativar os avisos de novo.')) return;
+  try{
+    const kp = await crypto.subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, true, ['sign', 'verify']);
+    const pub = b64url(new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey))), priv = (await crypto.subtle.exportKey('jwk', kp.privateKey)).d;
+    const q = (n, v) => "  select id into v_id from vault.secrets where name = '" + n + "';\n  if v_id is null then perform vault.create_secret('" + v + "', '" + n + "'); else perform vault.update_secret(v_id, '" + v + "'); end if;\n";
+    S.pushSQL = { id:r.id, sql:'-- Chaves dos avisos no celular de ' + r.nome + ' (gerado pelo Painel de Revenda)\ndo $$ declare v_id uuid; begin\n' + q('vapid_publica', pub) + q('vapid_privada', priv) + 'end $$;' };
+    r.push_chave_publica = pub;
+    if(await salvar('Chaves geradas. Agora copie e rode o código.')){ await hist(r.id, 'Chaves de aviso geradas', ''); abaPasso(); }
+  }catch(e){ erro('Este navegador não conseguiu gerar as chaves (' + e.message + '). Use o Chrome atualizado ou peça ao Claude.'); }
+};
+
+/* site: os 4 arquivos prontos */
+function publicarHtml(){
+  const r = S.rest, falta = [];
+  if(!r.supabase_url || !r.supabase_chave) falta.push('endereço e chave do Supabase'); if(!r.site_url) falta.push('endereço do site');
+  if(falta.length) return '<div class="res erro">Falta preencher: ' + falta.join(' e ') + '. Volte às etapas do banco e do site.</div>';
+  return '<div class="arquivos">' + ARQS_SITE.filter(a => a[3]).map(a => '<button class="arquivo" onclick="rvBaixarArq(\'' + a[0] + '\')"><span>⬇️</span><span><b>' + a[0] + '</b><small>' + a[1] + '</small><small class="onde">📁 Onde colocar: ' + (a[2] === 'raiz' ? 'na raiz do repositório (sem pasta)' : 'na ' + a[2]) + '</small></span></button>').join('') + '</div>'
+   + '<details class="como"><summary>🗺️ Mapa completo do GitHub deste restaurante</summary><p class="pequeno mudo">Tudo o que fica no repositório {slug}, e em que lugar:</p>'.replace('{slug}', esc(r.slug))
+   + ARQS_SITE.map(a => '<div class="mapa"><code>' + esc(a[2] === 'raiz' ? a[0] : a[2].replace(/^pasta /, '') + '/' + a[0]) + '</code><small>' + esc(a[1]) + (a[4] ? ' · ' + esc(a[4]) : '') + '</small></div>').join('') + '</details>';
+}
+/* arquivo, para que serve, onde colocar, baixa aqui?, de onde vem */
+const ARQS_SITE = [
+  ['index.html','A porta do site (abre o sistema)','raiz',true,'etapa Colocar o site no ar'],
+  ['config-restaurante.js','Os dados deste restaurante','raiz',true,'etapa Colocar o site no ar'],
+  ['sw.js','Deixa abrir sem internet e instalar','raiz',true,'etapa Colocar o site no ar'],
+  ['manifest.webmanifest','Nome e ícone do app instalado','raiz',true,'etapa Colocar o site no ar'],
+  ['privacidade.html','Aviso de privacidade (o Google exige)','raiz',false,'etapa Entrar com o Google'],
+  ['google….html','Verificação do Google (opcional)','raiz',false,'baixado no Search Console'],
+  ['README.md','Criado pelo GitHub','raiz',false,'pode deixar'],
+  ['publicar-funcoes.yml','Publica as funções do servidor','pasta .github/workflows',false,'etapa Publicar as funções'],
+  ['equipe.apk','App Android da equipe (opcional)','pasta downloads',false,'etapa App Android']
+];
+function workflowTexto(r){
+  return 'name: Publicar funções do servidor\n# Publica as 33 funções do sistema no Supabase de ' + r.nome + '. Rode em Actions → Run workflow.\non: workflow_dispatch\njobs:\n  publicar:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          repository: lucassricardo95/sistema-restaurantes\n          path: sr\n      - uses: supabase/setup-cli@v1\n        with:\n          version: latest\n      - name: Publicar as funções\n        env:\n          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}\n        run: |\n          cd sr/modelo/banco\n          chmod +x implantar-funcoes.sh\n          ./implantar-funcoes.sh ' + refDe(r) + ' ' + r.site_url + '\n';
+}
+function workflowHtml(){
+  const r = S.rest; if(!refDe(r) || !r.site_url) return '<div class="res erro">Antes, preencha o endereço do Supabase e o endereço do site (etapas anteriores).</div>';
+  return '<p class="pequeno"><b>1) Nome do arquivo</b> (cole no campo do nome):</p><div class="copiar" id="wfNome">.github/workflows/publicar-funcoes.yml</div><button class="mini" onclick="rvCopiar(\'wfNome\')">📋 Copiar nome</button>'
+   + '<p class="pequeno"><b>2) Conteúdo</b> (cole no campo grande):</p><div class="copiar" id="wfTxt">' + esc(workflowTexto(r)) + '</div><button class="principal" onclick="rvCopiar(\'wfTxt\')">📋 Copiar conteúdo</button> <button class="mini" onclick="rvBaixarWf()">⬇️ Baixar</button>';
+}
+window.rvBaixarWf = () => baixar('publicar-funcoes.yml', workflowTexto(S.rest), 'text/yaml');
+window.rvPrivacidade = async () => {
+  const r = S.rest, box = $('privRes'); if(!r.supabase_url || !r.supabase_chave || !r.site_url) return erro('Preencha antes o Supabase e o endereço do site.');
+  try{
+    if(!window.gerarPrivacidade) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'leve/aviso-privacidade.js?v=1'; s.onload = ok; s.onerror = () => no(new Error('não carregou o modelo do aviso')); document.head.appendChild(s); });
+    const x = await tempo(r.supabase_url + '/rest/v1/rpc/api_aviso_privacidade', { method:'POST', headers:{ apikey:r.supabase_chave, 'Content-Type':'application/json' }, body:'{}' });
+    if(!x.ok) throw new Error(x.status === 404 ? 'o banco ainda não tem as tabelas (faça a etapa do banco)' : 'o banco respondeu ' + x.status);
+    const d = await x.json(); if(!d.nome) d.nome = r.nome;
+    baixar('privacidade.html', gerarPrivacidade(d, r.site_url), 'text/html'); await hist(r.id, 'privacidade.html gerado', '');
+    if(box) box.innerHTML = '<div class="res ok">✅ Baixado. Agora suba na raiz do GitHub do restaurante.' + (!d.cnpj && !d.endereco ? ' Dica: quando o dono preencher CNPJ e endereço no sistema (Administrador → Sistema → Aparência/Dados), gere de novo para a página ficar completa.' : '') + '</div>';
+  }catch(e){ if(box) box.innerHTML = '<div class="res erro">❌ Não deu: ' + esc(e.message) + '.</div>'; }
+};
+window.rvConferir = async () => {
+  const r = S.rest, box = $('confRes'); if(!r.site_url) return erro('Preencha o endereço do site.');
+  box.innerHTML = '<div class="res aviso">⏳ Conferindo…</div>';
+  const L = [['index.html','index.html', t => t.includes('config_restaurante') ? '' : 'não é o arquivo do painel'], ['config-restaurante.js','config-restaurante.js', t => t.includes("'" + r.slug + "'") || t.includes('"' + r.slug + '"') ? '' : 'é de outro restaurante'], ['sw.js','sw.js', t => t.includes('sw-motor') ? '' : 'não é o arquivo do painel'], ['manifest.webmanifest','manifest.webmanifest', t => t.includes(r.nome) ? '' : 'está com outro nome'], ['privacidade.html','privacidade.html', t => /Privacidade/.test(t) ? '' : 'conteúdo estranho']];
+  const out = await Promise.all(L.map(async a => { try{ const x = await tempo(r.site_url + a[1] + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) return [a[0], 'erro', x.status === 404 ? 'não encontrado (falta subir na raiz)' : 'erro ' + x.status]; const p = a[2](await x.text()); return [a[0], p ? 'aviso' : 'ok', p || 'ok']; }catch(e){ return [a[0], 'erro', 'não abriu']; } }));
+  box.innerHTML = out.map(o => '<div class="res ' + o[1] + '">' + ({ ok:'✅', aviso:'⚠️', erro:'❌' }[o[1]]) + ' <b>' + o[0] + '</b>: ' + esc(o[2]) + '</div>').join('') + (out.every(o => o[1] === 'ok') ? '<div class="res ok">🎉 Site completo!</div>' : '');
+};
+function manifestTexto(r){
+  const m = r.marca || {}, c = m.cores || {}, ic = (m.logos || {}).icone, mo = r.motor || MOTOR_PADRAO, fundo = c.fundo || '#14100c';
+  const icons = ic ? [{ src:ic, sizes:'512x512', type:'image/png', purpose:'any' }, { src:ic, sizes:'512x512', type:'image/png', purpose:'maskable' }] : [{ src:mo + 'img/icon-192.png', sizes:'192x192', type:'image/png', purpose:'any' }, { src:mo + 'img/icon-512.png', sizes:'512x512', type:'image/png', purpose:'any' }, { src:mo + 'img/icon-maskable-512.png', sizes:'512x512', type:'image/png', purpose:'maskable' }];
+  return JSON.stringify({ id:'./', name:r.nome, short_name:r.nome.length > 12 ? r.nome.split(' ')[0].slice(0, 12) : r.nome, description:'Cardápio digital e pedidos', lang:'pt-BR', start_url:'./', scope:'./', display:'standalone', orientation:'any', background_color:fundo, theme_color:fundo, icons }, null, 2);
+}
+function configTexto(r){
+  const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {}, mo = r.motor || MOTOR_PADRAO;
+  const o = { motor:mo, slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
+    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', jogos:{ tema:(m.jogos && m.jogos.tema) || 'generico' }, cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
+  return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Marca e módulos também vêm do painel na hora; para mudar o resto, gere de novo. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
+}
+function baixar(nome, txt, tipo){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type:tipo || 'text/plain' })); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+window.rvBaixarArq = async nome => {
+  const r = S.rest;
+  try{
+    if(nome === 'config-restaurante.js') baixar(nome, configTexto(r), 'text/javascript');
+    else if(nome === 'manifest.webmanifest') baixar(nome, manifestTexto(r), 'application/manifest+json');
+    else { const x = await fetch('leve/' + nome + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('erro ' + x.status); baixar(nome, await x.text(), nome.endsWith('.html') ? 'text/html' : 'text/javascript'); }
+    aviso('Baixado: ' + nome, 'ok'); hist(r.id, 'Arquivo do site baixado', nome);
+  }catch(e){ erro('Não consegui preparar ' + nome + ' (' + e.message + ').'); }
+};
+
+/* testes automáticos */
+async function tempo(url, o){ const c = new AbortController(); const t = setTimeout(() => c.abort(), 12000); try{ return await fetch(url, Object.assign({ signal:c.signal }, o)); } finally { clearTimeout(t); } }
+const TESTES = {
+  async supabase(r){ if(!r.supabase_url || !r.supabase_chave) return ['erro', 'Falta o endereço do banco e/ou a chave pública.'];
+    const x = await tempo(r.supabase_url + '/auth/v1/health', { headers:{ apikey:r.supabase_chave } }); return x.ok ? ['ok', 'O banco responde e a chave foi aceita.'] : ['erro', 'O banco respondeu com erro ' + x.status + '. Confira a chave pública.']; },
+  async banco(r){ if(!r.supabase_url) return ['erro', 'Preencha primeiro o endereço do banco.'];
+    const x = await tempo(r.supabase_url + '/rest/v1/rpc/api_cardapio_promos', { method:'POST', headers:{ apikey:r.supabase_chave, 'Content-Type':'application/json' }, body:'{"p":{}}' });
+    if(x.status === 404) return ['erro', 'O banco existe, mas as tabelas ainda não foram criadas. Continue colando os códigos.'];
+    const j = await x.json().catch(() => null); return j && j.ok === true ? ['ok', 'Banco do sistema instalado e respondendo.'] : ['aviso', 'O banco respondeu, mas fora do esperado: ' + esc(JSON.stringify(j).slice(0, 120))]; },
+  async funcoes(r){ if(!r.supabase_url) return ['erro', 'Preencha primeiro o endereço do banco.'];
+    const x = await tempo(r.supabase_url + '/functions/v1/ping', { method:'POST', headers:{ apikey:r.supabase_chave, Authorization:'Bearer ' + r.supabase_chave, 'Content-Type':'application/json' }, body:'{}' });
+    return x.status === 404 ? ['erro', 'As funções do servidor ainda não foram publicadas.'] : (x.ok ? ['ok', 'Funções do servidor respondendo.'] : ['aviso', 'A função "ping" respondeu com erro ' + x.status + '.']); },
+  async site(r){ const u = r.site_url || (r.dominio ? 'https://' + r.dominio + '/' : ''); if(!u) return ['erro', 'Preencha o endereço do site.'];
+    try{ const x = await tempo(u + 'config-restaurante.js?t=' + Date.now(), { cache:'no-store' }); if(x.status === 404) return ['erro', 'O endereço existe, mas os 4 arquivos ainda não estão lá (ou o GitHub Pages ainda está publicando: espere 2 minutos).']; if(x.ok){ const t = await x.text(); return t.includes(r.slug) ? ['ok', 'Site no ar com os arquivos deste restaurante.'] : ['aviso', 'O site está no ar, mas o config-restaurante.js é de outro restaurante. Baixe de novo e suba.']; } }catch(e){}
+    await tempo(u, { mode:'no-cors' }); return ['ok', 'O endereço ' + esc(u) + ' está no ar.']; }
+};
+const NOME_T = { supabase:'Banco', banco:'Tabelas', funcoes:'Funções', site:'Site' };
+window.rvTeste = async id => {
+  lerForm(); S.res[id] = ['aviso', 'Testando…']; mostrarRes('res_' + id, [id]);
+  try{ S.res[id] = await TESTES[id](S.rest); }catch(e){ S.res[id] = ['erro', e.name === 'AbortError' ? 'Demorou demais para responder.' : 'Não foi possível chegar lá (' + esc(e.message) + ').']; }
+  mostrarRes('res_' + id, [id]); mostrarRes('resTeste', Object.keys(S.res));
+};
+function mostrarRes(box, ids){ const b = $(box); if(!b) return; b.innerHTML = ids.filter(i => S.res && S.res[i]).map(i => '<div class="res ' + S.res[i][0] + '">' + ({ ok:'✅ ', erro:'❌ ', aviso:'⏳ ' }[S.res[i][0]]) + '<b>' + (NOME_T[i] || i) + ':</b> ' + S.res[i][1] + '</div>').join(''); }
+
+/* ---------- MARCA E LOGOS ---------- */
+const lum = h => { h = String(h || '#000').replace('#', ''); return parseInt(h.slice(0, 2), 16) * .299 + parseInt(h.slice(2, 4), 16) * .587 + parseInt(h.slice(4, 6), 16) * .114; };
+function marcaHtml(){
+  const m = S.rest.marca, c = m.cores = m.cores || {};
+  return '<h3>Tema pronto</h3><div class="temas">' + TEMAS.map(t => '<button class="tema ' + (m.tema === t.id ? 'on' : '') + '" onclick="rvTema(\'' + t.id + '\')" style="background:' + t.fundo + ';color:' + (lum(t.fundo) > 150 ? '#1b1b1b' : '#f5efe6') + '"><i style="background:' + t.destaque + '"></i><i style="background:' + t.botao + '"></i><br>' + t.nome + '</button>').join('') + '</div>'
+   + '<h3>Ou escolha as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botões'],['fundo','Fundo']].map(k => '<label class="cor-item"><input type="color" data-k="marca.cores.' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '" oninput="rvPrevia()"><span>' + k[1] + '</span></label>').join('') + '</div>'
+   + '<div class="previa" id="previa"></div>'
+   + '<div class="cols"><div>' + campo('marca.slogan', { rot:'Slogan (frase curta)', ph:'Ex.: Feito com carinho' }) + '</div><div>' + campo('marca.assistente', { rot:'Nome do atendente virtual', ph:'Ex.: Atendente da Pizzaria' }) + '</div></div>'
+   + '<label for="f_jogos">Jogos do cliente (enquanto espera o pedido)</label><select id="f_jogos" data-k="marca.jogos.tema">' + [['generico','Comida em geral'],['burger','Hambúrguer'],['churros','Churros e doces']].map(o => '<option value="' + o[0] + '"' + (((m.jogos || {}).tema || 'generico') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>'
+   + botSalvar('💾 Salvar cores');
+}
+window.rvTema = id => { const t = TEMAS.find(x => x.id === id); lerForm(); const m = S.rest.marca; m.tema = id; m.cores = { destaque:t.destaque, botao:t.botao, fundo:t.fundo }; refazerMarca(); };
+function refazerMarca(){ if(S.aba === 'marca') abaMarcaTudo(); else abaPasso(); }
+window.rvPrevia = () => { const g = k => (document.querySelector('[data-k="marca.cores.' + k + '"]') || {}).value || '#000'; const p = $('previa'); if(!p) return; const lg = (S.rest.marca.logos || {}).cardapio;
+  p.style.background = g('fundo'); const tx = lum(g('fundo')) > 150 ? '#222' : '#fffc';
+  p.innerHTML = (lg ? '<img src="' + esc(lg) + '" alt="" style="max-height:70px;max-width:60%;display:block;margin:0 auto 8px">' : '') + '<b style="color:' + g('destaque') + ';font-size:18px">' + esc(S.rest.nome) + '</b><div style="color:' + tx + '">Prévia de um cartão do cardápio</div><span class="bt" style="background:' + g('botao') + ';color:#fff">Fazer pedido</span>'; };
+function promptLogo(L){
+  const r = S.rest, m = r.marca || {}, c = m.cores || {}, tipo = (S.aj.tipoComida || {})[r.id] || '';
+  return L.prompt.replace(/\{nome\}/g, r.nome).replace(/\{destaque\}/g, c.destaque || '#d9a21b').replace(/\{botao\}/g, c.botao || '#8c1c13').replace(/\{fundo\}/g, c.fundo || '#14100c')
+    .replace(/\{tipo\}/g, tipo ? ', que vende ' + tipo : '').replace(/\{tipo_icone\}/g, tipo ? ' que lembre ' + tipo : '').replace(/\{slogan_p\}/g, m.slogan ? ' (se quiser, o slogan "' + m.slogan + '" pequeno embaixo)' : '');
+}
+function logosHtml(){
+  const lg = S.rest.marca.logos = S.rest.marca.logos || {}, tipo = (S.aj.tipoComida || {})[S.rest.id] || '';
+  return '<label for="f_tipo">O que o restaurante vende? (ajuda o ChatGPT a desenhar)</label><input id="f_tipo" value="' + esc(tipo) + '" placeholder="Ex.: pizza, hambúrguer, churros, açaí" onchange="rvTipoComida(this.value)">'
+   + LOGOS.map(L => '<div class="logo-card"><div class="logo-topo"><div class="logo-img' + (L.id === 'impressao' ? ' branco' : '') + '">' + (lg[L.id] ? '<img src="' + esc(lg[L.id]) + '" alt=""' + (L.id === 'impressao' ? ' class="termica"' : '') + '>' : '<span>' + L.icone + '</span>') + '</div><div><b>' + L.nome + '</b><small>' + esc(L.onde) + '</small>' + (lg[L.id] ? '<span class="selo ativo">✓ enviada</span>' : '<span class="selo aviso">falta</span>') + '</div></div>'
+     + '<details class="como"><summary>📏 Como deve ser · 🤖 pedir ao ChatGPT</summary><ul class="regras">' + L.regras.map(x => '<li>✅ ' + esc(x) + '</li>').join('') + L.nao.map(x => '<li>❌ ' + esc(x) + '</li>').join('') + '</ul>'
+     + '<p class="pequeno"><b>Texto pronto para o ChatGPT</b> (copie, cole no ChatGPT e peça a imagem):</p><div class="copiar" id="pr_' + L.id + '">' + esc(promptLogo(L)) + '</div><button class="mini" onclick="rvCopiar(\'pr_' + L.id + '\')">📋 Copiar texto</button> <a class="btn mini" href="https://chatgpt.com/" target="_blank" rel="noopener">Abrir o ChatGPT ↗</a></details>'
+     + '<label class="enviar"><input type="file" accept="image/png,image/webp,image/jpeg" onchange="rvLogo(\'' + L.id + '\',this)"><span>📤 ' + (lg[L.id] ? 'Trocar imagem' : 'Enviar imagem') + '</span></label>' + (lg[L.id] && L.id === 'impressao' ? '<small class="mudo">A prévia acima mostra como sai na impressora (preto e branco).</small>' : '') + '<div id="lgres_' + L.id + '"></div></div>').join('');
+}
+window.rvTipoComida = v => { const t = Object.assign({}, S.aj.tipoComida || {}); t[S.rest.id] = v.trim(); salvarAjustes({ tipoComida:t }, 'Anotado.').then(refazerMarca); };
+function abrirImg(arq){ return new Promise((ok, no) => { const im = new Image(), u = URL.createObjectURL(arq); im.onload = () => ok({ im, u }); im.onerror = () => no(new Error('Não consegui ler essa imagem. Use PNG ou JPG.')); im.src = u; }); }
+function analisar(im){ const cv = document.createElement('canvas'), w = cv.width = Math.min(200, im.width), h = cv.height = Math.round(im.height * w / im.width), x = cv.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+  const d = x.getImageData(0, 0, w, h).data, px = (i, j) => { const o = (j * w + i) * 4; return [d[o], d[o + 1], d[o + 2], d[o + 3]]; }, cantos = [px(1, 1), px(w - 2, 1), px(1, h - 2), px(w - 2, h - 2)];
+  let cor = 0, n = 0; for(let o = 0; o < d.length; o += 16){ if(d[o + 3] < 40) continue; n++; const mx = Math.max(d[o], d[o + 1], d[o + 2]), mn = Math.min(d[o], d[o + 1], d[o + 2]); if(mx - mn > 50) cor++; }
+  const lumP = p => p[0] * .299 + p[1] * .587 + p[2] * .114;
+  return { transp:cantos.some(p => p[3] < 200), fundoBranco:cantos.every(p => p[3] > 240 && lumP(p) > 225), fundoEscuro:cantos.every(p => p[3] > 240 && lumP(p) < 70), colorido:n ? cor / n > .15 : false, ratio:im.width / im.height }; }
+function prepararImg(L, im){ const cv = document.createElement('canvas'), x = cv.getContext('2d');
+  if(L === 'icone'){ cv.width = cv.height = 512; x.fillStyle = (S.rest.marca.cores || {}).fundo || '#14100c'; x.fillRect(0, 0, 512, 512); const e = Math.min(512 / im.width, 512 / im.height); const w = im.width * e, h = im.height * e; x.drawImage(im, (512 - w) / 2, (512 - h) / 2, w, h); }
+  else { const e = Math.min(1, 1024 / Math.max(im.width, im.height)); cv.width = Math.round(im.width * e); cv.height = Math.round(im.height * e); x.drawImage(im, 0, 0, cv.width, cv.height); }
+  return new Promise((ok, no) => cv.toBlob(b => b ? ok(b) : no(new Error('Imagem inválida.')), 'image/png')); }
+window.rvLogo = async (tipo, inp) => {
+  const f = inp.files[0]; if(!f) return; const box = $('lgres_' + tipo);
+  try{
+    lerForm(); const { im, u } = await abrirImg(f), a = analisar(im), avisos = [];
+    if(tipo === 'cardapio'){ if(a.fundoBranco) avisos.push('Parece ter FUNDO BRANCO: no cardápio escuro vai aparecer um quadrado. Peça ao ChatGPT "com fundo transparente".'); if(!a.transp && !a.fundoBranco) avisos.push('A imagem não tem fundo transparente. Se ficar um quadrado no cardápio, peça de novo com fundo transparente.'); }
+    if(tipo === 'impressao'){ if(a.fundoEscuro) avisos.push('Fundo ESCURO vira um borrão preto na impressora. Use fundo branco.'); if(a.colorido) avisos.push('A logo é colorida: na impressora vira cinza manchado. O ideal é só preto.'); if(a.ratio < 1.2) avisos.push('O ideal é deitada (mais larga que alta).'); }
+    if(tipo === 'icone' && Math.abs(a.ratio - 1) > .03) avisos.push('A imagem não era quadrada: o painel encaixou num quadrado com a cor de fundo do restaurante.');
+    const b = await prepararImg(tipo, im); URL.revokeObjectURL(u);
+    const cam = S.rest.slug + '/' + tipo + '-' + Date.now() + '.png';
+    await req('/storage/v1/object/marcas/' + cam, { method:'POST', body:b, headers:{ 'Content-Type':'image/png', 'x-upsert':'true' } });
+    S.rest.marca.logos = S.rest.marca.logos || {}; S.rest.marca.logos[tipo] = URL_ + '/storage/v1/object/public/marcas/' + cam;
+    if(await salvar('Logo enviada ✓')){ await hist(S.rest.id, 'Logo enviada', tipo); refazerMarca(); const bx = $('lgres_' + tipo); if(bx && avisos.length) bx.innerHTML = avisos.map(x => '<div class="res aviso">⚠️ ' + esc(x) + '</div>').join(''); }
+  }catch(e){ if(box) box.innerHTML = '<div class="res erro">❌ ' + esc(e.message) + '</div>'; erro(e.message); }
+};
+function modulosHtml(){ const m = S.rest.modulos; return MODULOS.map(x => '<label class="modulo"><input type="checkbox" data-k="modulos.' + x.id + '"' + (m[x.id] ? ' checked' : '') + '><span><b>' + esc(x.nome) + '</b><small>' + esc(x.desc || '') + '</small></span></label>').join('') + botSalvar(); }
+function abaMarcaTudo(){ C('<div class="card"><h2>🎨 Cores e textos</h2><p class="mudo pequeno">Muda no site do restaurante na hora (o dono também pode ajustar em Administrador → Sistema → Aparência).</p>' + marcaHtml() + '</div><div class="card"><h2>🖼️ Logos</h2>' + logosHtml() + '</div>'); rvPrevia(); }
+
+/* ---------- SAÚDE ---------- */
 function saudeHtml(r, aninhado){
-  const sd = saudeDe(r.slug), h = sd.h, sec = x => aninhado ? '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #2a2a2a;overflow-wrap:anywhere">' + x + '</div>' : '<div class="card" style="overflow-wrap:anywhere">' + x + '</div>';
-  const dot = c => '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:8px"></span>';
-  if(!h) return sec('<b>' + dot(SAUDE_COR.sem) + 'Sem sinal ainda</b><p class="mudo" style="margin:6px 0 0;font-size:13px">Este restaurante ainda não enviou o resumo de saúde (ele envia sozinho a cada 15 minutos).</p>');
+  const sd = saudeDe(r.slug), h = sd.h, sec = x => aninhado ? '<div class="sub-sec">' + x + '</div>' : '<div class="card">' + x + '</div>';
+  if(!h) return sec('<b>' + ponto(SAUDE_COR.sem) + 'Sem sinal ainda</b><p class="mudo pequeno">Este restaurante ainda não enviou o resumo de saúde (ele envia sozinho a cada 15 minutos, depois que o banco e o site estão prontos).</p>');
   const itens = h.itens || [], ruins = itens.filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')), uso = usoDe(h), srv = h.servidores || {};
   const outros = itens.filter(i => !/^Plano grátis:/i.test(i.titulo || '') || !uso.some(u => u.id === i.id));
-  return sec('<div class="linha"><b>' + dot(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>'
-      + (sd.geral === 'sem' ? '<p class="mudo" style="margin:6px 0 0;font-size:13px">Parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>'))
+  return sec('<div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>' + (sd.geral === 'sem' ? '<p class="mudo pequeno">Parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado por falta de uso).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>'))
     + sec('<b>Servidores</b>' + linhaSrv_('Supabase', 'principal', srv.supabase) + linhaSrv_('Planilha principal', 'reserva', srv.planilha) + '<div id="srvCont_' + r.id + '">' + linhaSrv_('Planilha de contingência', 'último recurso', r.contingencia_url ? { estado:'sem_resposta' } : { estado:'nao_usa' }) + '</div>')
-    + (srv.drive && (srv.drive.principal || srv.drive.contingencia) ? sec('<b>☁️ Google Drive</b>' + driveBarra_('Drive principal', srv.drive.principal) + driveBarra_('Drive da contingência', srv.drive.contingencia) + '<small class="mudo" style="display:block;margin-top:8px">Medido a cada 6 horas' + (srv.drive.principal && srv.drive.principal.medido_em ? ' · última medição ' + haTempo(Math.round((Date.now() - new Date(srv.drive.principal.medido_em).getTime()) / 60000)) : '') + '.</small>') : '')
-    + (ruins.length ? sec('<b>Pede atenção</b>' + ruins.map(i => '<div style="border-left:3px solid ' + SAUDE_COR[i.nivel] + ';padding:4px 0 4px 10px;margin:8px 0"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('')) : '')
-    + (uso.length ? sec('<b>📊 Plano grátis do Supabase</b>' + uso.map(barraUso).join('') + '<small class="mudo" style="display:block;margin-top:8px">Chamadas às funções é estimativa pelas últimas 24 h. O número oficial está no Supabase (Settings → Usage).</small>') : '')
-    + sec('<details><summary style="cursor:pointer"><b>Todas as verificações (' + outros.length + ')</b></summary>' + outros.map(i => '<div style="padding:6px 0">' + dot(SAUDE_COR[i.nivel] || SAUDE_COR.sem) + '<b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</details>');
+    + (srv.drive && (srv.drive.principal || srv.drive.contingencia) ? sec('<b>☁️ Google Drive</b>' + driveBarra_('Drive principal', srv.drive.principal) + driveBarra_('Drive da contingência', srv.drive.contingencia)) : '')
+    + (ruins.length ? sec('<b>Pede atenção</b>' + ruins.map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('')) : '')
+    + (uso.length ? sec('<b>📊 Plano grátis do Supabase</b>' + uso.map(barraUso).join('') + '<small class="mudo">Estimativa. O número oficial está no Supabase (Settings → Usage).</small>') : '')
+    + sec('<details><summary><b>Todas as verificações (' + outros.length + ')</b></summary>' + outros.map(i => '<div style="padding:6px 0">' + ponto(SAUDE_COR[i.nivel] || SAUDE_COR.sem) + '<b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</details>');
 }
 const fmtBytes_ = b => { b = Number(b) || 0; if(b <= 0) return '0 B'; const u = ['B','KB','MB','GB','TB']; let i = 0; while(b >= 1024 && i < u.length - 1){ b /= 1024; i++; } return b.toFixed(i ? 1 : 0).replace('.', ',') + ' ' + u[i]; };
 function driveBarra_(titulo, d){
-  if(!d || d.estado === 'sem_resposta') return '<div style="margin:10px 0 2px"><b style="font-size:14px">' + titulo + '</b><br><small class="mudo">Aguardando a primeira medição…</small></div>';
-  if(d.estado !== 'ok') return '<div style="margin:10px 0 2px"><b style="font-size:14px">' + titulo + '</b><div class="res erro" style="margin-top:4px">⚠️ Não foi possível medir: ' + esc(d.mensagem || 'sem resposta') + '</div></div>';
+  if(!d || d.estado === 'sem_resposta') return '<div class="uso"><b>' + titulo + '</b><br><small class="mudo">Aguardando a primeira medição…</small></div>';
+  if(d.estado !== 'ok') return '<div class="uso"><b>' + titulo + '</b><div class="res erro">⚠️ Não foi possível medir: ' + esc(d.mensagem || 'sem resposta') + '</div></div>';
   const total = (Number(d.usado) || 0) + (Number(d.livre) || 0), pct = d.percentual == null ? 0 : Number(d.percentual);
-  const comp = Object.keys(d.categorias || {}).filter(k => (d.categorias[k].bytes || 0) > 0).map(k => esc(k) + ' ' + fmtBytes_(d.categorias[k].bytes)).join(' · ');
-  return barraUso({ tit:titulo, uso:fmtBytes_(d.usado), lim:d.livre == null ? '—' : fmtBytes_(total), pct }) + (comp ? '<small class="mudo" style="display:block">' + comp + '</small>' : '') + (d.nivel === 'Crítico' ? '<small style="color:var(--erro);display:block">⚠️ Quase cheio: novos backups e fotos podem falhar.</small>' : '');
+  return barraUso({ tit:titulo, uso:fmtBytes_(d.usado), lim:d.livre == null ? '—' : fmtBytes_(total), pct }) + (d.nivel === 'Crítico' ? '<small class="txt-erro">⚠️ Quase cheio: novos backups e fotos podem falhar.</small>' : '');
 }
 function linhaSrv_(nome, papel, o){ o = o || {}; const ok = o.estado === 'ok', c = ok ? SAUDE_COR.ok : (o.estado === 'nao_usa' || o.estado === 'sem_resposta') ? SAUDE_COR.sem : SAUDE_COR.problema;
-  return '<div class="linha" style="padding:6px 0;gap:8px"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:8px"></span><b>' + nome + '</b> <small class="mudo">' + papel + '</small></span><small>' + (ok ? 'Online' + (o.ms != null ? ' · ' + o.ms + ' ms' : '') : o.estado === 'nao_usa' ? 'Não usada' : o.estado === 'sem_resposta' ? 'Medindo…' : 'Fora do ar' + (o.detalhe ? ' · ' + esc(o.detalhe) : '')) + '</small></div>'; }
-function abaSaude(){ $('corpo').innerHTML = saudeHtml(S.rest, false); medirContingencia_([S.rest]); }
-/* A planilha de contingência é medida aqui, pelo navegador (o banco do restaurante não guarda o endereço dela). */
+  return '<div class="linha srv"><span>' + ponto(c) + '<b>' + nome + '</b> <small class="mudo">' + papel + '</small></span><small>' + (ok ? 'Online' + (o.ms != null ? ' · ' + o.ms + ' ms' : '') : o.estado === 'nao_usa' ? 'Não usada' : o.estado === 'sem_resposta' ? 'Medindo…' : 'Fora do ar' + (o.detalhe ? ' · ' + esc(o.detalhe) : '')) + '</small></div>'; }
 function medirContingencia_(rests){
   (rests || []).forEach(async r => {
     if(!r.contingencia_url) return; const t0 = Date.now(); let est;
@@ -206,239 +619,142 @@ function medirContingencia_(rests){
     const box = $('srvCont_' + r.id); if(box) box.innerHTML = linhaSrv_('Planilha de contingência', 'último recurso', est);
   });
 }
+function errosHtml(lista, comNome){
+  return lista.map(e => '<div class="erro-item"><div class="linha"><b>' + (comNome ? esc(nomeSlug(e.slug)) + ' · ' : '') + esc(e.mensagem) + '</b><span class="selo">' + e.ocorrencias + 'x</span></div>'
+    + '<small class="mudo">Tela: ' + esc(e.tela || '—') + ' · versão ' + esc(e.versao || '—') + ' · último ' + esc(new Date(e.ultimo_em).toLocaleString('pt-BR')) + '</small>'
+    + (e.detalhe || e.aparelho ? '<details><summary class="mudo pequeno">Detalhe técnico</summary><small class="mudo pre">' + esc((e.aparelho || '') + '\n' + (e.detalhe || '')) + '</small></details>' : '')
+    + '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvErroOk(' + e.id + ')">✓ Resolvido</button><button class="mini" onclick="rvErroClaude(' + e.id + ')">🤖 Copiar para o Claude</button></div></div>').join('');
+}
+const nomeSlug = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
+function abaSaude(){ const r = S.rest, er = errosDe(r.slug); C(saudeHtml(r, false) + '<div class="card"><div class="linha"><h2>🐞 Erros abertos</h2>' + (er.length ? '<button class="mini" onclick="rvErrosOk(\'' + esc(r.slug) + '\')">Marcar todos resolvidos</button>' : '') + '</div>' + (er.length ? errosHtml(er, false) : '<p class="mudo">Nenhum erro aberto. 👍</p>') + '</div>'); medirContingencia_([r]); }
+function vSaude(){
+  const L = S.lista.filter(r => r.situacao !== 'encerrado'), cont = { ok:0, atencao:0, problema:0, sem:0 }; L.forEach(r => cont[saudeDe(r.slug).geral]++);
+  const ordem = { problema:0, atencao:1, sem:2, ok:3 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
+  T('<div class="topo"><h1>Saúde</h1><small class="mudo">atualiza sozinho · ' + haTempo(Math.round((Date.now() - (S.saudeEm || Date.now())) / 60000)) + '</small></div>'
+   + '<div class="kpis quatro">' + kpi('🟢 Tudo certo', cont.ok, 'ok') + kpi('🟡 Atenção', cont.atencao, cont.atencao ? 'aviso' : '') + kpi('🔴 Problema', cont.problema, cont.problema ? 'erro' : '') + kpi('⚪ Sem sinal', cont.sem, '') + '</div>'
+   + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
+      return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
+       + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo erro">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
+       + (ruins.length ? ruins.slice(0, 3).map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') : '')
+       + (pior ? barraUso(pior) : '') + (er.length ? '<details><summary class="pequeno"><b>Ver os erros</b></summary>' + errosHtml(er, false) + '</details>' : '')
+       + '<details><summary class="pequeno"><b>Ver tudo</b></summary>' + saudeHtml(r, true) + '</details><p style="margin:8px 0 0"><button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'saude\')">Abrir restaurante ›</button></p></div>'; }).join('')
+   + (S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)).length ? '<div class="card"><h2>Erros de sites sem cadastro</h2>' + errosHtml(S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)), true) + '</div>' : '')
+   + (!L.length ? '<div class="card vazio">Nenhum restaurante ainda.</div>' : ''));
+  medirContingencia_(L);
+}
+window.rvErroOk = async id => { try{ await rest('erros_app?id=eq.' + id, 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.id !== id); aviso('Marcado como resolvido.', 'ok'); S.view === 'rest' ? abaSaude() : desenhar(); }catch(e){ erro('Não foi possível marcar: ' + e.message); } };
+window.rvErrosOk = async slug => { if(!confirm('Marcar todos os erros deste restaurante como resolvidos?')) return; try{ await rest('erros_app?slug=eq.' + encodeURIComponent(slug) + '&resolvido=eq.false', 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.slug !== slug); aviso('Pronto.', 'ok'); abaSaude(); }catch(e){ erro(e.message); } };
+window.rvErroClaude = async id => { const e = S.erros.find(x => x.id === id); if(!e) return; const t = 'Erro no sistema do restaurante "' + nomeSlug(e.slug) + '" (' + e.slug + '), ' + e.ocorrencias + ' vez(es), último em ' + new Date(e.ultimo_em).toLocaleString('pt-BR') + '.\nMensagem: ' + e.mensagem + '\nTela: ' + (e.tela || '—') + ' · versão ' + (e.versao || '—') + '\nAparelho: ' + (e.aparelho || '—') + '\nDetalhe: ' + (e.detalhe || '—') + '\nDescubra a causa e corrija em todos os restaurantes.'; if(await copiarTxt(t)) aviso('Copiado. Cole na conversa com o Claude.', 'ok'); };
+
+/* ---------- CADASTRO DO RESTAURANTE ---------- */
 function abaDados(){
   const r = S.rest;
-  $('corpo').innerHTML = '<div class="card"><div class="cols"><div>' + campoTxt('Nome do restaurante', 'nome') + '</div><div><label>Código (não muda)</label><input value="' + esc(r.slug) + '" disabled></div></div>'
-   + '<label for="f_sit">Situação</label><select id="f_sit" data-k="situacao">' + Object.keys(SIT).map(k => '<option value="' + k + '"' + (r.situacao === k ? ' selected' : '') + '>' + SIT[k] + '</option>').join('') + '</select>'
-   + '<p class="mudo" style="font-size:13px">"Suspenso" faz o app do restaurante mostrar o aviso de serviço suspenso. "Encerrado" tira o restaurante do ar.</p>'
-   + '<div class="cols"><div>' + campoTxt('Nome do contato', 'contato_nome') + '</div><div>' + campoTxt('Telefone/WhatsApp', 'contato_telefone') + '</div></div>' + campoTxt('E-mail do contato', 'contato_email', { tipo:'email' })
-   + '<div class="cols"><div>' + campoTxt('Plano', 'plano', { ph:'Ex.: Básico' }) + '</div><div>' + campoTxt('Mensalidade (R$)', 'valor_mensal', { tipo:'number' }) + '</div></div>'
-   + '<div class="cols"><div>' + campoTxt('Dia do vencimento (1 a 28)', 'dia_vencimento', { tipo:'number' }) + '</div><div>' + campoTxt('Início do contrato', 'inicio_em', { tipo:'date' }) + '</div></div>'
-   + '<label for="f_obs">Observações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar + '</div>';
+  C('<div class="card"><h2>📋 Cliente e contrato</h2><div class="cols">' + ['nome','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','inicio_em'].map(k => '<div>' + campo(k) + '</div>').join('') + '<div><label>Código (não muda)</label><input value="' + esc(r.slug) + '" disabled></div></div>'
+   + '<label for="f_sit">Situação</label><select id="f_sit" data-k="situacao">' + Object.keys(SIT).map(k => '<option value="' + k + '"' + (r.situacao === k ? ' selected' : '') + '>' + SIT[k] + '</option>').join('') + '</select><small class="mudo">"Encerrado" tira o restaurante do ar.</small>'
+   + '<label for="f_obs">Anotações</label><textarea id="f_obs" data-k="observacoes">' + esc(r.observacoes || '') + '</textarea>' + botSalvar() + '</div>'
+   + '<div class="card"><h2>🔌 Ligações (banco, site, planilhas)</h2><p class="mudo pequeno">Só endereços e chaves PÚBLICAS. Senhas nunca entram aqui.</p>' + ['supabase_url','supabase_chave','site_url','github_url','dominio','api_url','contingencia_url','push_chave_publica','motor'].map(k => campo(k)).join('') + botSalvar()
+   + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start">' + Object.keys(TESTES).map(t => '<button class="mini" onclick="rvTeste(\'' + t + '\')">' + NOME_T[t] + '</button>').join('') + '</div><div id="resTeste"></div>'
+   + '<h3>Arquivos do site</h3>' + publicarHtml() + '</div>'
+   + '<div class="card"><h2>🧩 Módulos contratados</h2>' + modulosHtml() + '</div>'
+   + '<details class="card"><summary><b class="txt-erro">🗑️ Excluir restaurante</b></summary>' + excluirHtml() + '</details>');
+  mostrarRes('resTeste', Object.keys(S.res));
 }
-function abaExcluir_(){
+function excluirHtml(){
   const r = S.rest;
-  $('corpo').innerHTML = ((S.lista.find(x => x.id === r.id) || {}).situacao === 'encerrado' ? '<div class="card" style="border-color:var(--erro)"><h2 style="color:var(--erro)">Excluir permanentemente</h2>'
-     + '<p class="mudo" style="font-size:13px">Apaga do painel este restaurante e tudo ligado a ele (etapas, cobranças, histórico, promessas, termos aceitos, erros e saúde). <b>Não tem como desfazer.</b></p>'
-     + '<p class="mudo" style="font-size:13px">Não apaga o que está fora do painel: o projeto no Supabase, o repositório no GitHub, o site e as planilhas dele continuam existindo e você apaga à mão.</p>'
-     + '<label for="exNome">Digite o nome do restaurante: <b>' + esc(r.nome) + '</b></label><input id="exNome" autocomplete="off">'
-     + '<label for="exSenha">Sua senha do painel</label><input id="exSenha" type="password" autocomplete="current-password">'
-     + '<p><button style="background:var(--erro);color:#000" onclick="rvExcluir()">Excluir permanentemente</button></p><div id="exRes"></div></div>'
-     : '<p class="mudo" style="font-size:13px">Para excluir permanentemente, mude a situação para "Encerrado" e salve.</p>');
+  return (S.lista.find(x => x.id === r.id) || {}).situacao === 'encerrado'
+    ? '<p class="mudo pequeno">Apaga do painel este restaurante e tudo ligado a ele (etapas, cobranças, histórico). <b>Não tem como desfazer.</b> O Supabase, o GitHub e as planilhas dele continuam existindo: apague à mão.</p>'
+      + '<label for="exNome">Digite o nome: <b>' + esc(r.nome) + '</b></label><input id="exNome" autocomplete="off"><label for="exSenha">Sua senha do painel</label><input id="exSenha" type="password" autocomplete="current-password">'
+      + '<p><button class="perigo-forte" onclick="rvExcluir()">Excluir permanentemente</button></p><div id="exRes"></div>'
+    : '<p class="mudo pequeno">Para excluir, mude a situação para "Encerrado" e salve.</p>';
 }
 window.rvExcluir = async () => {
   const r = S.rest, nome = ($('exNome').value || '').trim(), senha = $('exSenha').value || '';
-  if(!nome || !senha){ erro('Digite o nome do restaurante e a sua senha.'); return; }
+  if(!nome || !senha) return erro('Digite o nome do restaurante e a sua senha.');
   if(!confirm('Excluir "' + r.nome + '" para sempre? Não tem como desfazer.')) return;
-  try{
-    const x = await rpc('revenda_excluir_restaurante', { p_id:r.id, p_nome:nome, p_senha:senha });
+  try{ const x = await rpc('revenda_excluir_restaurante', { p_id:r.id, p_nome:nome, p_senha:senha });
     if(!x || !x.ok){ $('exRes').innerHTML = '<div class="res erro">⚠️ ' + esc((x && x.erro) || 'Não foi possível excluir.') + '</div>'; return; }
-    S.rest = null; await carregar(); telaLista(); aviso('Restaurante excluído do painel. Lembre de apagar à mão o Supabase, o GitHub e as planilhas dele.', 'ok');
+    S.rest = null; await carregar(); S.view = 'restaurantes'; desenhar(); aviso('Restaurante excluído do painel.', 'ok');
   }catch(e){ $('exRes').innerHTML = '<div class="res erro">⚠️ ' + esc(e.message) + '</div>'; }
 };
-function abaLig(){
-  $('corpo').innerHTML = '<div class="card"><h2>Ligações do restaurante</h2><p class="mudo">É aqui que o app descobre com qual banco e planilhas falar. Só endereços e chaves PÚBLICAS: senhas e chaves secretas nunca entram aqui.</p>'
-   + campoTxt('Endereço do banco (Project URL do Supabase)', 'supabase_url', { ph:'https://xxxx.supabase.co' }) + campoTxt('Chave pública (publishable)', 'supabase_chave', { ph:'sb_publishable_…' })
-   + campoTxt('Planilha principal (endereço /exec do Apps Script) — opcional', 'api_url') + campoTxt('Planilha de contingência (endereço /exec) — opcional', 'contingencia_url')
-   + campoTxt('Chave pública dos avisos no celular (push)', 'push_chave_publica')
-   + campoTxt('Endereço (domínio) do site — só o nome', 'dominio', { ph:'churros.meusistema.com.br' }) + campoTxt('Endereço completo do site', 'site_url', { ph:'https://churros.meusistema.com.br/' }) + campoTxt('Versão do sistema (motor) — deixe em branco para acompanhar as atualizações', 'motor', { ph:'https://lucassricardo95.github.io/motor/estavel/' })
-   + botSalvar + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvTeste(\'supabase\')">Testar ligação</button><button class="mini" onclick="rvTeste(\'banco\')">Testar banco</button><button class="mini" onclick="rvTeste(\'funcoes\')">Testar funções</button><button class="mini" onclick="rvTeste(\'site\')">Testar site</button></div><div id="resTeste"></div>'
-   + '<h3>Arquivo de configuração do restaurante</h3><p class="mudo" style="font-size:13px">Preencha tudo acima, salve e gere. Este arquivo vai para o GitHub do restaurante e é o único que muda de um restaurante para outro.</p><button class="mini principal" onclick="rvGerarConfig()">Gerar config-restaurante.js</button><div id="cfgGerado"></div></div>';
-  mostrarRes('resTeste', ['supabase','banco','funcoes','site']);
-}
 
-/* ---------- arquivo de configuração do restaurante ---------- */
-function configTexto(r){
-  const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {}, mo = (r.motor || 'https://lucassricardo95.github.io/motor/estavel/').replace(/texas-estavel\/$/, 'estavel/').replace(/texas-(v[\d.]+)\/$/, '$1/');
-  const o = { motor:r.motor || 'https://lucassricardo95.github.io/motor/estavel/', slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
-    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', jogos:{ tema:(m.jogos && m.jogos.tema) || 'generico' }, cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
-  return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Para mudar, gere de novo no painel. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
+/* ---------- COBRANÇA DE UM RESTAURANTE ---------- */
+function linhaCob(c, comNome){
+  const h = hoje(), at = !c.pago_em && c.vencimento && c.vencimento < h, r = S.lista.find(x => x.id === c.restaurante_id) || {};
+  const tit = c.tipo === 'implantacao' ? 'Taxa de implantação' : c.tipo === 'avulsa' ? (c.descricao || 'Cobrança avulsa') : 'Mensalidade ' + mesCurto(mesDe(c.competencia)) + '/' + String(c.competencia).slice(2, 4);
+  return '<div class="cob ' + (c.pago_em ? 'paga' : at ? 'atrasada' : '') + '"><div class="cob-i"><b>' + (comNome ? esc(r.nome || '—') + ' · ' : '') + esc(tit) + '</b><small>' + (c.pago_em ? '✅ Pago em ' + dataBr(c.pago_em) + (c.forma ? ' · ' + esc(c.forma) : '') : (at ? '⚠️ Atrasada · venceu ' : 'Vence ') + dataBr(c.vencimento)) + '</small></div><b class="cob-v">' + BRL(c.pago_em ? pagoValor(c) : c.valor) + '</b>'
+   + '<div class="cob-a">' + (c.pago_em ? '<button class="mini" onclick="rvPago(\'' + c.id + '\',false)">Desfazer</button>'
+      : '<button class="mini principal" onclick="rvReceber(\'' + c.id + '\')">💵 Recebi</button>' + (r.contato_telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLink(r.contato_telefone, msgCobranca(c))) + '">💬 Cobrar</a>' : '') + '<button class="mini" onclick="rvCobApagar(\'' + c.id + '\')" title="Apagar">🗑️</button>') + '</div></div>';
 }
-window.rvGerarConfig = async () => {
-  lerForm(); const r = S.rest, falta = [];
-  if(!r.supabase_url || !r.supabase_chave) falta.push('endereço e chave pública do Supabase'); if(!r.site_url) falta.push('endereço completo do site');
-  if(falta.length) return erro('Antes de gerar, preencha: ' + falta.join(' e ') + '.');
-  if(!await salvar('Salvo.')) return;
-  const t = configTexto(S.rest); $('cfgGerado').innerHTML = '<div class="copiar" id="cfgTxt"></div><button class="mini" onclick="rvCopiar(\'cfgTxt\')">Copiar</button> <button class="mini" onclick="rvBaixarConfig()">Baixar arquivo</button>'; $('cfgTxt').textContent = t; window.__cfg = t;
-  await hist(S.rest.id, 'Arquivo de configuração gerado', '');
+function abaCobranca(){
+  const r = S.rest, nAtr = atrasadas(r.id).length, total = S.cobR.filter(c => c.pago_em).reduce((s, c) => s + pagoValor(c), 0);
+  const pm = (S.prom || []).filter(x => x.restaurante_id === r.id), ROTP = { pendente:'Aguardando você', aprovada:'Aprovada', recusada:'Recusada', encerrada:'Encerrada' };
+  C('<div class="kpis tres">' + kpi('Mensalidade', r.valor_mensal ? BRL(r.valor_mensal) : '—', '') + kpi('Já recebido', BRL(total), 'ok') + kpi('Em atraso', nAtr, nAtr ? 'erro' : '') + '</div>'
+   + '<div class="card"><div class="linha"><h2>💰 Cobranças</h2><span><button class="mini principal" onclick="rvCobRest(\'mensalidade\')">＋ Mensalidade do mês</button> <button class="mini" onclick="rvNovaCob(\'' + r.id + '\')">＋ Outra</button></span></div>'
+   + (r.valor_mensal ? '<p class="mudo pequeno">' + BRL(r.valor_mensal) + ' por mês, vence todo dia ' + (r.dia_vencimento || 10) + '.</p>' : '<p class="txt-erro pequeno">Defina a mensalidade na aba Cadastro.</p>')
+   + (S.cobR.length ? S.cobR.map(c => linhaCob(c, false)).join('') : '<p class="mudo">Nenhuma cobrança ainda.</p>') + '</div>'
+   + (pm.length ? '<div class="card' + (pm.some(x => x.status === 'pendente') ? ' destaque-aviso' : '') + '"><h2>🤝 Promessas de pagamento</h2><p class="mudo pequeno">Só valem se você aprovar. Aprovada, o acesso volta sozinho em até 4 minutos; passada a data, o bloqueio volta sozinho.</p>'
+      + pm.slice(0, 8).map(x => '<div class="cob"><div class="cob-i"><b>Pagar em ' + dataBr(x.data_prometida) + '</b><small>Pedido em ' + esc(new Date(x.criada_em).toLocaleDateString('pt-BR')) + (x.contato ? ' · ' + esc(x.contato) : '') + (x.status === 'aprovada' ? ' · liberado até ' + dataBr(x.liberado_ate) : '') + '</small></div><span class="selo">' + ROTP[x.status] + '</span>'
+        + (x.status === 'pendente' ? '<div class="cob-a"><button class="mini principal" onclick="rvPromessa(\'' + x.id + '\',true)">Aprovar</button><button class="mini" onclick="rvPromessa(\'' + x.id + '\',false)">Recusar</button></div>' : '') + '</div>').join('') + '</div>' : '')
+   + '<div class="card' + (r.bloqueado ? ' destaque-erro' : '') + '"><h2>🔒 Acesso ao sistema</h2>'
+   + (r.bloqueado ? '<p><b class="txt-erro">⛔ Bloqueado' + (r.bloqueado_em ? ' em ' + esc(new Date(r.bloqueado_em).toLocaleDateString('pt-BR')) : '') + '.</b> A equipe vê "Acesso suspenso" (o cardápio do cliente continua funcionando).' + (r.bloqueio_motivo ? '<br><small class="mudo">Mensagem: ' + esc(r.bloqueio_motivo) + '</small>' : '') + '</p><button class="principal" onclick="rvBloquear(false)">🔓 Liberar acesso</button>'
+      : '<p class="mudo pequeno">O bloqueio nunca é automático: só vale quando você tocar em "Bloquear". Dá para liberar a qualquer momento.</p><label for="bloqMsg">Mensagem para o restaurante (opcional)</label><textarea id="bloqMsg" rows="2" maxlength="200" placeholder="Ex.: Acesso suspenso por mensalidade em aberto. Fale comigo pelo WhatsApp."></textarea><button class="mini perigo" onclick="rvBloquear(true)">⛔ Bloquear acesso</button>') + '</div>');
+}
+window.rvCobRest = async tipo => {
+  const r = S.rest, v = tipo === 'implantacao' ? r.taxa_implantacao : r.valor_mensal; if(!v) return erro('Defina o valor na aba Cadastro e salve antes.');
+  const comp = hoje().slice(0, 8) + '01', dia = pad(r.dia_vencimento || 10);
+  try{ await rest('cobrancas', 'POST', { restaurante_id:r.id, tipo, competencia:comp, valor:v, vencimento:tipo === 'implantacao' ? hoje() : comp.slice(0, 8) + dia, descricao:tipo === 'implantacao' ? 'Taxa de implantação' : null });
+    await hist(r.id, tipo === 'implantacao' ? 'Taxa de implantação gerada' : 'Mensalidade gerada', comp.slice(0, 7)); await carregar(); await carregarRest(); aviso('Cobrança gerada.', 'ok'); S.aba === 'passo' ? abaPasso() : abaCobranca(); }
+  catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'A mensalidade deste mês já foi gerada.' : e.message); }
 };
-window.rvBaixarConfig = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([window.__cfg || ''], { type:'text/javascript' })); a.download = 'config-restaurante.js'; a.click(); };
-
-/* ---------- testes automáticos (feitos pelo seu navegador) ---------- */
-async function tempo(url, o){ const c = new AbortController(); const t = setTimeout(() => c.abort(), 12000); try{ return await fetch(url, Object.assign({ signal:c.signal }, o)); } finally { clearTimeout(t); } }
-const TESTES = {
-  async supabase(r){ if(!r.supabase_url || !r.supabase_chave) return ['erro', 'Falta o endereço do banco e/ou a chave pública.'];
-    const x = await tempo(r.supabase_url + '/auth/v1/health', { headers:{ apikey:r.supabase_chave } }); return x.ok ? ['ok', 'O banco responde. Chave aceita.'] : ['erro', 'O banco respondeu com erro ' + x.status + '. Confira a chave pública.']; },
-  async banco(r){ if(!r.supabase_url) return ['erro', 'Preencha primeiro o endereço do banco.'];
-    const x = await tempo(r.supabase_url + '/rest/v1/rpc/api_cardapio_promos', { method:'POST', headers:{ apikey:r.supabase_chave, 'Content-Type':'application/json' }, body:'{"p":{}}' });
-    if(x.status === 404) return ['erro', 'O banco existe, mas as tabelas e funções do sistema ainda não foram criadas (etapa "Criar as tabelas").'];
-    const j = await x.json().catch(() => null); return j && j.ok === true ? ['ok', 'Banco do sistema instalado e respondendo.'] : ['aviso', 'O banco respondeu, mas fora do esperado: ' + esc(JSON.stringify(j).slice(0, 120))]; },
-  async funcoes(r){ if(!r.supabase_url) return ['erro', 'Preencha primeiro o endereço do banco.'];
-    const x = await tempo(r.supabase_url + '/functions/v1/ping', { method:'POST', headers:{ apikey:r.supabase_chave, Authorization:'Bearer ' + r.supabase_chave, 'Content-Type':'application/json' }, body:'{}' });
-    return x.status === 404 ? ['erro', 'As funções do servidor ainda não foram publicadas.'] : (x.ok ? ['ok', 'Funções do servidor respondendo.'] : ['aviso', 'A função "ping" respondeu com erro ' + x.status + '.']); },
-  async site(r){ const u = r.site_url || (r.dominio ? 'https://' + r.dominio + '/' : ''); if(!u) return ['erro', 'Preencha o endereço do site.'];
-    await tempo(u, { mode:'no-cors' }); return ['ok', 'O endereço ' + esc(u) + ' está no ar.']; }
-};
-window.rvTeste = async id => {
-  lerForm(); S.res = S.res || {}; S.res[id] = ['aviso', 'Testando…']; mostrarRes('resTeste', Object.keys(S.res)); mostrarRes('res_' + id, [id]);
-  try{ S.res[id] = await TESTES[id](S.rest); }catch(e){ S.res[id] = ['erro', e.name === 'AbortError' ? 'Demorou demais para responder.' : 'Não foi possível chegar lá (' + esc(e.message) + ').']; }
-  mostrarRes('resTeste', Object.keys(S.res)); mostrarRes('res_' + id, [id]);
-};
-function mostrarRes(box, ids){ const b = $(box); if(!b) return; b.innerHTML = ids.filter(i => S.res && S.res[i]).map(i => '<div class="res ' + S.res[i][0] + '">' + ({ ok:'✅ ', erro:'❌ ', aviso:'⏳ ' }[S.res[i][0]]) + '<b>' + esc(i) + ':</b> ' + S.res[i][1] + '</div>').join(''); }
-
-/* ---------- passo a passo ---------- */
-function sub(t){ const r = S.rest; return String(t).replace(/\{nome\}/g, r.nome).replace(/\{slug\}/g, r.slug).replace(/\{ref\}/g, refDe(r)).replace(/\{supabase_url\}/g, r.supabase_url || '(URL do Supabase)').replace(/\{site_url\}/g, r.site_url || '(endereço do site)').replace(/\{site_origem\}/g, (r.site_url || '(endereço do site)').replace(/\/+$/, '')); }
-const QUEM = { voce:'👤 Você faz', claude:'🤖 Peça ao Claude', cliente:'🍽️ O restaurante faz' };
-function abaPasso(){
-  const r = S.rest, e = r.etapas || {}, feita = id => !!(e[id] && e[id].feita);
-  const prox = ETAPAS.find(x => !feita(x.id)), atual = ETAPAS.find(x => x.id === S.passoVer) || prox;
-  if(!atual){ $('corpo').innerHTML = '<div class="card">✅ Implantação completa. Veja a aba "Contrato" para a entrega e a cobrança.</div>' + listaPassos_(e, null); return; }
-  const i = ETAPAS.indexOf(atual), f = feita(atual.id), ck = (e[atual.id] && e[atual.id].itens) || [], fase = FASES.findIndex(x => x[1].includes(atual.id)), opc = OPCIONAIS.includes(atual.id);
-  const chips = FASES.map((x, k) => { const n = x[1].filter(feita).length, ok = n === x[1].length, alvo = x[1].find(id => !feita(id)) || x[1][0];
-    return '<button class="mini ' + (k === fase ? 'principal' : '') + '" onclick="rvVerPasso(\'' + alvo + '\')">' + (ok ? '✅ ' : '') + (k + 1) + '. ' + x[0] + '</button>'; }).join('');
-  $('corpo').innerHTML = '<div class="fases">' + chips + '</div>'
-   + '<div class="card passo ' + (f ? 'feita' : '') + '"><small class="mudo">Passo ' + (i + 1) + ' de ' + ETAPAS.length + ' · ' + esc(FASES[fase][0]) + (opc ? ' · opcional' : '') + '</small>'
-   + '<h2 style="margin:6px 0">' + esc(atual.titulo) + (f ? ' ✅' : '') + '</h2><span class="quem">' + QUEM[atual.quem] + '</span>'
-   + '<p style="margin:10px 0">' + esc(sub(atual.passos[0])) + '</p>'
-   + '<details open class="como"><summary class="mini" style="cursor:pointer;display:inline-block;list-style:none;padding:6px 10px;border:1px solid #2a2a2a;border-radius:8px">Como fazer ▾</summary>'
-   + '<ol>' + atual.passos.map(p => '<li>' + esc(sub(p)) + '</li>').join('') + '</ol>'
-   + (window.cdEtapa ? cdEtapa(atual.id, { ref:refDe(r), cod:r.slug, chave:r.supabase_chave || '', feitos:ck }) : '')
-   + (atual.pedido ? '<small class="mudo">Se quiser a ajuda do Claude, copie e cole na conversa com ele:</small><div class="copiar" id="pd_' + atual.id + '">' + esc(sub(atual.pedido)) + '</div><button class="mini" onclick="rvCopiar(\'pd_' + atual.id + '\')">Copiar pedido</button> ' : '')
-   + (atual.checklist ? atual.checklist.map((c, k) => '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--txt);margin:6px 0"><input type="checkbox" ' + (ck.includes(k) ? 'checked ' : '') + 'onchange="rvItem(\'' + atual.id + '\',' + k + ',this.checked)"> ' + esc(c) + '</label>').join('') : '')
-   + (atual.teste ? '<button class="mini" onclick="rvTeste(\'' + atual.teste + '\')">Testar</button><div id="res_' + atual.teste + '"></div> ' : '')
-   + (atual.campos ? '<button class="mini" onclick="rvAba(\'ligacoes\')">Ir para as ligações</button> ' : '')
-   + (atual.id === 'marca' ? '<button class="mini" onclick="rvAba(\'marca\')">Ir para a marca</button> ' : '') + (atual.id === 'modulos' ? '<button class="mini" onclick="rvAba(\'modulos\')">Ir para os módulos</button> ' : '')
-   + (atual.id === 'entrega' ? '<button class="mini" onclick="rvAba(\'cobranca\')">Ir para o contrato e a cobrança</button> ' : '')
-   + '</details>'
-   + '<div class="linha" style="margin-top:14px;justify-content:flex-start;flex-wrap:wrap;gap:8px">'
-   + (i > 0 ? '<button class="mini" onclick="rvVerPasso(\'' + ETAPAS[i - 1].id + '\')">← Voltar</button>' : '')
-   + (f ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',false)">Desmarcar</button>' + (i < ETAPAS.length - 1 ? '<button class="principal" onclick="rvVerPasso(\'' + ETAPAS[i + 1].id + '\')">Próximo →</button>' : '')
-       : (opc ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',true,true)">Pular</button>' : '') + '<button class="principal" onclick="rvEtapa(\'' + atual.id + '\',true)">Fiz, próximo →</button>')
-   + '</div></div>' + listaPassos_(e, atual.id);
-  Object.keys(S.res || {}).forEach(k => mostrarRes('res_' + k, [k]));
-}
-function listaPassos_(e, atualId){
-  return '<details class="card"><summary><b>Ver todos os passos</b> <small class="mudo">(' + nEtapas(S.rest) + ' de ' + ETAPAS.length + ' feitos)</small></summary>'
-   + ETAPAS.map((x, k) => { const f = e[x.id] && e[x.id].feita; return '<div class="linha" style="padding:6px 0"><span>' + (f ? (e[x.id].pulada ? '⏭ ' : '✅ ') : '⬜ ') + (k + 1) + '. ' + esc(x.titulo) + '</span><button class="mini" onclick="rvVerPasso(\'' + x.id + '\')">' + (x.id === atualId ? 'Aqui' : 'Abrir') + '</button></div>'; }).join('') + '</details>';
-}
-window.rvVerPasso = id => { S.passoVer = id; telaRest(); };
-window.rvCopiar = async id => { try{ await navigator.clipboard.writeText($(id).textContent); aviso('Copiado.', 'ok'); }catch(e){ erro('Não deu para copiar. Selecione o texto e copie manualmente.'); } };
-window.rvItem = (id, k, v) => { const e = S.rest.etapas = S.rest.etapas || {}; const x = e[id] = e[id] || {}; x.itens = (x.itens || []).filter(i => i !== k); if(v) x.itens.push(k); salvar('Anotado.'); };
-window.rvEtapa = async (id, feita, pulada) => {
-  const et = ETAPAS.find(x => x.id === id);
-  if(feita && et.checklist){ const ck = ((S.rest.etapas || {})[id] || {}).itens || []; if(ck.length < et.checklist.length){ return erro('Marque todos os itens do teste antes de concluir.'); } }
-  S.rest.etapas = S.rest.etapas || {}; const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null)); S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, pulada:!!pulada, em:new Date().toISOString() }); if(feita) S.passoVer = null;
-  if(await salvar(feita ? (pulada ? 'Passo pulado.' : 'Passo concluído.') : 'Passo reaberto.')){ await hist(S.rest.id, feita ? (pulada ? 'Etapa pulada' : 'Etapa concluída') : 'Etapa reaberta', et.titulo); telaRest(); }
-  else { if(antes) S.rest.etapas[id] = antes; else delete S.rest.etapas[id]; try{ telaRest(); }catch(e){} erro('NÃO foi salvo. Motivo: ' + (S.ultimoErro || 'sem resposta do banco') + ' — me mande este texto.'); }
-};
-
-/* ---------- marca ---------- */
-function abaMarca(){
-  const m = S.rest.marca = S.rest.marca || {}, c = m.cores = m.cores || {}, lg = m.logos = m.logos || {};
-  $('corpo').innerHTML = '<div class="card"><h2>Marca inicial</h2><p class="mudo">Você define a primeira aparência; o dono do restaurante pode ajustar depois em Administrador → Sistema → Aparência.</p>'
-   + '<h3>Tema pronto</h3><div class="temas">' + TEMAS.map(t => '<div class="tema ' + (m.tema === t.id ? 'on' : '') + '" onclick="rvTema(\'' + t.id + '\')" style="background:' + t.fundo + ';color:' + (parseInt(t.fundo.slice(1,3),16)*0.299 + parseInt(t.fundo.slice(3,5),16)*0.587 + parseInt(t.fundo.slice(5,7),16)*0.114 > 150 ? '#1b1b1b' : '#f5efe6') + '"><i style="background:' + t.destaque + '"></i><i style="background:' + t.botao + '"></i><br>' + t.nome + '</div>').join('') + '</div>'
-   + '<h3>Ou ajuste as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botão principal'],['fundo','Fundo']].map(k => '<div class="cor-item"><input type="color" data-k="marca.cores.' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '" oninput="rvPrevia()"><br>' + k[1] + '</div>').join('') + '</div>'
-   + '<div class="previa" id="previa"></div>'
-   + '<div class="cols"><div>' + campoTxt('Slogan', 'slogan', { path:'marca.slogan' }) + '</div><div>' + campoTxt('Nome do assistente virtual', 'assist', { path:'marca.assistente' }) + '</div></div>'
-   + '<h3>Jogos do cliente (enquanto espera o pedido)</h3><label for="f_jogos">Tema dos jogos</label><select id="f_jogos" data-k="marca.jogos.tema">' + [['generico','Comida em geral'],['burger','Hambúrguer'],['churros','Churros e doces']].map(o => '<option value="' + o[0] + '"' + ((m.jogos || {}).tema === o[0] || (!(m.jogos || {}).tema && o[0] === 'generico') ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>'
-   + '<h3>Logos</h3>' + [['cardapio','Logo principal (cardápio, login e cabeçalho)'],['impressao','Logo de impressão (comanda e recibo)'],['icone','Ícone do app (quadrado)']].map(l =>
-      '<div class="logo-box" style="margin:10px 0"><div style="min-width:70px">' + (lg[l[0]] ? '<img src="' + esc(lg[l[0]]) + '" alt="">' : '<small class="mudo">sem imagem</small>') + '</div><div><b style="font-size:14px">' + l[1] + '</b><br><input type="file" accept="image/*" onchange="rvLogo(\'' + l[0] + '\',this)"></div></div>').join('')
-   + botSalvar + '</div>';
-  rvPrevia();
-}
-window.rvTema = id => { const t = TEMAS.find(x => x.id === id); lerForm(); const m = S.rest.marca; m.tema = id; m.cores = { destaque:t.destaque, botao:t.botao, fundo:t.fundo }; telaRest(); };
-window.rvPrevia = () => { const g = k => (document.querySelector('[data-k="marca.cores.' + k + '"]') || {}).value || '#000'; const p = $('previa'); if(!p) return;
-  p.style.background = g('fundo'); p.innerHTML = '<b style="color:' + g('destaque') + ';font-size:18px">' + esc(S.rest.nome) + '</b><div style="color:#fff9">Prévia de um cartão do cardápio</div><span class="bt" style="background:' + g('botao') + ';color:#fff">Fazer pedido</span>'; };
-function reduzir(arq, max){ return new Promise((ok, no) => { const im = new Image(), u = URL.createObjectURL(arq); im.onload = () => { const e = Math.min(1, max / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.round(im.width * e); cv.height = Math.round(im.height * e); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); cv.toBlob(b => b ? ok(b) : no(new Error('Imagem inválida.')), 'image/png'); }; im.onerror = () => no(new Error('Não consegui ler essa imagem.')); im.src = u; }); }
-window.rvLogo = async (tipo, inp) => {
-  const f = inp.files[0]; if(!f) return;
-  try{ lerForm(); const b = await reduzir(f, tipo === 'icone' ? 512 : 1024), cam = S.rest.slug + '/' + tipo + '-' + Date.now() + '.png';
-    await req('/storage/v1/object/marcas/' + cam, { method:'POST', body:b, headers:{ 'Content-Type':'image/png', 'x-upsert':'true' } });
-    S.rest.marca.logos = S.rest.marca.logos || {}; S.rest.marca.logos[tipo] = URL_ + '/storage/v1/object/public/marcas/' + cam;
-    if(await salvar('Logo enviada.')) telaRest();
-  }catch(e){ erro(e.message); }
-};
-
-/* ---------- módulos ---------- */
-function abaMod(){
-  const m = S.rest.modulos = S.rest.modulos || {};
-  $('corpo').innerHTML = '<div class="card"><h2>O que o restaurante contratou</h2><p class="mudo">Desligado = a tela some e o sistema funciona sem ele.</p>' + MODULOS.map(x => '<label style="display:flex;gap:10px;align-items:center;font-weight:400;color:var(--txt);font-size:15px;margin:10px 0"><input type="checkbox" data-k="modulos.' + x.id + '"' + (m[x.id] ? ' checked' : '') + '> ' + esc(x.nome) + '</label>').join('') + botSalvar + '</div>';
-}
-
-/* ---------- cobrança ---------- */
-function abaCob(){
-  const r = S.rest, h = hoje();
-  const nAtr = atrasadas(r.id).length;
-  const bloq = '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><h2>Acesso ao sistema</h2>'
-    + (r.bloqueado
-      ? '<p><b style="color:var(--erro)">⛔ Bloqueado' + (r.bloqueado_em ? ' em ' + esc(new Date(r.bloqueado_em).toLocaleDateString('pt-BR')) : '') + '.</b> O restaurante vê "Acesso suspenso" e não consegue usar o sistema (cardápio e equipe).' + (r.bloqueio_motivo ? '<br><small class="mudo">Mensagem mostrada: ' + esc(r.bloqueio_motivo) + '</small>' : '') + '</p><button class="principal" onclick="rvBloquear(false)">Liberar acesso</button>'
-      : '<p class="mudo">' + (nAtr ? '<b style="color:var(--erro)">' + nAtr + ' mensalidade(s) em atraso.</b> ' : 'Nenhuma mensalidade em atraso. ') + 'O bloqueio nunca é automático: só vale depois que você tocar em "Bloquear acesso". Dá para liberar de novo a qualquer momento.</p>'
-        + '<label class="mudo" style="font-size:13px">Mensagem para o restaurante (opcional)</label><textarea id="bloqMsg" rows="2" maxlength="200" placeholder="Ex.: Acesso suspenso por mensalidade em aberto. Fale com o suporte pelo WhatsApp (16) 9xxxx-xxxx."></textarea>'
-        + '<button class="mini" style="margin-top:8px;border-color:var(--erro);color:var(--erro)" onclick="rvBloquear(true)">⛔ Bloquear acesso</button>')
-    + '</div>';
-  const pm = (S.prom || []).filter(x => x.restaurante_id === r.id), ROT = { pendente:'Aguardando você', aprovada:'Aprovada', recusada:'Recusada', encerrada:'Encerrada' };
-  const promHtml = pm.length ? '<div class="card"' + (pm.some(x => x.status === 'pendente') ? ' style="border-color:#f0a500"' : '') + '><h2>🤝 Promessas de pagamento</h2><p class="mudo">Só valem se você aprovar. Aprovada, o acesso volta sozinho em até 4 minutos (a equipe entra de novo) e, passada a data, o bloqueio volta sozinho. Bloquear de novo cancela.</p>'
-    + pm.slice(0, 8).map(x => '<div style="border-top:1px solid #333;padding:8px 0"><div class="linha"><span><b>Pagar em ' + esc(x.data_prometida.split('-').reverse().join('/')) + '</b><br><small class="mudo">Pedido em ' + esc(new Date(x.criada_em).toLocaleDateString('pt-BR')) + (x.contato ? ' · ' + esc(x.contato) : '') + (x.status === 'aprovada' ? ' · liberado até ' + esc(x.liberado_ate.split('-').reverse().join('/')) : '') + '</small></span><span class="selo">' + ROT[x.status] + '</span></div>'
-      + (x.status === 'pendente' ? '<p style="margin:8px 0 0"><button class="mini principal" onclick="rvPromessa(\'' + x.id + '\',true)">Aprovar</button> <button class="mini" onclick="rvPromessa(\'' + x.id + '\',false)">Recusar</button></p>' : '') + '</div>').join('') + '</div>' : '';
-  $('corpo').innerHTML = bloq + promHtml + '<div class="card"><div class="linha"><h2>Mensalidades</h2><button class="principal mini" onclick="rvGerarCob()">Gerar a do mês</button></div><p class="mudo">' + (r.valor_mensal ? BRL(r.valor_mensal) + ' por mês, vence todo dia ' + (r.dia_vencimento || '—') + '.' : 'Defina o valor e o dia na aba Dados.') + '</p>'
-   + (S.cobR.length ? '<table><tr><th>Mês</th><th>Valor</th><th>Vence</th><th></th></tr>' + S.cobR.map(c => { const at = !c.pago_em && c.vencimento && c.vencimento < h; return '<tr><td>' + esc(c.competencia.slice(5, 7) + '/' + c.competencia.slice(0, 4)) + '</td><td>' + BRL(c.valor) + '</td><td>' + esc(c.vencimento ? c.vencimento.split('-').reverse().join('/') : '—') + '</td><td>'
-      + (c.pago_em ? '<span class="res ok">Pago ' + esc(c.pago_em.split('-').reverse().join('/')) + '</span> <button class="mini" onclick="rvPago(\'' + c.id + '\',false)">Desfazer</button>' : (at ? '<span class="res erro">Atrasada</span> ' : '') + '<button class="mini principal" onclick="rvPago(\'' + c.id + '\',true)">Marcar paga</button>') + '</td></tr>'; }).join('') + '</table>' : '<p>Nenhuma mensalidade gerada.</p>') + '</div>';
-}
 window.rvBloquear = async b => {
-  const r = S.rest, msg = ((document.getElementById('bloqMsg') || {}).value || '').trim();
-  if(!confirm(b ? 'Bloquear o acesso de "' + r.nome + '" agora?\n\nO cardápio e o sistema da equipe deixam de abrir para ele até você liberar.' : 'Liberar o acesso de "' + r.nome + '"?')) return;
+  const r = S.rest, msg = (($('bloqMsg') || {}).value || '').trim();
+  if(!confirm(b ? 'Bloquear o acesso de "' + r.nome + '" agora?\n\nA equipe dele deixa de usar o sistema até você liberar.' : 'Liberar o acesso de "' + r.nome + '"?')) return;
   const dados = { bloqueado:b, bloqueado_em:b ? new Date().toISOString() : null, bloqueio_motivo:b ? (msg || null) : null };
-  try{
-    await rest('restaurantes?id=eq.' + r.id, 'PATCH', dados);
-    Object.assign(r, dados);
-    await hist(r.id, b ? 'Acesso BLOQUEADO' : 'Acesso liberado', b ? msg : '');
-    aviso(b ? 'Acesso bloqueado.' : 'Acesso liberado.', 'ok'); telaRest();
-  }catch(e){ erro(/bloqueado|bloqueio|column|schema/i.test(e.message) ? 'O banco ainda não tem o bloqueio. Rode o SQL "001-bloqueio.sql" no projeto revenda (peça ao Claude) e tente de novo.' : e.message); }
+  try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', dados); Object.assign(r, dados); const x = S.lista.find(z => z.id === r.id); if(x) Object.assign(x, dados); await hist(r.id, b ? 'Acesso BLOQUEADO' : 'Acesso liberado', b ? msg : ''); aviso(b ? 'Acesso bloqueado.' : 'Acesso liberado.', 'ok'); vRest(); }catch(e){ erro(e.message); }
 };
 window.rvPromessa = async (id, ok) => {
-  const x = (S.prom || []).find(z => z.id === id); if(!x) return;
-  let ate = null;
-  if(ok){
-    const v = prompt('Liberar o acesso de "' + S.rest.nome + '" até que dia?\n(formato dd/mm/aaaa — a data prometida é ' + x.data_prometida.split('-').reverse().join('/') + ')', x.data_prometida.split('-').reverse().join('/'));
-    if(v === null) return;
-    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(!m) return erro('Data inválida. Use dd/mm/aaaa.');
-    ate = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
-    if(ate < hoje()) return erro('Essa data já passou.');
-  }else if(!confirm('Recusar o pedido de promessa?')) return;
-  try{ await rpc('decidir_promessa', { p_id:id, p_aprovar:ok, p_ate:ate }); await carregar(); await carregarRest(); aviso(ok ? 'Promessa aprovada. O acesso volta em até 4 minutos.' : 'Promessa recusada.', 'ok'); telaRest(); }
-  catch(e){ erro(e.message); }
+  const x = (S.prom || []).find(z => z.id === id); if(!x) return; let ate = null;
+  if(ok){ const v = prompt('Liberar o acesso até que dia? (dd/mm/aaaa)', dataBr(x.data_prometida)); if(v === null) return; const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(!m) return erro('Data inválida. Use dd/mm/aaaa.'); ate = m[3] + '-' + pad(m[2]) + '-' + pad(m[1]); if(ate < hoje()) return erro('Essa data já passou.'); }
+  else if(!confirm('Recusar o pedido de promessa?')) return;
+  try{ await rpc('decidir_promessa', { p_id:id, p_aprovar:ok, p_ate:ate }); await carregar(); await carregarRest(); aviso(ok ? 'Promessa aprovada. O acesso volta em até 4 minutos.' : 'Promessa recusada.', 'ok'); vRest(); }catch(e){ erro(e.message); }
 };
 
-/* ---------- termos de uso e entrega ---------- */
-function abaTermos(){
-  const r = S.rest, t = S.termos || {}, a = S.aceite, fmt = d => esc(new Date(d).toLocaleString('pt-BR'));
-  const completo = !!(t.fornecedor_nome && t.fornecedor_doc && t.foro);
-  let ent;
-  if(!r.entregue_em){
-    ent = '<p class="mudo">Em <b>desenvolvimento</b>: você mexe no sistema livremente e o cliente não vê nenhuma tela de termos.</p>'
-      + (completo ? '' : '<p style="color:var(--erro)">Preencha seus dados abaixo antes de entregar.</p>')
-      + '<button class="principal"' + (completo ? '' : ' disabled') + ' onclick="rvEntregar(true)">📦 Marcar como entregue</button><p class="mudo" style="font-size:13px">Depois de entregue, o Admin do restaurante precisa ler, aceitar, mandar a foto do rosto e assinar para usar o painel administrativo. A equipe e o cardápio continuam funcionando.</p>';
-  }else if(!a){
-    ent = '<p><b style="color:#f0a500">⏳ Entregue em ' + fmt(r.entregue_em) + '. Aguardando o aceite do cliente.</b></p><p class="mudo">O Admin do restaurante só vê a tela dos termos até aceitar. Você (Desenvolvedor) continua entrando normalmente.</p><button class="mini" onclick="rvEntregar(false)">Voltar para desenvolvimento</button>';
-  }else{
-    ent = '<p><b style="color:#2f9e44">✅ Termos aceitos em ' + fmt(a.aceito_em) + '</b> (versão ' + esc(a.versao) + ')</p>'
-      + '<div class="linha" style="gap:12px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:200px"><p style="margin:0">' + esc(a.nome) + '<br><small class="mudo">' + esc(a.cargo || '—') + ' · CPF/CNPJ ' + esc(a.documento) + '<br>' + esc(a.email || '') + ' ' + esc(a.telefone || '') + '<br>IP ' + esc(a.ip || '—') + '<br>Aparelho: ' + esc((a.aparelho || '').slice(0, 90)) + '<br>Impressão digital do texto (SHA-256):<br><code style="word-break:break-all;font-size:11px">' + esc(a.hash_texto) + '</code></small></p></div>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap"><img src="' + esc(a.foto) + '" alt="Foto" style="width:110px;height:110px;object-fit:cover;border-radius:12px;border:1px solid #333"><img src="' + esc(a.assinatura) + '" alt="Assinatura" style="width:160px;height:110px;object-fit:contain;background:#fff;border-radius:12px"></div></div>'
-      + '<p style="margin:10px 0 0"><button class="principal mini" onclick="rvComprovante()">🖨️ Imprimir comprovante (PDF)</button></p>';
-  }
-  $('corpo').innerHTML = '<div class="card"><h2>Entrega e aceite dos termos</h2>' + ent + '</div>'
-    + '<div class="card"><h2>Seus dados nos termos</h2><p class="mudo">Aparecem no texto que o cliente assina (valem para todos os restaurantes).</p>'
-    + '<label class="mudo" style="font-size:13px">Seu nome ou razão social</label><input id="tNome" value="' + esc(t.fornecedor_nome || '') + '" maxlength="120">'
-    + '<label class="mudo" style="font-size:13px">Seu CPF ou CNPJ</label><input id="tDoc" value="' + esc(t.fornecedor_doc || '') + '" maxlength="30">'
-    + '<label class="mudo" style="font-size:13px">Cidade/UF do foro (ex.: Jaboticabal/SP)</label><input id="tForo" value="' + esc(t.foro || '') + '" maxlength="80">'
-    + '<label class="mudo" style="font-size:13px">Seu contato (e-mail ou WhatsApp)</label><input id="tCont" value="' + esc(t.contato || '') + '" maxlength="120">'
-    + '<p style="margin:10px 0 0"><button class="principal" onclick="rvSalvarTermos()">Salvar</button> <button class="mini" onclick="rvVerTermos()">Ver o texto dos termos</button></p>'
-    + '<p class="mudo" style="font-size:12px">Versão atual dos termos: ' + esc(t.versao || '—') + '. Este modelo foi feito para proteger você, mas não substitui a revisão de um advogado.</p></div>';
+/* janelas (receber, despesa, cobrança, proposta) */
+function janela(titulo, html, ok, txtOk){
+  fecharJanela(); const d = document.createElement('div'); d.className = 'modal'; d.innerHTML = '<div class="modal-c"><div class="linha"><h2>' + esc(titulo) + '</h2><button class="mini" onclick="rvFecharJ()">✕</button></div>' + html + '<div class="rodape-acoes"><button onclick="rvFecharJ()">Cancelar</button><button class="principal" id="jOk">' + (txtOk || 'Salvar') + '</button></div></div>';
+  d.addEventListener('click', e => { if(e.target === d) fecharJanela(); }); document.body.appendChild(d);
+  $('jOk').onclick = async () => { const b = $('jOk'); b.disabled = true; try{ if(await ok() !== false) fecharJanela(); }catch(e){ erro(e.message); } if($('jOk')) $('jOk').disabled = false; };
+  const p = d.querySelector('input,select,textarea'); if(p) setTimeout(() => p.focus(), 50);
 }
-window.rvSalvarTermos = async () => {
-  const d = { fornecedor_nome:$('tNome').value.trim(), fornecedor_doc:$('tDoc').value.trim(), foro:$('tForo').value.trim(), contato:$('tCont').value.trim(), atualizado_em:new Date().toISOString() };
-  try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); telaRest(); }catch(e){ erro(e.message); }
+function fecharJanela(){ document.querySelectorAll('.modal').forEach(m => m.remove()); }
+window.rvFecharJ = fecharJanela;
+const jv = id => (($(id) || {}).value || '').trim();
+async function recarregarTudo(){ await carregar(); if(S.rest){ const x = S.lista.find(r => r.id === S.rest.id); if(x) S.rest = normalizar(JSON.parse(JSON.stringify(x))); await carregarRest(); } desenhar(); }
+window.rvReceber = id => {
+  const c = S.cob.find(x => x.id === id) || S.cobR.find(x => x.id === id); if(!c) return;
+  janela('Registrar recebimento', '<p class="mudo">' + esc(nomeRest(c.restaurante_id)) + '</p><div class="cols"><div><label for="jD">Data</label><input id="jD" type="date" value="' + hoje() + '"></div><div><label for="jV">Valor recebido (R$)</label><input id="jV" inputmode="decimal" value="' + String(c.valor).replace('.', ',') + '"></div></div>'
+    + '<label for="jF">Forma</label><select id="jF">' + FORMAS.map(f => '<option>' + f + '</option>').join('') + '</select><label for="jO">Observação</label><input id="jO">',
+    async () => { const v = num(jv('jV')); if(v == null) throw new Error('Valor inválido.'); await rest('cobrancas?id=eq.' + id, 'PATCH', { pago_em:jv('jD') || hoje(), valor_pago:v, forma:jv('jF'), observacao:jv('jO') || null }); await hist(c.restaurante_id, 'Pagamento recebido', BRL(v) + ' · ' + jv('jF')); aviso('Recebimento registrado 💵', 'ok'); await recarregarTudo(); }, '💵 Registrar');
 };
+window.rvPago = async (id, pago) => { if(!pago && !confirm('Desfazer este recebimento?')) return; try{ const c = S.cob.find(x => x.id === id); await rest('cobrancas?id=eq.' + id, 'PATCH', { pago_em:null, valor_pago:null, forma:null }); if(c) await hist(c.restaurante_id, 'Pagamento desfeito', ''); await recarregarTudo(); }catch(e){ erro(e.message); } };
+window.rvCobApagar = async id => { if(!confirm('Apagar esta cobrança?')) return; try{ await req('/rest/v1/cobrancas?id=eq.' + id, { method:'DELETE' }); aviso('Cobrança apagada.', 'ok'); await recarregarTudo(); }catch(e){ erro(e.message); } };
+window.rvNovaCob = rid => {
+  const opts = S.lista.filter(r => r.situacao !== 'encerrado').map(r => '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.nome) + '</option>').join('');
+  janela('Nova cobrança', '<label for="jR">Restaurante</label><select id="jR">' + opts + '</select><label for="jT">Tipo</label><select id="jT"><option value="avulsa">Avulsa (serviço extra)</option><option value="implantacao">Taxa de implantação</option><option value="mensalidade">Mensalidade</option></select>'
+    + '<label for="jDs">Descrição</label><input id="jDs" placeholder="Ex.: Cardápio impresso, visita técnica"><div class="cols"><div><label for="jV">Valor (R$)</label><input id="jV" inputmode="decimal"></div><div><label for="jVc">Vencimento</label><input id="jVc" type="date" value="' + hoje() + '"></div></div>',
+    async () => { const v = num(jv('jV')); if(!v) throw new Error('Informe o valor.'); const venc = jv('jVc') || hoje(); await rest('cobrancas', 'POST', { restaurante_id:jv('jR'), tipo:jv('jT'), descricao:jv('jDs') || null, valor:v, vencimento:venc, competencia:venc.slice(0, 8) + '01' }); await hist(jv('jR'), 'Cobrança criada', jv('jT') + ' ' + BRL(v)); aviso('Cobrança criada.', 'ok'); await recarregarTudo(); });
+};
+
+/* ---------- CONTRATO (termos, entrega, histórico) ---------- */
+function abaContrato(){
+  const r = S.rest, t = S.termos || {}, a = S.aceite, fmt = d => esc(new Date(d).toLocaleString('pt-BR')), completo = !!(t.fornecedor_nome && t.fornecedor_doc && t.foro);
+  let ent;
+  if(!r.entregue_em) ent = '<p class="mudo">Em <b>desenvolvimento</b>: você mexe livremente e o cliente não vê tela de termos.</p>' + (completo ? '' : '<p class="txt-erro">Preencha seus dados em Mais → Meus dados antes de entregar.</p>') + '<button class="principal"' + (completo ? '' : ' disabled') + ' onclick="rvEntregar(true)">📦 Marcar como entregue</button><p class="mudo pequeno">Depois disso, o Admin do restaurante lê, aceita, tira uma foto e assina para usar a área administrativa. A equipe e o cardápio continuam funcionando.</p>';
+  else if(!a) ent = '<p><b class="txt-aviso">⏳ Entregue em ' + fmt(r.entregue_em) + '. Aguardando o aceite do cliente.</b></p><button class="mini" onclick="rvEntregar(false)">Voltar para desenvolvimento</button>';
+  else ent = '<p><b class="txt-ok">✅ Termos aceitos em ' + fmt(a.aceito_em) + '</b> (versão ' + esc(a.versao) + ')</p><p class="pequeno">' + esc(a.nome) + ' · ' + esc(a.cargo || '—') + ' · CPF/CNPJ ' + esc(a.documento) + '<br><small class="mudo">IP ' + esc(a.ip || '—') + '</small></p><div class="linha" style="justify-content:flex-start"><img src="' + esc(a.foto) + '" alt="Foto" class="foto-aceite"><img src="' + esc(a.assinatura) + '" alt="Assinatura" class="ass-aceite"></div><p><button class="principal mini" onclick="rvComprovante()">🖨️ Comprovante (PDF)</button></p>';
+  C('<div class="card"><h2>📄 Entrega e termos de uso</h2>' + ent + '<p><button class="mini" onclick="rvVerTermos()">Ver o texto dos termos</button></p></div>'
+   + '<div class="card"><h2>🕑 Histórico</h2>' + (S.hist.length ? S.hist.map(h => '<div class="hist"><small class="mudo">' + esc(new Date(h.em).toLocaleString('pt-BR')) + '</small><b>' + esc(h.acao) + '</b>' + (h.detalhe ? '<small class="mudo">' + esc(h.detalhe) + '</small>' : '') + '</div>').join('') : '<p class="mudo">Sem registros.</p>') + '</div>');
+}
 window.rvVerTermos = async () => {
   try{ const t = (await rest('termos_uso?select=texto,versao,fornecedor_nome,fornecedor_doc,foro,contato') || [])[0] || {};
     const txt = String(t.texto || '').replace(/\{\{FORNECEDOR\}\}/g, t.fornecedor_nome || '[preencher]').replace(/\{\{DOCUMENTO\}\}/g, t.fornecedor_doc || '[preencher]').replace(/\{\{FORO\}\}/g, t.foro || '[preencher]').replace(/\{\{CONTATO\}\}/g, t.contato || '[preencher]').replace(/\{\{RESTAURANTE\}\}/g, S.rest ? S.rest.nome : '[restaurante]');
@@ -449,14 +765,12 @@ window.rvVerTermos = async () => {
 function htmlTermos(txt){ return String(txt).split('\n').map(l => /^## /.test(l) ? '<h3 style="margin:18px 0 6px">' + esc(l.slice(3)) + '</h3>' : (l.trim() ? '<p style="margin:0 0 8px">' + esc(l) + '</p>' : '')).join(''); }
 window.rvEntregar = async on => {
   const r = S.rest;
-  if(!confirm(on ? 'Marcar "' + r.nome + '" como ENTREGUE?\n\nA partir de agora o Admin do restaurante só usa o painel administrativo depois de ler e aceitar os termos, mandar a foto do rosto e assinar.' : 'Voltar "' + r.nome + '" para desenvolvimento?\n\nO cliente deixa de ver a tela dos termos.')) return;
+  if(!confirm(on ? 'Marcar "' + r.nome + '" como ENTREGUE?\n\nO Admin do restaurante vai precisar aceitar os termos para usar a área administrativa.' : 'Voltar "' + r.nome + '" para desenvolvimento?')) return;
   const d = { entregue_em: on ? new Date().toISOString() : null };
-  try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', d); Object.assign(r, d); const x = S.lista.find(z => z.id === r.id); if(x) Object.assign(x, d); await hist(r.id, on ? 'Marcado como ENTREGUE (termos exigidos)' : 'Voltou para desenvolvimento', ''); aviso(on ? 'Entregue. O Admin verá os termos ao entrar.' : 'De volta ao desenvolvimento.', 'ok'); abaTermos(); }
-  catch(e){ erro(/entregue_em|column|schema/i.test(e.message) ? 'O banco do painel ainda não tem os termos. Rode o SQL 007 (peça ao Claude).' : e.message); }
+  try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', d); Object.assign(r, d); const x = S.lista.find(z => z.id === r.id); if(x) Object.assign(x, d); await hist(r.id, on ? 'Marcado como ENTREGUE (termos exigidos)' : 'Voltou para desenvolvimento', ''); aviso(on ? 'Entregue. O Admin verá os termos ao entrar.' : 'De volta ao desenvolvimento.', 'ok'); S.aba === 'passo' ? abaPasso() : abaContrato(); }catch(e){ erro(e.message); }
 };
 window.rvComprovante = () => {
-  const r = S.rest, a = S.aceite; if(!a) return;
-  const w = window.open('', '_blank'); if(!w) return erro('Libere pop-ups para imprimir.');
+  const r = S.rest, a = S.aceite; if(!a) return; const w = window.open('', '_blank'); if(!w) return erro('Libere pop-ups para imprimir.');
   w.document.write('<meta charset="utf-8"><title>Comprovante de aceite - ' + esc(r.nome) + '</title><body style="font:14px/1.5 system-ui;max-width:780px;margin:20px auto;padding:0 16px"><h2>Comprovante de aceite dos termos de uso</h2>'
     + '<table style="border-collapse:collapse;width:100%"><tr><td><b>Estabelecimento</b></td><td>' + esc(r.nome) + '</td></tr><tr><td><b>Signatário</b></td><td>' + esc(a.nome) + ' (' + esc(a.cargo || '—') + ')</td></tr><tr><td><b>CPF/CNPJ</b></td><td>' + esc(a.documento) + '</td></tr><tr><td><b>Contato</b></td><td>' + esc(a.email || '') + ' ' + esc(a.telefone || '') + '</td></tr>'
     + '<tr><td><b>Data e hora</b></td><td>' + esc(new Date(a.aceito_em).toLocaleString('pt-BR')) + '</td></tr><tr><td><b>IP</b></td><td>' + esc(a.ip || '—') + '</td></tr><tr><td><b>Aparelho</b></td><td>' + esc(a.aparelho || '') + '</td></tr><tr><td><b>Versão dos termos</b></td><td>' + esc(a.versao) + '</td></tr><tr><td><b>SHA-256 do texto</b></td><td style="word-break:break-all">' + esc(a.hash_texto) + '</td></tr></table>'
@@ -465,26 +779,149 @@ window.rvComprovante = () => {
     + '<h3 style="page-break-before:always">Texto aceito</h3>' + htmlTermos(a.texto_aceito) + '<script>setTimeout(function(){window.print()},400)<\/script></body>');
   w.document.close();
 };
-window.rvGerarCob = async () => {
-  const r = S.rest; if(!r.valor_mensal) return erro('Defina a mensalidade na aba Dados e salve antes.');
-  const d = new Date(), comp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01', dia = String(r.dia_vencimento || 10).padStart(2, '0');
-  try{ await rest('cobrancas', 'POST', { restaurante_id:r.id, competencia:comp, valor:r.valor_mensal, vencimento:comp.slice(0, 8) + dia }); await hist(r.id, 'Mensalidade gerada', comp.slice(0, 7)); await carregar(); await carregarRest(); abaCob(); }
-  catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'A mensalidade deste mês já foi gerada.' : e.message); }
-};
-window.rvPago = async (id, pago) => { try{ await rest('cobrancas?id=eq.' + id, 'PATCH', { pago_em: pago ? hoje() : null }); await hist(S.rest.id, pago ? 'Mensalidade paga' : 'Pagamento desfeito', ''); await carregar(); await carregarRest(); abaCob(); }catch(e){ erro(e.message); } };
 
-function telaErros(){
-  const nome = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
-  $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div></div><h1>Erros do sistema</h1>'
-   + (S.erros.length ? S.erros.map(e => '<div class="card" style="overflow-wrap:anywhere"><div class="linha"><b>' + esc(nome(e.slug)) + '</b><span class="selo">' + e.ocorrencias + 'x</span></div>'
-     + '<p style="margin:6px 0"><b>' + esc(e.mensagem) + '</b></p>'
-     + '<small class="mudo">Tela: ' + esc(e.tela || '—') + ' · versão ' + esc(e.versao || '—') + '<br>' + esc(e.aparelho || '') + '<br>Último: ' + esc(new Date(e.ultimo_em).toLocaleString('pt-BR')) + ' · primeiro: ' + esc(new Date(e.primeiro_em).toLocaleString('pt-BR')) + '</small>'
-     + (e.detalhe ? '<details style="margin-top:6px"><summary class="mudo">Detalhe técnico</summary><small class="mudo" style="white-space:pre-wrap">' + esc(e.detalhe) + '</small></details>' : '')
-     + '<p style="margin:8px 0 0"><button class="mini" onclick="rvErroOk(' + e.id + ')">Marcar como resolvido</button></p></div>').join('') : '<div class="card">Nenhum erro aberto.</div>');
+/* ---------- DINHEIRO ---------- */
+function vDinheiro(){
+  const m = S.mes, f = finMes(m), atr = atrasadas(), atrV = atr.reduce((s, c) => s + (Number(c.valor) || 0), 0), meta = Number(S.aj.meta) || 0;
+  const ativos = S.lista.filter(r => r.situacao === 'ativo'), semCob = ativos.filter(r => r.valor_mensal && !S.cob.some(c => c.restaurante_id === r.id && c.tipo === 'mensalidade' && mesDe(c.competencia) === m));
+  const ultimos = []; for(let k = 11; k >= 0; k--) ultimos.push(somaMes(hoje().slice(0, 7), -k));
+  const ano = ultimos.map(finMes), totAno = ano.reduce((s, x) => s + x.recebido, 0), lucAno = ano.reduce((s, x) => s + x.lucro, 0);
+  const ticket = ativos.length ? mrr() / ativos.length : 0, venc = S.cob.filter(c => c.vencimento && c.vencimento < hoje()), inad = venc.length ? atr.length / venc.length * 100 : 0;
+  const cats = {}; f.desp.forEach(d => { cats[d.categoria] = (cats[d.categoria] || 0) + Number(d.valor); });
+  T('<div class="topo"><h1>Dinheiro</h1><button class="mini" onclick="rvCsv()">⬇️ Planilha</button></div>'
+   + '<div class="mes-nav"><button onclick="rvMes(-1)">‹</button><b>' + mesNome(m) + '</b><button onclick="rvMes(1)">›</button></div>'
+   + '<div class="kpis">' + kpi('Recebido', BRL(f.recebido), 'ok') + kpi('Falta receber', BRL(f.aReceber), f.aReceber ? 'aviso' : '') + kpi('Despesas', BRL(f.despTotal), f.despTotal ? 'erro' : '') + kpi('Lucro', BRL(f.lucro), f.lucro < 0 ? 'erro' : 'ok') + '</div>'
+   + (meta ? '<div class="card"><div class="linha"><b>🎯 Meta</b><small>' + BRL(f.recebido) + ' de ' + BRL(meta) + ' · ' + Math.round(f.recebido / meta * 100) + '%</small></div><div class="barra grossa"><i style="width:' + Math.min(100, f.recebido / meta * 100) + '%;background:var(--ok)"></i></div></div>' : '')
+   + (atr.length ? '<div class="card destaque-erro"><div class="linha"><h2>⚠️ Atrasadas (todas)</h2><b class="txt-erro">' + BRL(atrV) + '</b></div>' + atr.map(c => linhaCob(c, true)).join('') + '</div>' : '')
+   + '<div class="card"><div class="linha"><h2>💵 Recebimentos do mês</h2><span><button class="mini principal" onclick="rvGerarTodas()"' + (semCob.length ? '' : ' disabled') + '>＋ Gerar mensalidades' + (semCob.length ? ' (' + semCob.length + ')' : '') + '</button> <button class="mini" onclick="rvNovaCob()">＋ Outra</button></span></div>'
+   + (f.cob.length ? f.cob.slice().sort((a, b) => !!a.pago_em - !!b.pago_em || String(a.vencimento).localeCompare(String(b.vencimento))).map(c => linhaCob(c, true)).join('') : '<p class="mudo">Nenhuma cobrança vence neste mês.' + (semCob.length ? ' Toque em "Gerar mensalidades".' : '') + '</p>') + '</div>'
+   + '<div class="card"><div class="linha"><h2>🧾 Suas despesas do mês</h2><span><button class="mini principal" onclick="rvDespesa()">＋ Despesa</button>' + (S.desp.some(d => d.recorrente) ? ' <button class="mini" onclick="rvRepetir()">↻ Repetir fixas</button>' : '') + '</span></div>'
+   + (f.desp.length ? f.desp.map(d => '<div class="cob desp' + (d.pago ? '' : ' aberta') + '"><div class="cob-i"><b>' + esc(d.descricao) + (d.recorrente ? ' <small>↻</small>' : '') + '</b><small>' + esc(d.categoria) + ' · ' + dataBr(d.data) + (d.restaurante_id ? ' · ' + esc(nomeRest(d.restaurante_id)) : '') + (d.pago ? '' : ' · a pagar') + '</small></div><b class="cob-v">' + BRL(d.valor) + '</b><div class="cob-a">' + (d.pago ? '' : '<button class="mini principal" onclick="rvDespPaga(\'' + d.id + '\')">Paguei</button>') + '<button class="mini" onclick="rvDespesa(\'' + d.id + '\')">✏️</button><button class="mini" onclick="rvDespApagar(\'' + d.id + '\')">🗑️</button></div></div>').join('')
+      + '<div class="cats">' + Object.keys(cats).sort((a, b) => cats[b] - cats[a]).map(k => '<div class="linha"><small>' + esc(k) + '</small><small><b>' + BRL(cats[k]) + '</b></small></div><div class="barra"><i style="width:' + (cats[k] / f.despTotal * 100) + '%;background:var(--erro)"></i></div>').join('') + '</div>' : '<p class="mudo">Nenhuma despesa lançada neste mês. Lance o que você gasta (Supabase Pro, domínio, IA, transporte) para ver o lucro de verdade.</p>') + '</div>'
+   + '<div class="card"><h2>📈 Últimos 12 meses</h2>' + grafico(12) + '<div class="kpis tres">' + kpi('Recebido em 12 meses', BRL(totAno), 'ok') + kpi('Lucro em 12 meses', BRL(lucAno), lucAno < 0 ? 'erro' : 'ok') + kpi('Média por mês', BRL(totAno / 12), '') + '</div></div>'
+   + '<div class="card"><h2>📊 Indicadores</h2><div class="kpis">' + kpi('Receita mensal fixa', BRL(mrr()), '') + kpi('Clientes ativos', ativos.length, '') + kpi('Ticket médio', BRL(ticket), '') + kpi('Inadimplência', Math.round(inad) + '%', inad > 10 ? 'erro' : '') + '</div>'
+   + '<p class="mudo pequeno">Previsão do próximo mês: <b>' + BRL(mrr()) + '</b> em mensalidades' + (S.desp.some(d => d.recorrente) ? ' menos <b>' + BRL(S.desp.filter(d => d.recorrente && mesDe(d.data) === m).reduce((s, d) => s + Number(d.valor), 0)) + '</b> de despesas fixas' : '') + '.</p></div>');
 }
-window.rvErros = async () => { try{ await carregar(); }catch(e){ erro(e.message); } telaErros(); };
-window.rvErroOk = async id => { try{ await rest('erros_app?id=eq.' + id, 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.id !== id); telaErros(); }catch(e){ erro('Não foi possível marcar como resolvido: ' + e.message); } };
-function abaHist(){ $('corpo').innerHTML = '<div class="card"><h2>Histórico</h2>' + (S.hist.length ? '<table>' + S.hist.map(h => '<tr><td>' + esc(new Date(h.em).toLocaleString('pt-BR')) + '</td><td>' + esc(h.acao) + '</td><td class="mudo">' + esc(h.detalhe || '') + '</td></tr>').join('') + '</table>' : '<p>Sem registros.</p>') + '</div>'; }
+window.rvMes = k => { S.mes = somaMes(S.mes, k); vDinheiro(); };
+window.rvGerarTodas = async () => {
+  const m = S.mes, alvo = S.lista.filter(r => r.situacao === 'ativo' && r.valor_mensal && !S.cob.some(c => c.restaurante_id === r.id && c.tipo === 'mensalidade' && mesDe(c.competencia) === m));
+  if(!alvo.length) return aviso('Todas as mensalidades do mês já foram geradas.', 'ok');
+  if(!confirm('Gerar a mensalidade de ' + mesNome(m) + ' para ' + alvo.length + ' restaurante(s)?\n\n' + alvo.map(r => r.nome + ': ' + BRL(r.valor_mensal)).join('\n'))) return;
+  let ok = 0; for(const r of alvo){ try{ await rest('cobrancas', 'POST', { restaurante_id:r.id, tipo:'mensalidade', competencia:m + '-01', valor:r.valor_mensal, vencimento:m + '-' + pad(r.dia_vencimento || 10) }); await hist(r.id, 'Mensalidade gerada', m); ok++; }catch(e){} }
+  aviso(ok + ' mensalidade(s) gerada(s).', 'ok'); await recarregarTudo();
+};
+window.rvDespesa = id => {
+  const d = S.desp.find(x => x.id === id) || { data:S.mes === hoje().slice(0, 7) ? hoje() : S.mes + '-01', pago:true, categoria:'Outros' };
+  janela(id ? 'Editar despesa' : 'Nova despesa', '<label for="jDs">O que foi</label><input id="jDs" value="' + esc(d.descricao || '') + '" placeholder="Ex.: Supabase Pro, domínio, gasolina">'
+    + '<div class="cols"><div><label for="jV">Valor (R$)</label><input id="jV" inputmode="decimal" value="' + (d.valor != null ? String(d.valor).replace('.', ',') : '') + '"></div><div><label for="jD">Data</label><input id="jD" type="date" value="' + esc(d.data) + '"></div></div>'
+    + '<label for="jC">Categoria</label><select id="jC">' + CAT_DESP.map(c => '<option' + (d.categoria === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>'
+    + '<label for="jR">É de algum restaurante? (opcional)</label><select id="jR"><option value="">Não, é geral</option>' + S.lista.map(r => '<option value="' + r.id + '"' + (d.restaurante_id === r.id ? ' selected' : '') + '>' + esc(r.nome) + '</option>').join('') + '</select>'
+    + '<label class="check"><input type="checkbox" id="jP"' + (d.pago ? ' checked' : '') + '><span>Já paguei</span></label><label class="check"><input type="checkbox" id="jRc"' + (d.recorrente ? ' checked' : '') + '><span>Repete todo mês (despesa fixa)</span></label>',
+    async () => { const v = num(jv('jV')); if(!jv('jDs') || v == null) throw new Error('Preencha o que foi e o valor.'); const corpo = { descricao:jv('jDs'), valor:v, data:jv('jD') || hoje(), categoria:jv('jC'), restaurante_id:jv('jR') || null, pago:$('jP').checked, recorrente:$('jRc').checked };
+      if(id) await rest('despesas_revenda?id=eq.' + id, 'PATCH', corpo); else await rest('despesas_revenda', 'POST', corpo); aviso('Despesa salva.', 'ok'); await recarregarTudo(); });
+};
+window.rvDespPaga = async id => { try{ await rest('despesas_revenda?id=eq.' + id, 'PATCH', { pago:true }); await recarregarTudo(); }catch(e){ erro(e.message); } };
+window.rvDespApagar = async id => { if(!confirm('Apagar esta despesa?')) return; try{ await req('/rest/v1/despesas_revenda?id=eq.' + id, { method:'DELETE' }); await recarregarTudo(); }catch(e){ erro(e.message); } };
+window.rvRepetir = async () => {
+  const m = S.mes, ant = somaMes(m, -1), fixas = S.desp.filter(d => d.recorrente && mesDe(d.data) === ant && !S.desp.some(x => x.recorrente && mesDe(x.data) === m && x.descricao === d.descricao));
+  if(!fixas.length) return aviso('Nenhuma despesa fixa de ' + mesNome(ant) + ' para repetir.', 'ok');
+  if(!confirm('Lançar em ' + mesNome(m) + ' as despesas fixas do mês anterior?\n\n' + fixas.map(d => d.descricao + ': ' + BRL(d.valor)).join('\n'))) return;
+  for(const d of fixas){ try{ await rest('despesas_revenda', 'POST', { descricao:d.descricao, valor:d.valor, categoria:d.categoria, restaurante_id:d.restaurante_id, recorrente:true, pago:false, data:m + d.data.slice(7) }); }catch(e){} }
+  aviso('Despesas fixas lançadas.', 'ok'); await recarregarTudo();
+};
+window.rvCsv = () => {
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"', L = [['Tipo','Data','Restaurante','Descrição','Categoria/forma','Valor','Situação'].map(q).join(';')];
+  S.cob.forEach(c => L.push(['Receita', c.pago_em || c.vencimento, nomeRest(c.restaurante_id), c.tipo === 'mensalidade' ? 'Mensalidade ' + mesDe(c.competencia) : (c.descricao || c.tipo), c.forma || '', String(c.pago_em ? pagoValor(c) : c.valor).replace('.', ','), c.pago_em ? 'Recebido' : (c.vencimento < hoje() ? 'Atrasado' : 'A receber')].map(q).join(';')));
+  S.desp.forEach(d => L.push(['Despesa', d.data, d.restaurante_id ? nomeRest(d.restaurante_id) : '', d.descricao, d.categoria, String(d.valor).replace('.', ','), d.pago ? 'Pago' : 'A pagar'].map(q).join(';')));
+  baixar('financeiro-revenda-' + hoje() + '.csv', '﻿' + L.join('\n'), 'text/csv'); aviso('Planilha baixada (abre no Excel ou Google Planilhas).', 'ok');
+};
+
+/* ---------- VENDAS (propostas) ---------- */
+function vVendas(){
+  const F = { abertas:'Em aberto', novo:'Novos', conversando:'Conversando', proposta:'Proposta enviada', fechado:'Fechados', perdido:'Perdidos' };
+  const L = S.prop.filter(p => S.filtroProp === 'abertas' ? !['fechado','perdido'].includes(p.status) : p.status === S.filtroProp);
+  const abertas = S.prop.filter(p => !['fechado','perdido'].includes(p.status)), potencial = abertas.reduce((s, p) => s + (Number(p.valor_mensal) || 0), 0), fech = S.prop.filter(p => p.status === 'fechado').length, conv = S.prop.length ? Math.round(fech / S.prop.length * 100) : 0;
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button><button class="principal" onclick="rvProp()">＋ Nova proposta</button></div><h1>Vendas</h1>'
+   + '<div class="kpis tres">' + kpi('Em negociação', abertas.length, '') + kpi('Potencial por mês', BRL(potencial), 'aviso') + kpi('Conversão', conv + '%', '') + '</div>'
+   + '<div class="chips">' + Object.keys(F).map(k => '<button class="chip ' + (S.filtroProp === k ? 'on' : '') + '" onclick="rvFiltroProp(\'' + k + '\')">' + F[k] + ' <small>' + (k === 'abertas' ? abertas.length : S.prop.filter(p => p.status === k).length) + '</small></button>').join('') + '</div>'
+   + (L.length ? L.map(p => { const atrasa = p.proxima_acao && p.proxima_acao <= hoje() && !['fechado','perdido'].includes(p.status);
+      return '<div class="card"><div class="linha"><b>' + esc(p.nome) + '</b><span class="selo ' + (p.status === 'fechado' ? 'ativo' : p.status === 'perdido' ? 'encerrado' : 'teste') + '">' + ST_PROP[p.status] + '</span></div>'
+       + '<small class="mudo">' + esc([p.contato_nome, p.cidade, p.origem].filter(Boolean).join(' · ')) + '</small>'
+       + '<p class="pequeno">' + (p.valor_mensal ? BRL(p.valor_mensal) + '/mês' : 'Sem valor') + (p.taxa_implantacao ? ' + ' + BRL(p.taxa_implantacao) + ' implantação' : '') + (p.plano ? ' · ' + esc(p.plano) : '') + '</p>'
+       + (p.proxima_acao ? '<p class="pequeno ' + (atrasa ? 'txt-erro' : 'mudo') + '">📅 Retornar em ' + dataBr(p.proxima_acao) + (atrasa ? ' (hoje ou atrasado)' : '') + '</p>' : '')
+       + (p.observacoes ? '<p class="pequeno mudo">' + esc(p.observacoes) + '</p>' : '')
+       + '<div class="linha" style="justify-content:flex-start">' + (p.telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLink(p.telefone)) + '">💬 WhatsApp</a>' : '') + '<button class="mini" onclick="rvPropTexto(\'' + p.id + '\')">📋 Texto da proposta</button><button class="mini" onclick="rvProp(\'' + p.id + '\')">✏️ Editar</button>'
+       + (p.restaurante_id ? '<button class="mini" onclick="rvAbrir(\'' + p.restaurante_id + '\')">Abrir restaurante ›</button>' : p.status !== 'perdido' ? '<button class="mini principal" onclick="rvPropFechar(\'' + p.id + '\')">🎉 Fechou! Criar restaurante</button>' : '') + '</div></div>'; }).join('')
+     : '<div class="card vazio">Nenhuma proposta aqui. Anote cada restaurante com quem você conversar para não perder nenhum.</div>'));
+}
+window.rvFiltroProp = f => { S.filtroProp = f; vVendas(); };
+window.rvProp = id => {
+  const p = S.prop.find(x => x.id === id) || { status:'novo', modulos:{} }, planos = S.aj.planos || [];
+  janela(id ? 'Editar proposta' : 'Nova proposta', '<label for="jN">Restaurante</label><input id="jN" value="' + esc(p.nome || '') + '"><div class="cols"><div><label for="jCn">Contato</label><input id="jCn" value="' + esc(p.contato_nome || '') + '"></div><div><label for="jT">WhatsApp</label><input id="jT" type="tel" value="' + esc(p.telefone || '') + '"></div></div>'
+    + '<div class="cols"><div><label for="jCi">Cidade</label><input id="jCi" value="' + esc(p.cidade || '') + '"></div><div><label for="jO">Como conheceu</label><input id="jO" value="' + esc(p.origem || '') + '" placeholder="Indicação, Instagram…"></div></div>'
+    + '<label for="jS">Situação</label><select id="jS">' + Object.keys(ST_PROP).map(k => '<option value="' + k + '"' + (p.status === k ? ' selected' : '') + '>' + ST_PROP[k] + '</option>').join('') + '</select>'
+    + (planos.length ? '<label for="jPl">Plano</label><select id="jPl" onchange="rvPropPlano(this.value)"><option value="">—</option>' + planos.map((x, i) => '<option value="' + i + '"' + (p.plano === x.nome ? ' selected' : '') + '>' + esc(x.nome) + ' · ' + BRL(x.valor) + '</option>').join('') + '</select>' : '')
+    + '<div class="cols"><div><label for="jV">Mensalidade (R$)</label><input id="jV" inputmode="decimal" value="' + (p.valor_mensal != null ? String(p.valor_mensal).replace('.', ',') : '') + '"></div><div><label for="jTx">Implantação (R$)</label><input id="jTx" inputmode="decimal" value="' + (p.taxa_implantacao != null ? String(p.taxa_implantacao).replace('.', ',') : '') + '"></div></div>'
+    + '<label for="jPa">Retornar em</label><input id="jPa" type="date" value="' + esc(p.proxima_acao || '') + '"><label for="jOb">Anotações</label><textarea id="jOb">' + esc(p.observacoes || '') + '</textarea>',
+    async () => { if(!jv('jN')) throw new Error('Escreva o nome do restaurante.'); const pl = planos[jv('jPl')];
+      const corpo = { nome:jv('jN'), contato_nome:jv('jCn') || null, telefone:jv('jT') || null, cidade:jv('jCi') || null, origem:jv('jO') || null, status:jv('jS'), plano:pl ? pl.nome : (p.plano || null), modulos:pl ? (pl.modulos || {}) : (p.modulos || {}), valor_mensal:num(jv('jV')), taxa_implantacao:num(jv('jTx')), proxima_acao:jv('jPa') || null, observacoes:jv('jOb') || null, atualizado_em:new Date().toISOString() };
+      if(id) await rest('propostas?id=eq.' + id, 'PATCH', corpo); else await rest('propostas', 'POST', corpo); aviso('Proposta salva.', 'ok'); await recarregarTudo(); });
+};
+window.rvPropPlano = i => { const p = (S.aj.planos || [])[i]; if(!p) return; $('jV').value = String(p.valor).replace('.', ','); $('jTx').value = p.implantacao ? String(p.implantacao).replace('.', ',') : ''; };
+window.rvPropTexto = async id => {
+  const p = S.prop.find(x => x.id === id), a = S.aj, mods = MODULOS.filter(m => (p.modulos || {})[m.id]).map(m => '• ' + m.nome);
+  const t = 'Olá' + (p.contato_nome ? ' ' + p.contato_nome.split(' ')[0] : '') + '! Segue a proposta do sistema para o ' + p.nome + ':\n\n'
+    + '✅ Cardápio digital com pedidos pelo celular\n✅ Caixa, pedidos, cozinha e entregas\n✅ Clientes, fidelidade e cupons\n✅ Estoque, custos e relatórios\n✅ App da equipe e avisos no celular\n✅ Backup automático e suporte\n'
+    + (mods.length ? '\nMódulos incluídos:\n' + mods.join('\n') + '\n' : '') + (p.plano ? '\nPlano: ' + p.plano : '') + (p.valor_mensal ? '\nMensalidade: ' + BRL(p.valor_mensal) : '') + (p.taxa_implantacao ? '\nImplantação (uma vez): ' + BRL(p.taxa_implantacao) : '')
+    + '\n\nO sistema fica com o nome, as cores e a logo do restaurante.' + (a.whatsapp ? '\nQualquer dúvida: ' + a.whatsapp : '');
+  if(await copiarTxt(t)) aviso('Proposta copiada. Cole no WhatsApp do cliente.', 'ok');
+};
+window.rvPropFechar = id => { const p = S.prop.find(x => x.id === id); rvNovo(p); };
+
+/* ---------- MAIS / AJUSTES / GUIA ---------- */
+function vMais(){
+  const it = [['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
+  T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
+   + '<div class="card"><small class="mudo">Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
+}
+function vAjustes(){
+  const a = S.aj, t = S.termos || {}, planos = a.planos || [];
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>Meus dados, Pix e planos</h1>'
+   + '<div class="card"><h2>👤 Seus dados nos termos de uso</h2><p class="mudo pequeno">Aparecem no contrato que o cliente aceita (valem para todos os restaurantes).</p>'
+   + '<label for="tNome">Seu nome ou razão social</label><input id="tNome" value="' + esc(t.fornecedor_nome || '') + '" maxlength="120"><label for="tDoc">Seu CPF ou CNPJ</label><input id="tDoc" value="' + esc(t.fornecedor_doc || '') + '" maxlength="30">'
+   + '<label for="tForo">Cidade/UF do foro (ex.: Jaboticabal/SP)</label><input id="tForo" value="' + esc(t.foro || '') + '" maxlength="80"><label for="tCont">Seu contato (e-mail ou WhatsApp)</label><input id="tCont" value="' + esc(t.contato || '') + '" maxlength="120">'
+   + '<p><button class="principal" onclick="rvSalvarTermos()">💾 Salvar</button> <button class="mini" onclick="rvVerTermos()">Ver o texto dos termos</button></p><small class="mudo">Versão dos termos: ' + esc(t.versao || '—') + '. Não substitui a revisão de um advogado.</small></div>'
+   + '<div class="card"><h2>💳 Recebimento e cobrança</h2><div class="cols"><div><label for="aPix">Sua chave Pix</label><input id="aPix" value="' + esc(a.pix || '') + '"></div><div><label for="aPn">Nome que aparece no Pix</label><input id="aPn" value="' + esc(a.pix_nome || '') + '"></div></div>'
+   + '<div class="cols"><div><label for="aWa">Seu WhatsApp (vai nas propostas)</label><input id="aWa" type="tel" value="' + esc(a.whatsapp || '') + '"></div><div><label for="aDv">Dia de vencimento padrão</label><input id="aDv" type="number" min="1" max="28" value="' + esc(a.dia_padrao || 10) + '"></div></div>'
+   + '<label for="aMeta">Meta de recebimento por mês (R$)</label><input id="aMeta" inputmode="decimal" value="' + esc(a.meta || '') + '">'
+   + '<label for="aMsg">Mensagem de cobrança (WhatsApp)</label><textarea id="aMsg" rows="5" placeholder="Deixe em branco para usar a mensagem padrão">' + esc(a.msg_cobranca || '') + '</textarea><small class="mudo">Pode usar: {contato} {restaurante} {tipo} {valor} {vencimento} {pix}</small>'
+   + '<p><button class="principal" onclick="rvSalvarAj()">💾 Salvar</button></p></div>'
+   + '<div class="card"><div class="linha"><h2>📦 Planos e preços</h2><button class="mini principal" onclick="rvPlano()">＋ Plano</button></div><p class="mudo pequeno">Escolha com um toque ao criar restaurante ou proposta.</p>'
+   + (planos.length ? planos.map((p, i) => '<div class="cob"><div class="cob-i"><b>' + esc(p.nome) + '</b><small>' + MODULOS.filter(m => (p.modulos || {})[m.id]).map(m => m.nome).join(', ') + '</small></div><b class="cob-v">' + BRL(p.valor) + '</b><div class="cob-a"><button class="mini" onclick="rvPlano(' + i + ')">✏️</button><button class="mini" onclick="rvPlanoApagar(' + i + ')">🗑️</button></div></div>').join('') : '<p class="mudo">Nenhum plano ainda.</p>') + '</div>');
+}
+window.rvSalvarTermos = async () => {
+  const d = { fornecedor_nome:jv('tNome'), fornecedor_doc:jv('tDoc'), foro:jv('tForo'), contato:jv('tCont'), atualizado_em:new Date().toISOString() };
+  try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); }catch(e){ erro(e.message); }
+};
+window.rvSalvarAj = () => salvarAjustes({ pix:jv('aPix'), pix_nome:jv('aPn'), whatsapp:jv('aWa'), dia_padrao:Math.min(28, Math.max(1, parseInt(jv('aDv'), 10) || 10)), meta:num(jv('aMeta')), msg_cobranca:jv('aMsg') });
+window.rvPlano = i => {
+  const p = (S.aj.planos || [])[i] || { modulos:{} }; MODULOS.forEach(m => { if(p.modulos[m.id] == null && i == null) p.modulos[m.id] = m.pad; });
+  janela(i != null ? 'Editar plano' : 'Novo plano', '<label for="jN">Nome do plano</label><input id="jN" value="' + esc(p.nome || '') + '" placeholder="Ex.: Básico, Completo"><div class="cols"><div><label for="jV">Mensalidade (R$)</label><input id="jV" inputmode="decimal" value="' + (p.valor != null ? String(p.valor).replace('.', ',') : '') + '"></div><div><label for="jTx">Implantação (R$)</label><input id="jTx" inputmode="decimal" value="' + (p.implantacao != null ? String(p.implantacao).replace('.', ',') : '') + '"></div></div>'
+    + '<p class="pequeno"><b>Módulos incluídos</b></p>' + MODULOS.map(m => '<label class="check"><input type="checkbox" class="jMod" value="' + m.id + '"' + (p.modulos[m.id] ? ' checked' : '') + '><span>' + esc(m.nome) + '</span></label>').join(''),
+    async () => { const v = num(jv('jV')); if(!jv('jN') || v == null) throw new Error('Preencha o nome e a mensalidade.'); const mod = {}; document.querySelectorAll('.jMod').forEach(c => { mod[c.value] = c.checked; });
+      const L = (S.aj.planos || []).slice(), novo = { nome:jv('jN'), valor:v, implantacao:num(jv('jTx')), modulos:mod }; if(i != null) L[i] = novo; else L.push(novo); if(await salvarAjustes({ planos:L }, 'Plano salvo.')) vAjustes(); });
+};
+window.rvPlanoApagar = async i => { if(!confirm('Apagar este plano?')) return; const L = (S.aj.planos || []).slice(); L.splice(i, 1); if(await salvarAjustes({ planos:L }, 'Plano apagado.')) vAjustes(); };
+function vGuia(){
+  const tot = ETAPAS.reduce((s, e) => s + (parseInt(e.tempo, 10) || 0), 0);
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>Como criar um restaurante</h1>'
+   + '<div class="card"><p>O painel te leva <b>um passo de cada vez</b>. Você só precisa ler e fazer o que está escrito. Leva umas <b>' + Math.round(tot / 60 * 10) / 10 + ' horas</b> no total, e dá para parar e continuar depois: o painel lembra onde você parou.</p>'
+   + '<p class="mudo pequeno">Em cada etapa tem um botão "Prefere que o Claude faça?": copie o pedido e cole na conversa com ele. Mas dá para fazer tudo sozinho.</p></div>'
+   + '<h2 class="sec-t">1. Contas que você vai criar</h2><div class="card contas">' + CONTAS.map(c => '<div><b>' + esc(c[0]) + '</b><small>' + esc(c[1]) + '</small></div>').join('') + '</div>'
+   + '<h2 class="sec-t">2. O caminho</h2>' + FASES.map((f, k) => '<div class="card"><h3>' + (k + 1) + '. ' + f[0] + '</h3>' + f[1].map(id => { const e = ETAPAS.find(x => x.id === id); return '<div class="guia-e"><b>' + esc(e.titulo) + '</b> <small class="mudo">· ' + esc(e.tempo) + (e.opcional ? ' · opcional' : '') + '</small><br><small>' + esc(e.porque.replace(/\{[a-z_]+\}/g, '…')) + '</small></div>'; }).join('') + '</div>').join('')
+   + '<h2 class="sec-t">3. Logos</h2><div class="card">' + LOGOS.map(L => '<div class="guia-e"><b>' + L.icone + ' ' + L.nome + '</b><br><small>' + esc(L.onde) + '</small><br><small class="mudo">' + esc(L.regras.slice(0, 3).join(' · ')) + '</small></div>').join('') + '<p class="mudo pequeno">Na etapa "Cores e logos" o painel monta o texto pronto para pedir cada uma ao ChatGPT.</p></div>'
+   + '<button class="principal grande" onclick="rvNovo()">＋ Começar um restaurante agora</button>');
+}
 
 S.sess = sessLer(); tela();
 })();
