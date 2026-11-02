@@ -40,10 +40,53 @@ begin
 end $$;
 revoke all on function public.saude_sondar() from public, anon, authenticated;
 
+-- Drives do Google (principal e contingência): a cada 6 horas o banco pede a medição às funções (as mesmas do cartão "Uso do espaço");
+-- a resposta é lida no envio seguinte ao Painel.
+create table if not exists public.saude_drive (
+  id boolean primary key default true check (id),
+  req_prin bigint,
+  req_cont bigint,
+  pedido_em timestamptz
+);
+alter table public.saude_drive enable row level security;
+
+create or replace function public.saude_drive_pedir() returns void
+language plpgsql security definer set search_path = public, extensions, vault as $$
+declare v_url text; v_key text; v_p bigint; v_c bigint;
+begin
+  select decrypted_secret into v_url from vault.decrypted_secrets where name = 'supabase_url';
+  select decrypted_secret into v_key from vault.decrypted_secrets where name = 'service_key';
+  if v_url is null or v_key is null then return; end if;
+  select net.http_post(url := v_url || '/functions/v1/planilha-admin', headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_key),
+    body := '{"acao":"armazenamento"}'::jsonb, timeout_milliseconds := 90000) into v_p;
+  select net.http_post(url := v_url || '/functions/v1/planilha-admin', headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_key),
+    body := '{"acao":"armazenamentoContingencia"}'::jsonb, timeout_milliseconds := 90000) into v_c;
+  insert into saude_drive (id, req_prin, req_cont, pedido_em) values (true, v_p, v_c, now())
+  on conflict (id) do update set req_prin = excluded.req_prin, req_cont = excluded.req_cont, pedido_em = excluded.pedido_em;
+end $$;
+revoke all on function public.saude_drive_pedir() from public, anon, authenticated;
+
+create or replace function public._saude_drive_ler(p_req bigint, p_em timestamptz) returns jsonb
+language plpgsql security definer set search_path = public, extensions, net as $$
+declare x record; j jsonb;
+begin
+  if p_req is null then return jsonb_build_object('estado', 'sem_resposta'); end if;
+  select status_code, timed_out, error_msg, content into x from net._http_response where id = p_req;
+  if not found then return jsonb_build_object('estado', 'sem_resposta'); end if;
+  begin j := x.content::jsonb; exception when others then j := null; end;
+  if j is null or coalesce(x.timed_out, false) or x.status_code is null or x.status_code >= 400 or coalesce((j->>'ok')::boolean, false) is not true then
+    return jsonb_build_object('estado', 'erro', 'medido_em', p_em,
+      'mensagem', left(coalesce(j->>'message', x.error_msg, 'erro ' || coalesce(x.status_code::text, '')), 160));
+  end if;
+  return jsonb_build_object('estado', 'ok', 'medido_em', p_em, 'usado', j#>'{drive,usado}', 'livre', j#>'{drive,livre}',
+    'percentual', j#>'{drive,percentual}', 'nivel', j#>>'{drive,nivel}', 'categorias', coalesce(j->'categorias', '{}'::jsonb));
+end $$;
+revoke all on function public._saude_drive_ler(bigint, timestamptz) from public, anon, authenticated;
+
 -- passo 2: monta o resumo e envia ao Painel
 create or replace function public.saude_enviar_painel() returns void
 language plpgsql security definer set search_path = public, extensions, vault, net as $$
-declare v_slug text; v_s jsonb; v_pl jsonb; r record; x record;
+declare v_slug text; v_s jsonb; v_pl jsonb; r record; x record; d record; v_drive jsonb := '{}'::jsonb;
 begin
   select decrypted_secret into v_slug from vault.decrypted_secrets where name = 'restaurante_slug';
   if coalesce(v_slug, '') = '' then return; end if;
@@ -57,11 +100,13 @@ begin
     else v_pl := jsonb_build_object('estado', 'ok', 'ms', round(extract(epoch from (x.created - r.enviado_em)) * 1000));
     end if;
   end if;
+  select * into d from saude_drive where id;
+  if found then v_drive := jsonb_build_object('principal', public._saude_drive_ler(d.req_prin, d.pedido_em), 'contingencia', public._saude_drive_ler(d.req_cont, d.pedido_em)); end if;
   perform net.http_post(
     url := 'https://shbhclxhlffdusikjeqp.supabase.co/rest/v1/rpc/registrar_saude',
     headers := jsonb_build_object('apikey', 'sb_publishable_0u_j3zKFnJDkhN57KRJ9Ng_7uN24jl4', 'Content-Type', 'application/json'),
     body := jsonb_build_object('p', jsonb_build_object('slug', v_slug, 'geral', v_s->>'geral', 'itens', v_s->'itens',
-              'servidores', jsonb_build_object('supabase', jsonb_build_object('estado', 'ok'), 'planilha', v_pl))),
+              'servidores', jsonb_build_object('supabase', jsonb_build_object('estado', 'ok'), 'planilha', v_pl, 'drive', v_drive))),
     timeout_milliseconds := 10000);
 end $$;
 revoke all on function public.saude_enviar_painel() from public, anon, authenticated;
@@ -69,6 +114,8 @@ revoke all on function public.saude_enviar_painel() from public, anon, authentic
 do $$ begin
   perform cron.unschedule('saude-sondar') where exists (select 1 from cron.job where jobname = 'saude-sondar');
   perform cron.unschedule('saude-painel') where exists (select 1 from cron.job where jobname = 'saude-painel');
+  perform cron.unschedule('saude-drive') where exists (select 1 from cron.job where jobname = 'saude-drive');
   perform cron.schedule('saude-sondar', '*/15 * * * *', 'select public.saude_sondar()');
   perform cron.schedule('saude-painel', '1-59/15 * * * *', 'select public.saude_enviar_painel()');
+  perform cron.schedule('saude-drive', '5 */6 * * *', 'select public.saude_drive_pedir()');
 end $$;
