@@ -226,7 +226,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 64
+   "kb": 65
   },
   {
    "etapa": "banco",
@@ -430,6 +430,28 @@ window.CODIGOS = {
    "quando": "Logo depois do item anterior.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Troque COLE_AQUI_login, COLE_AQUI_senha (mínimo 8 letras) e o nome. Anote o login e a senha para entregar ao dono. Responde \"criado\"."
+  },
+  {
+   "etapa": "admin",
+   "id": "dev",
+   "titulo": "Função do seu acesso de Desenvolvedor",
+   "arq": "banco-restaurante/134-desenvolvedor-funcao.sql",
+   "desc": "Cria a função que faz o SEU login de suporte (Desenvolvedor) neste restaurante. Restaurantes novos já vêm com ela.",
+   "quando": "Depois do Administrador.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Este só cria a função; o próximo cria o seu login.",
+   "kb": 2
+  },
+  {
+   "etapa": "admin",
+   "id": "dev2",
+   "titulo": "Criar o seu login de Desenvolvedor (suporte)",
+   "arq": null,
+   "especial": "dev2",
+   "desc": "O seu acesso para dar suporte: entra mesmo com o restaurante bloqueado e não precisa aceitar os termos. Só existe um por restaurante.",
+   "quando": "Depois do código anterior.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Troque a senha (mínimo 8) antes de rodar. Use a mesma dos outros restaurantes se quiser lembrar fácil. Se responder \"ja_existe\", ele já foi criado."
   }
  ],
  "planilhas": [

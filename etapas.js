@@ -48,181 +48,225 @@ window.LOGOS = [
 
 /* Contas que você vai criar para cada restaurante (aparece no Guia e na primeira etapa). */
 window.CONTAS = [
-  ['📧 E-mail Google (Gmail) do restaurante', 'Use um e-mail só do restaurante (ex.: nomedorestaurante@gmail.com). Ele abre o Supabase, o Google Cloud, o Drive e as IAs.'],
-  ['🗄️ Supabase', 'O banco de dados (onde ficam produtos, pedidos, clientes). supabase.com → entrar com o Google.'],
-  ['🐙 GitHub', 'Onde o site fica publicado. github.com → Sign up.'],
-  ['☁️ Google Cloud', 'Para o "Entrar com o Google" e o backup no Drive. console.cloud.google.com (mesmo e-mail).'],
-  ['🤖 IAs (opcional)', 'Groq, Gemini, Cloudflare e NVIDIA: chaves grátis para o assistente virtual.']
+  ['📧 E-mail Google do restaurante (principal)', 'Um e-mail só do restaurante (ex.: nomedorestaurante@gmail.com). Ele abre o Supabase, o Google Cloud, o Drive, a planilha principal e as IAs.', 'https://accounts.google.com/signup'],
+  ['📧 Segundo e-mail Google (só se usar planilhas)', 'Para a planilha de contingência, que precisa ficar em OUTRA conta Google.', 'https://accounts.google.com/signup'],
+  ['🗄️ Supabase', 'O banco de dados (produtos, pedidos, clientes, caixa). Entra com o e-mail do restaurante.', 'https://supabase.com/dashboard/sign-in'],
+  ['🐙 GitHub', 'Onde o site fica publicado, de graça. Pode ser a sua conta (o endereço terá o seu usuário).', 'https://github.com/signup'],
+  ['☁️ Google Cloud', 'Para o "Entrar com o Google" e o backup no Drive. Mesmo e-mail do restaurante.', 'https://console.cloud.google.com/'],
+  ['🤖 IAs (grátis)', 'Groq, Gemini, Cloudflare e NVIDIA: chaves do atendente virtual. Use o e-mail do restaurante.', 'https://console.groq.com/keys']
 ];
 
+/* {ref} = projeto do Supabase · {github_url} = repositório · {gh_usuario} = usuário do GitHub · {site_url} = endereço do site */
+const SB = 'https://supabase.com/dashboard/project/{ref}';
 window.ETAPAS = [
- { id:'cadastro', titulo:'Dados do restaurante', curto:'Nome, dono e contrato', quem:'voce', tempo:'2 min',
-   porque:'É a ficha do cliente: nome, quem é o dono, quanto ele paga e quando vence.',
+ { id:'cadastro', titulo:'Dados do restaurante', curto:'Nome, dono e contrato', quem:'voce', tempo:'5 min',
+   porque:'É a ficha do cliente: nome, quem é o dono, quanto ele paga e quando vence. Também é a hora de separar as contas que você vai usar.',
    precisa:['Nome do restaurante','WhatsApp do dono','Valor da mensalidade'],
    partes:[
-    { t:'Confira os dados do restaurante abaixo. O código (ex.: churros-de-proposito) vai no endereço do site e no nome dos projetos: anote, você vai usar nas próximas etapas.', extra:'cadastro' },
-    { t:'Antes de seguir, crie (ou separe) um e-mail Google só deste restaurante. Ele vai abrir todas as contas das próximas etapas.', extra:'contas' }
+    { t:'Confira os dados do restaurante abaixo e toque em Salvar. O código ({slug}) vai no endereço do site e no nome dos projetos.', extra:'cadastro' },
+    { t:'Crie (ou separe) as contas abaixo. Anote cada e-mail e senha: na etapa "Guardar as contas e senhas" tudo vai para dentro do sistema do restaurante.', extra:'contas' }
    ] },
+
  { id:'supabase', titulo:'Criar o banco de dados', curto:'Projeto no Supabase', quem:'voce', tempo:'5 min', teste:'supabase', campos:['supabase_url','supabase_chave'],
-   porque:'O Supabase é onde ficam guardados produtos, pedidos, clientes e caixa. Cada restaurante tem o seu.',
+   porque:'O Supabase é onde ficam guardados produtos, pedidos, clientes e caixa. Cada restaurante tem o seu, no plano grátis.',
    precisa:['O e-mail Google do restaurante'],
    partes:[
-    { t:'Abra supabase.com e entre com o e-mail do restaurante (botão "Continue with Google").', link:'https://supabase.com/dashboard' },
-    { t:'Toque em "New project". Em Name escreva {slug}. Em "Database password" toque em "Generate a password" e GUARDE essa senha. Em Region escolha "South America (São Paulo)". Toque em "Create new project".' },
-    { t:'Espere uns 2 minutos até aparecer "Healthy" (verde).' },
-    { t:'Abra "Project Settings" (engrenagem) → "Data API" (ou "API"). Copie o "Project URL" e cole no primeiro campo abaixo. Depois abra "API Keys", copie a chave que começa com sb_publishable_ e cole no segundo campo. Toque em Salvar e depois em Testar.', extra:'campos' }
+    { t:'Abra o Supabase e entre com o e-mail do restaurante (botão "Continue with Google"). Se pedir para criar uma organização, use o nome do restaurante e o plano "Free".', link:'https://supabase.com/dashboard/sign-in' },
+    { t:'Toque em "New project". Name: {slug}. Database Password: toque em "Generate a password", COPIE e guarde (vai na etapa "Guardar as contas"). Region: "South America (São Paulo)". Toque em "Create new project".', link:'https://supabase.com/dashboard/new', copiar:'{slug}' },
+    { t:'Espere uns 2 minutos até o projeto ficar pronto (some o "Setting up project").' },
+    { t:'Pegue o endereço: menu da esquerda → "Project Settings" (engrenagem) → "Data API" → copie o "Project URL" (https://….supabase.co) e cole no primeiro campo abaixo.', link:'https://supabase.com/dashboard/project/_/settings/api', extra:'campos:supabase_url' },
+    { t:'Pegue a chave pública: "Project Settings" → "API Keys" → em "Publishable key" copie a chave que começa com sb_publishable_ e cole abaixo. Toque em "Salvar e testar".', link:'https://supabase.com/dashboard/project/_/settings/api-keys', extra:'campos:supabase_url,supabase_chave' },
+    { t:'Bom saber: o plano grátis pausa o projeto depois de 7 dias sem uso. O sistema manda sinal a cada 15 minutos e isso o mantém vivo. Se um dia aparecer "Paused" no Supabase, abra o projeto e toque em "Restore project".' }
    ] },
- { id:'repositorio', titulo:'Criar o endereço do site', curto:'Repositório no GitHub', quem:'voce', tempo:'5 min', teste:'site', campos:['site_url','github_url'],
-   porque:'O GitHub é quem coloca o site no ar, de graça. O endereço vai ser algo como usuario.github.io/{slug}.',
-   precisa:['Conta no GitHub (pode ser a sua ou uma do restaurante)'],
+
+ { id:'repositorio', titulo:'Criar o endereço do site', curto:'Repositório no GitHub', quem:'voce', tempo:'5 min', teste:'site', campos:['github_url','site_url'],
+   porque:'O GitHub coloca o site no ar de graça. O endereço vai ser usuario.github.io/{slug}.',
+   precisa:['Conta no GitHub (pode ser a sua)'],
    partes:[
-    { t:'Entre em github.com. Toque no "+" lá em cima → "New repository". Em "Repository name" escreva {slug}. Marque "Public" e marque também "Add a README file" (cria a pasta principal, a "main"). Toque em "Create repository".', link:'https://github.com/new' },
-    { t:'Dentro do repositório: "Settings" → "Pages". Em "Source" escolha "Deploy from a branch", em Branch escolha "main" e a pasta "/ (root)" e toque em Save.' },
-    { t:'O endereço do site aparece no alto da página Pages (ex.: https://usuario.github.io/{slug}/). Cole abaixo o endereço do site e o endereço do repositório (ex.: https://github.com/usuario/{slug}) e toque em Salvar.', extra:'campos' },
-    { t:'Se for usar o Claude para gravar arquivos: Settings → Applications → Installed GitHub Apps → Claude → Configure → libere este repositório. Se for fazer sozinho, pule esta parte.' }
+    { t:'Entre no GitHub (ou crie a conta em github.com/signup). Toque no "+" lá em cima → "New repository".', link:'https://github.com/new' },
+    { t:'Repository name: {slug}. Marque "Public". Marque "Add a README file". Toque em "Create repository".', copiar:'{slug}' },
+    { t:'Copie o endereço da página do repositório que abriu (ex.: https://github.com/usuario/{slug}) e cole abaixo. Salve.', extra:'campos:github_url' },
+    { t:'No repositório: "Settings" → "Pages". Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
+    { t:'Espere 1 minuto e atualize a página Pages: aparece "Your site is live at https://usuario.github.io/{slug}/". Copie esse endereço (com a barra no fim) e cole abaixo. Toque em "Salvar e testar".', link:'{github_url}/settings/pages', extra:'campos:github_url,site_url' },
+    { t:'Só se for usar o Claude para gravar arquivos: GitHub → sua foto → Settings → Applications → "Claude" → Configure → libere o repositório {slug}. Fazendo sozinho, pule.', link:'https://github.com/settings/installations' }
    ] },
- { id:'banco', titulo:'Montar as tabelas do banco', curto:'Copiar e colar os códigos', quem:'voce', tempo:'20 min', teste:'banco',
+
+ { id:'banco', titulo:'Montar as tabelas do banco', curto:'Copiar e colar os códigos', quem:'voce', tempo:'25 min', teste:'banco',
    porque:'O banco vem vazio. Estes códigos criam todas as tabelas, regras de segurança e funções do sistema.',
-   precisa:['O banco criado na etapa anterior','Paciência: são várias partes, uma de cada vez'],
+   precisa:['O banco criado (etapa 2)','A chave secreta do Supabase (a parte 2 mostra onde)','Paciência: são várias partes, uma de cada vez'],
    partes:[
-    { t:'No Supabase do restaurante, abra "SQL Editor" (ícone de terminal no menu da esquerda) e toque em "New query".' },
-    { t:'Agora é sempre igual: toque em Copiar no código abaixo, cole no SQL Editor (apague o que tiver lá antes), toque em "Run" e espere aparecer "Success". Volte aqui, marque "Já apliquei" e vá para o próximo. Se aparecer "already exists", essa parte já estava feita: só siga.', extra:'codigos' },
+    { t:'Abra o SQL Editor do Supabase do restaurante (ícone de terminal no menu da esquerda) e toque em "New query". Deixe essa aba aberta: você vai voltar nela várias vezes.', link:SB + '/sql/new' },
+    { t:'Um dos códigos (o "Cofre de chaves · parte 1") precisa da chave SECRETA do Supabase: "Project Settings" → "API Keys" → "Secret keys" → toque no olho ou em copiar (começa com sb_secret_; se não houver, toque em "New secret key"). Você cola ela no campo que aparece junto daquele código. Ela não fica guardada no painel.', link:SB + '/settings/api-keys' },
+    { t:'Agora é sempre igual: toque em "Copiar código", vá ao SQL Editor, apague o que estiver lá, cole, toque em "Run" e espere "Success". Volte aqui e toque em "Já colei e rodei". Se aparecer "already exists", aquela parte já estava feita: só siga.', extra:'codigos' },
     { t:'Terminou todos? Toque em Testar. Tem que aparecer "Banco do sistema instalado".', extra:'teste' }
    ],
-   pedido:'Aplique o banco completo do sistema no restaurante "{nome}" (código {slug}, projeto Supabase {ref}): estrutura, ajustes em ordem e conferência de segurança. Não use nenhum dado do Texas Burger.' },
+   pedido:'Aplique o banco completo do sistema no restaurante "{nome}" (código {slug}, projeto Supabase {ref}): estrutura, ajustes em ordem, cofre de chaves e conferência de segurança. Não use nenhum dado do Texas Burger.' },
+
  { id:'funcoes', titulo:'Publicar as funções do servidor', curto:'O GitHub publica para você (pelo celular)', quem:'voce', tempo:'10 min', teste:'funcoes',
-   porque:'São os "robôs" do servidor: mandam avisos no celular, fazem backup, falam com o iFood e com as IAs. O próprio GitHub do restaurante publica as 33 funções: você só toca em um botão.',
-   precisa:['O GitHub do restaurante (etapa "Criar o endereço do site")','O login do Supabase do restaurante'],
+   porque:'São os "robôs" do servidor: avisos no celular, backup, iFood, pagamentos e IAs. O próprio GitHub do restaurante publica as 33 funções: você só toca em um botão.',
+   precisa:['O repositório do GitHub (etapa 3)','O login do Supabase do restaurante'],
    partes:[
-    { t:'No Supabase, crie uma chave de acesso: abra o link abaixo → "Generate new token" → nome: publicar-{slug} → validade: a maior que tiver → "Generate token". COPIE a chave (começa com sbp_). Ela só aparece agora.', link:'https://supabase.com/dashboard/account/tokens' },
-    { t:'No GitHub, abra o repositório {slug} → "Settings" → "Secrets and variables" → "Actions" → "New repository secret". Em Name escreva exatamente o nome abaixo. Em Secret cole a chave sbp_ do passo anterior. Toque em "Add secret".', copiar:'SUPABASE_ACCESS_TOKEN', link:'{github_url}/settings/secrets/actions/new' },
-    { t:'Ainda no repositório: "Add file" → "Create new file". No nome do arquivo cole o caminho abaixo (as barras criam as pastas sozinhas). No conteúdo cole o código abaixo. Toque em "Commit changes".', extra:'workflow', link:'{github_url}/new/main' },
-    { t:'Abra a aba "Actions" do repositório → "Publicar funções do servidor" → "Run workflow" → "Run workflow" (verde). Espere 3 a 5 minutos até aparecer o ✓ verde. Se aparecer ✗ vermelho, toque nele e copie o erro para o Claude.', link:'{github_url}/actions' },
-    { t:'Toque em Testar. Tem que aparecer "Funções do servidor respondendo". Sempre que o sistema tiver funções novas, é só repetir a parte 4 (Run workflow).', extra:'teste' }
+    { t:'Crie uma chave de acesso do Supabase: abra o link → "Generate new token" → nome: publicar-{slug} → validade: a maior que tiver → "Generate token". COPIE a chave (começa com sbp_). Ela só aparece uma vez.', link:'https://supabase.com/dashboard/account/tokens', copiar:'publicar-{slug}' },
+    { t:'No GitHub: repositório {slug} → "Settings" → "Secrets and variables" → "Actions" → "New repository secret". Em "Name" cole o nome abaixo. Em "Secret" cole a chave sbp_. Toque em "Add secret".', copiar:'SUPABASE_ACCESS_TOKEN', link:'{github_url}/settings/secrets/actions/new' },
+    { t:'No repositório: "Add file" → "Create new file". No campo do nome cole o caminho abaixo (as barras criam as pastas sozinhas). No campo grande cole o conteúdo. Toque em "Commit changes" (duas vezes).', extra:'workflow', link:'{github_url}/new/main' },
+    { t:'Abra a aba "Actions" do repositório. Se aparecer um botão verde "I understand my workflows, go ahead and enable them", toque nele. Depois toque em "Publicar funções do servidor" → "Run workflow" → "Run workflow" (verde).', link:'{github_url}/actions' },
+    { t:'Espere 3 a 5 minutos até aparecer o ✓ verde. Se aparecer ✗ vermelho, toque nele → "publicar" → copie o erro e mande ao Claude. Depois toque em Testar: tem que aparecer "Funções do servidor respondendo". Quando o sistema ganhar funções novas, é só repetir a parte 4.', extra:'teste' }
    ],
-   pedido:'Publique as 33 funções do servidor (edge functions) no projeto Supabase {ref} do restaurante "{nome}" ({site_url}), com verify_jwt desligado, e confira que a função ping responde.' },
- { id:'admin', titulo:'Criar o primeiro administrador', curto:'Login do dono', quem:'voce', tempo:'3 min',
-   porque:'É o login que o dono vai usar para entrar na área de funcionários.',
-   precisa:['Escolher um login e uma senha para o dono'],
+   pedido:'Publique as 33 funções do servidor (edge functions) no projeto Supabase {ref} do restaurante "{nome}" ({site_url}), com verify_jwt desligado e o segredo SITE_URL, e confira que a função ping responde.' },
+
+ { id:'admin', titulo:'Criar os logins', curto:'Administrador do dono e o seu de suporte', quem:'voce', tempo:'5 min',
+   porque:'O Administrador é o login do dono. O Desenvolvedor é o SEU login de suporte: entra mesmo com o restaurante bloqueado e sem a tela dos termos.',
+   precisa:['Escolher login e senha do dono','Sua senha de Desenvolvedor'],
    partes:[
-    { t:'No SQL Editor do Supabase do restaurante, rode os dois códigos abaixo, na ordem. No segundo, troque o login e a senha de exemplo pelos que você escolheu antes de rodar.', extra:'codigos' },
-    { t:'Anote o login e a senha para entregar ao dono. Ele pode trocar a senha depois.' }
+    { t:'Rode os 4 códigos abaixo no SQL Editor, na ordem. No 2º, escreva o login e a senha do dono nos campos (a senha precisa de 8 letras ou números) e o código já sai pronto. No 4º, escreva a SUA senha de Desenvolvedor. Nada disso fica guardado no painel.', extra:'codigos', link:SB + '/sql/new' },
+    { t:'Teste: abra o site → "Área de Funcionários" (no rodapé do cardápio) → entre com o login do dono. Depois saia e entre com o login Lucas. Anote o login e a senha do dono para entregar a ele: ele pode trocar a senha depois.', link:'{site_url}' }
    ],
-   pedido:'Crie o primeiro Administrador do restaurante "{nome}" (projeto {ref}) com o login: ________ . Gere a senha e me entregue só a mim.' },
- { id:'entrada', titulo:'Entrar com o Google', curto:'Login do cliente com a conta Google', quem:'voce', tempo:'20 min',
-   porque:'Deixa o cliente entrar no cardápio com a conta Google (para cupons e carimbos) e prepara o backup no Drive.',
-   precisa:['O e-mail Google do restaurante','O endereço do site ({site_url})'],
-   partes:[
-    { t:'SUPABASE: Authentication → URL Configuration. Em "Site URL" cole {site_url}. Em "Redirect URLs" toque em "Add URL" e cole {site_url}** . Save.' },
-    { t:'GOOGLE CLOUD: entre em console.cloud.google.com com o e-mail do restaurante. No alto, seletor de projeto → "Novo projeto" → nome {slug} → Criar. Confira que ele ficou selecionado.', link:'https://console.cloud.google.com/' },
-    { t:'Menu ☰ → APIs e serviços → Tela de consentimento OAuth (ou "Google Auth Platform") → Começar. Nome do app: {nome}. E-mail de suporte: o do restaurante. Público: Externo. Aceite e Criar.' },
-    { t:'O Google exige uma página de privacidade. O painel gera para você: toque no botão abaixo, baixe o privacidade.html e suba no GitHub do restaurante, NA RAIZ (mesmo lugar do index.html): "Add file" → "Upload files" → "Commit changes".', extra:'privacidade', link:'{github_url}/upload/main' },
-    { t:'Em "Branding": página inicial = {site_url} ; política de privacidade = {site_url}privacidade.html ; domínio autorizado = só o domínio do site (ex.: usuario.github.io, sem https). Salve. Não clique em "Ver problemas".' },
-    { t:'Em "Público-alvo": toque em "Publicar app" e confirme. Sem isso só e-mails de teste conseguem entrar.' },
-    { t:'APIs e serviços → Credenciais → Criar credenciais → "ID do cliente OAuth" → tipo "Aplicativo da Web" → nome "Login do sistema".' },
-    { t:'Em "Origens JavaScript autorizadas" cole SÓ: {site_origem}' , copiar:'{site_origem}' },
-    { t:'Em "URIs de redirecionamento autorizados" adicione os dois endereços abaixo e toque em Criar.', copiar:'{supabase_url}/auth/v1/callback\n{supabase_url}/functions/v1/drive-oauth' },
-    { t:'Copie o "ID do cliente" e a "Chave secreta do cliente" (a chave só aparece inteira agora). GUARDE os dois: a etapa do Drive usa os mesmos.' },
-    { t:'Volte ao SUPABASE: Authentication → Sign In / Providers → Google → ligue "Enable", cole o ID e a chave secreta → Save.' },
-    { t:'Teste: abra o site, toque em "Entrar" no cardápio e entre com um e-mail Google. Erro "redirect_uri_mismatch" = algum endereço da parte 9 foi colado diferente. "Acesso bloqueado" = falta publicar o app (parte 6).' },
-    { t:'(Recomendado, tira o aviso "app não verificado") Abra o Search Console com o MESMO e-mail → Adicionar propriedade → "Prefixo do URL" → cole {site_url} → método "Arquivo HTML" → baixe o arquivo google….html → suba no GitHub NA RAIZ (igual ao privacidade.html) → volte e toque em Verificar. Nunca apague esse arquivo.', link:'https://search.google.com/search-console' }
-   ],
-   pedido:'Publique no site do restaurante "{nome}" ({site_url}) a página estática privacidade.html (Aviso de Privacidade completo com a seção dos dados do Google), gerada com ferramentas/gerar-privacidade.js a partir dos dados do banco (select public.api_aviso_privacidade()). Se eu mandar o arquivo google....html do Search Console, publique também na raiz do site.' },
- { id:'drive', titulo:'Backup no Google Drive', curto:'Cópias de segurança automáticas', quem:'voce', tempo:'10 min',
-   porque:'O sistema guarda cópias de segurança no Drive do restaurante. Se algo der errado, dá para voltar.',
-   precisa:['O ID do cliente e a chave secreta da etapa anterior'],
-   partes:[
-    { t:'Se o restaurante NÃO vai usar backup no Drive, toque em "Pular" lá embaixo.' },
-    { t:'Google Cloud (mesmo projeto): ☰ → APIs e serviços → Biblioteca → procure "Google Drive API" → Ativar.' },
-    { t:'Google Auth Platform → "Acesso a dados" → "Adicionar ou remover escopos" → filtre "drive" → marque .../auth/drive → Atualizar → Salvar. Ignore o aviso de "escopo não verificado".' },
-    { t:'Rode o código abaixo no SQL Editor do Supabase, trocando o ID do cliente e a chave secreta. Copie os dois pelo botão de copiar do Google (nunca digite: l, I e 1 se confundem).', extra:'codigos' },
-    { t:'Entre no sistema como Administrador → Sistema → Backup e espaço → cartão "Google Drive" → "Conectar o Drive principal". Escolha a conta do restaurante e aceite. Na tela "O Google não verificou este app": Avançado → Acessar.' }
-   ],
-   pedido:'Guarde no cofre (Vault) do Supabase do restaurante "{nome}" (projeto {ref}) as chaves google_client_id e google_client_secret. ID do cliente: ________  Chave secreta: ________  Depois confira que a função drive-api responde.' },
- { id:'ia', titulo:'Chaves do assistente virtual', curto:'IAs grátis para o atendente', quem:'voce', tempo:'15 min', modulo:'ia',
-   porque:'O assistente responde os clientes no cardápio. Cada restaurante precisa das próprias chaves (grátis).',
-   precisa:['O e-mail do restaurante','Login de Administrador do sistema'],
-   partes:[
-    { t:'Se o módulo "Assistente virtual" estiver desligado, toque em "Pular". O mínimo é GROQ + GEMINI; as outras são reserva.' },
-    { t:'GROQ: console.groq.com/keys → "Create API Key" → copie a chave (começa com gsk_). Ela só aparece uma vez.', link:'https://console.groq.com/keys' },
-    { t:'GEMINI: aistudio.google.com/apikey → "Criar chave de API" → copie (começa com AIza ou AQ.).', link:'https://aistudio.google.com/apikey' },
-    { t:'(Opcional) CLOUDFLARE: dash.cloudflare.com → copie o código de 32 letras da barra de endereço (Account ID). Depois Profile → API Tokens → Create Token → modelo "Workers AI" → copie o token.', link:'https://dash.cloudflare.com/profile/api-tokens' },
-    { t:'(Opcional) NVIDIA: build.nvidia.com → Settings → API Keys → Generate → copie (começa com nvapi-).', link:'https://build.nvidia.com/settings/api-keys' },
-    { t:'Entre no sistema como Administrador → Sistema → Integrações e contas → "Chaves das IAs". Em cada uma: colar, digitar sua senha, salvar e tocar em "Testar" (tem que aparecer "Funcionando").' }
-   ] },
- { id:'planilhas', titulo:'Planilhas Google de reserva', curto:'Opcional', quem:'voce', tempo:'20 min', opcional:true, modulo:'planilhas', campos:['api_url','contingencia_url'],
-   porque:'Uma cópia do sistema em planilha, para continuar vendendo se o banco cair. É opcional.',
-   precisa:['O e-mail do restaurante'],
-   partes:[
-    { t:'Se o restaurante não vai usar planilhas, desligue o módulo "Planilhas" na etapa Módulos e toque em "Pular".' },
-    { t:'No Google Drive do restaurante crie duas planilhas: "Principal" e "Contingência". Em cada uma: Extensões → Apps Script → apague tudo e cole o código abaixo (o primeiro na principal, o segundo na contingência).', extra:'codigos' },
-    { t:'Em cada Apps Script: Implantar → Nova implantação → "Aplicativo da Web" → Executar como: Eu → Quem tem acesso: Qualquer pessoa → Implantar. Copie o endereço que termina em /exec e cole abaixo.', extra:'campos' },
-    { t:'O código 3 ("Cofre de chaves · parte 2") vai no SQL Editor do Supabase: troque o endereço /exec dentro dele pelo da planilha principal e rode. Ele mostra uma chave: no Apps Script da planilha principal → Configurações do projeto → Propriedades do script → adicione SB_CHAVE_SERVIDOR com essa chave. Depois Implantar → Gerenciar implantações → lápis → Nova versão.', extra:'codigos' }
-   ] },
- { id:'push', titulo:'Avisos no celular', curto:'O painel gera as chaves para você', quem:'voce', tempo:'2 min', campos:['push_chave_publica'],
-   porque:'Faz o celular da equipe apitar quando chega pedido, e avisa o cliente quando o pedido sai.',
+   pedido:'Crie o primeiro Administrador do restaurante "{nome}" (projeto {ref}) com o login: ________ e o meu login de Desenvolvedor (Lucas). Gere a senha do Administrador e me entregue só a mim.' },
+
+ { id:'push', titulo:'Avisos no celular', curto:'O painel gera as chaves para você', quem:'voce', tempo:'3 min', campos:['push_chave_publica'],
+   porque:'Faz o celular da equipe apitar quando chega pedido e avisa o cliente quando o pedido sai.',
    precisa:['Nada: o painel cria as chaves'],
    partes:[
-    { t:'Toque em "Gerar chaves agora". O painel cria as duas chaves deste restaurante e já guarda a pública aqui.', extra:'push' },
-    { t:'Copie o código que apareceu e rode no SQL Editor do Supabase do restaurante. Ele guarda as chaves no cofre do banco (a privada nunca fica no site). Pronto.' }
+    { t:'Toque em "Gerar chaves agora". O painel cria as duas chaves deste restaurante e já guarda a pública.', extra:'push' },
+    { t:'Copie o código que apareceu e rode no SQL Editor do Supabase do restaurante. Ele guarda as chaves no cofre do banco (a privada nunca fica no site). Se o site já estiver no ar, baixe de novo o config-restaurante.js e suba por cima.', link:SB + '/sql/new' }
    ],
    pedido:'Gere as chaves de aviso no celular (VAPID) do restaurante "{nome}" (projeto {ref}), guarde-as no Vault (vapid_publica e vapid_privada) e me devolva a chave pública.' },
- { id:'leitura', titulo:'Ligar o assistente do painel', curto:'Para a sua IA ler os dados dele', quem:'voce', tempo:'3 min',
-   porque:'Deixa o assistente do SEU painel responder coisas como "quanto esse restaurante vendeu na semana?" ou "o que está faltando no estoque?". É só leitura: ele nunca muda nada no restaurante e não vê telefone nem endereço de cliente.',
-   precisa:['Banco do restaurante pronto (etapa "Montar as tabelas")'],
-   partes:[
-    { t:'Rode no SQL Editor do Supabase do restaurante o código abaixo. Restaurantes criados agora já vêm com ele; rodar de novo não faz mal.', extra:'codigos' },
-    { t:'Toque em "Gerar chave de leitura". Copie o código que aparecer, rode também no SQL Editor do Supabase do restaurante e depois toque em "Testar a leitura".', extra:'leitura' }
-   ] },
- { id:'marca', titulo:'Cores e logos', curto:'A cara do restaurante', quem:'voce', tempo:'10 min',
+
+ { id:'marca', titulo:'Cores e logos', curto:'A cara do restaurante', quem:'voce', tempo:'15 min',
    porque:'Deixa o sistema com as cores e a logo do restaurante. Muda na hora, sem mexer no site.',
    precisa:['3 imagens: logo principal, logo de impressão e ícone (o painel ensina a pedir ao ChatGPT)'],
    partes:[
-    { t:'Escolha um tema pronto ou ajuste as 3 cores. Escreva o slogan e o nome do atendente virtual.', extra:'marca' },
-    { t:'Agora as logos. Cada uma tem um jeito certo. Toque em "Como deve ser" para ver as regras e o texto pronto para pedir ao ChatGPT.', extra:'logos' }
+    { t:'Escolha um tema pronto ou ajuste as 3 cores. Escreva o slogan e o nome do atendente virtual. Toque em Salvar.', extra:'marca' },
+    { t:'Agora as logos. Cada uma tem um jeito certo: toque em "Como deve ser" para ver as regras e o texto pronto para pedir ao ChatGPT. Depois envie cada imagem.', extra:'logos' }
    ] },
+
  { id:'modulos', titulo:'Módulos contratados', curto:'Ligue só o que ele usa', quem:'voce', tempo:'1 min',
-   porque:'Desligado, a tela some e não gasta nada do servidor. Dá para ligar depois.',
+   porque:'Desligado, a tela some e não gasta nada do servidor. Dá para ligar depois, na hora.',
    precisa:['Saber o que o restaurante contratou'],
-   partes:[ { t:'Ligue só o que o restaurante contratou e toque em Salvar. iFood e nota fiscal só funcionam depois que o restaurante cadastrar as chaves dele no sistema.', extra:'modulos' } ] },
+   partes:[ { t:'Ligue só o que o restaurante contratou e toque em Salvar. iFood, nota fiscal, Mercado Pago e InfinitePay só funcionam depois que o restaurante cadastrar as contas dele no sistema (Administrador → Sistema → Integrações e contas).', extra:'modulos' } ] },
+
  { id:'publicar', titulo:'Colocar o site no ar', curto:'4 arquivos no GitHub', quem:'voce', tempo:'5 min', teste:'site',
    porque:'O site do restaurante é só uma "porta" com 4 arquivos pequenos. O sistema em si vem do motor e se atualiza sozinho.',
-   precisa:['Etapas do banco, endereço do site e marca feitas'],
+   precisa:['Banco, endereço do site e marca feitos'],
    partes:[
-    { t:'Baixe os 4 arquivos abaixo (um toque em cada). Eles já saem prontos para este restaurante. A coluna "Onde colocar" diz o lugar de cada um no GitHub.', extra:'publicar' },
-    { t:'No GitHub, abra o repositório {slug} → "Add file" → "Upload files" → escolha os 4 arquivos de uma vez → "Commit changes". Eles ficam na RAIZ (a primeira página do repositório, sem pasta). Se já existirem, o GitHub troca pelos novos.', link:'{github_url}/upload/main' },
-    { t:'Espere 1 a 2 minutos e toque em "Conferir o site". O painel abre cada arquivo no ar e diz se está certo. Depois abra o site: tem que aparecer o cardápio com o nome e as cores do restaurante.', extra:'conferir' }
+    { t:'Baixe os 4 arquivos abaixo (um toque em cada). Eles já saem prontos para este restaurante. "Onde colocar" diz o lugar de cada um no GitHub.', extra:'publicar' },
+    { t:'No GitHub: repositório {slug} → "Add file" → "Upload files" → escolha os 4 arquivos de uma vez → "Commit changes". Eles ficam na RAIZ (a primeira página do repositório, sem pasta). Se já existirem, o GitHub troca pelos novos.', link:'{github_url}/upload/main' },
+    { t:'Espere 1 a 2 minutos e toque em "Conferir o site": o painel abre cada arquivo no ar e diz se está certo. Depois abra o site: tem que aparecer o cardápio com o nome e as cores do restaurante.', extra:'conferir', link:'{site_url}' },
+    { t:'Para o futuro: cores, logos e módulos mudam pelo painel, na hora. Se mudar endereço do Supabase, planilhas ou avisos, baixe de novo só o config-restaurante.js e suba por cima.' }
    ],
-   pedido:'Crie o repositório leve do restaurante "{nome}" ({slug}): grave os arquivos index.html, sw.js, manifest.webmanifest e config-restaurante.js que o painel gera para ele. Confirme se publicou e abriu sem erro.' },
- { id:'app', titulo:'App Android da equipe', curto:'Opcional', quem:'voce', tempo:'15 min', opcional:true,
-   porque:'Um app que abre o sistema em tela cheia no celular da equipe (sem a barra do navegador).',
-   precisa:['Site já no ar'],
+   pedido:'Grave no repositório do restaurante "{nome}" ({github_url}) os arquivos index.html, sw.js, manifest.webmanifest e config-restaurante.js que o painel gera para ele. Confirme se publicou e abriu sem erro.' },
+
+ { id:'entrada', titulo:'Entrar com o Google', curto:'Login do cliente com a conta Google', quem:'voce', tempo:'25 min',
+   porque:'Deixa o cliente entrar no cardápio com a conta Google (para cupons e carimbos) e prepara o backup no Drive.',
+   precisa:['O e-mail Google do restaurante','O site já no ar (etapa anterior)'],
    partes:[
-    { t:'Entre em pwabuilder.com, cole {site_url} e toque em Start → Package for stores → Android → Generate Package. Em "Signing key" escolha "Create new". Baixe o zip.', link:'https://www.pwabuilder.com/' },
-    { t:'GUARDE o signing.keystore e o signing-key-info.txt num lugar seguro e nunca publique: sem eles não dá para atualizar o app.' },
-    { t:'No GitHub do restaurante crie a pasta downloads e suba o .apk com o nome equipe.apk. O assetlinks.json vai no repositório <usuario>.github.io, em .well-known/assetlinks.json (com um arquivo vazio .nojekyll). Ou mande o zip ao Claude.' },
-    { t:'Instale o equipe.apk num Android e abra: tem que abrir em tela cheia.' }
+    { t:'SUPABASE → Authentication → URL Configuration. Em "Site URL" cole o primeiro endereço abaixo. Em "Redirect URLs" toque em "Add URL", cole o segundo e salve.', link:SB + '/auth/url-configuration', copiar:'{site_url}\n{site_url}**' },
+    { t:'GOOGLE CLOUD: entre com o e-mail do restaurante e crie um projeto: nome {slug} → Criar. Confira no alto da tela que ele ficou selecionado.', link:'https://console.cloud.google.com/projectcreate', copiar:'{slug}' },
+    { t:'Abra "Google Auth Platform" → "Começar". Nome do app: {nome}. E-mail de suporte: o do restaurante. Público: "Externo". E-mail de contato: o mesmo. Aceite e toque em "Criar".', link:'https://console.cloud.google.com/auth/overview', copiar:'{nome}' },
+    { t:'O Google exige uma página de privacidade. O painel gera para você: toque no botão abaixo, baixe o privacidade.html e suba no GitHub do restaurante NA RAIZ (mesmo lugar do index.html): "Add file" → "Upload files" → escolha o arquivo → "Commit changes".', extra:'privacidade', link:'{github_url}/upload/main' },
+    { t:'"Branding" (Identidade visual): preencha os 3 endereços abaixo (página inicial, política de privacidade e, em "Domínios autorizados", só o domínio, sem https). Salve. Não toque em "Ver problemas".', link:'https://console.cloud.google.com/auth/branding', copiar:'{site_url}\n{site_url}privacidade.html\n{dominio_site}' },
+    { t:'"Público-alvo" (Audience): toque em "Publicar app" e confirme. Sem isso só e-mails de teste conseguem entrar.', link:'https://console.cloud.google.com/auth/audience' },
+    { t:'"Clientes" → "Criar cliente": tipo "Aplicativo da Web", nome "Login do sistema".', link:'https://console.cloud.google.com/auth/clients/create', copiar:'Login do sistema' },
+    { t:'Em "Origens JavaScript autorizadas" (campo de cima) adicione SÓ o endereço abaixo (sem barra no fim).', copiar:'{site_origem}' },
+    { t:'Em "URIs de redirecionamento autorizados" (campo de baixo) adicione os DOIS endereços abaixo, um de cada vez. Toque em "Criar".', copiar:'{supabase_url}/auth/v1/callback\n{supabase_url}/functions/v1/drive-oauth' },
+    { t:'Vai aparecer o "ID do cliente" (termina em .apps.googleusercontent.com) e a "Chave secreta do cliente" (começa com GOCSPX-). Copie os dois e GUARDE: a etapa do Drive usa os mesmos. A chave secreta só aparece inteira agora.' },
+    { t:'Volte ao SUPABASE → Authentication → Sign In / Providers → Google → ligue "Enable Sign in with Google", cole o ID do cliente e a chave secreta → Save.', link:SB + '/auth/providers' },
+    { t:'Teste: abra o site, toque em "Entrar" no cardápio e entre com um e-mail Google. Erro "redirect_uri_mismatch" = algum endereço da parte 9 está diferente. "Acesso bloqueado" = falta publicar o app (parte 6).', link:'{site_url}' },
+    { t:'(Recomendado, tira o aviso "app não verificado") Search Console com o MESMO e-mail → "Adicionar propriedade" → "Prefixo do URL" → cole {site_url} → método "Arquivo HTML" → baixe o google….html → suba NA RAIZ do GitHub (igual ao privacidade.html) → volte e toque em "Verificar". Depois, no Google Cloud → Branding → "Ver problemas" → "Corrigi os problemas". Nunca apague esse arquivo.', link:'https://search.google.com/search-console/welcome' }
    ],
-   pedido:'Estou mandando o zip do PWABuilder do restaurante "{nome}". Coloque o APK como downloads/equipe.apk no repositório do site, publique o assetlinks.json em .well-known no repositório <usuario>.github.io (com .nojekyll) e confira que o app abre em tela cheia. Não guarde o keystore em nenhum repositório.' },
+   pedido:'Publique no site do restaurante "{nome}" ({site_url}) a página privacidade.html gerada pelo painel e, se eu mandar, o arquivo google….html do Search Console, os dois na raiz do repositório.' },
+
+ { id:'drive', titulo:'Backup no Google Drive', curto:'Cópias de segurança automáticas', quem:'voce', tempo:'10 min',
+   porque:'O sistema guarda cópias de segurança no Drive do restaurante. Se algo der errado, dá para voltar.',
+   precisa:['O ID do cliente e a chave secreta (etapa anterior)','Login de Administrador do sistema'],
+   partes:[
+    { t:'Se o restaurante NÃO vai usar backup no Drive, toque em "Pular" lá embaixo.' },
+    { t:'Google Cloud (mesmo projeto): ative a "Google Drive API" → toque em "Ativar".', link:'https://console.cloud.google.com/apis/library/drive.googleapis.com' },
+    { t:'Google Auth Platform → "Acesso a dados" → "Adicionar ou remover escopos" → no filtro escreva drive → marque o que termina em /auth/drive → "Atualizar" → "Salvar". Ignore o aviso de "escopo não verificado".', link:'https://console.cloud.google.com/auth/scopes' },
+    { t:'Cole o ID do cliente e a chave secreta nos campos do código abaixo (copie do Google pelo botão de copiar, nunca digite: l, I e 1 se confundem). Toque em "Copiar código" e rode no SQL Editor.', extra:'codigos', link:SB + '/sql/new' },
+    { t:'Entre no sistema como Administrador → Sistema → Backup e espaço → cartão "Google Drive" → "Conectar o Drive principal". Escolha a conta do restaurante. Na tela "O Google não verificou este app": "Avançado" → "Acessar". Volta com "Drive principal conectado". Se usar contingência, repita em "Drive da contingência" com a OUTRA conta.', link:'{site_url}' }
+   ],
+   pedido:'Guarde no cofre (Vault) do Supabase do restaurante "{nome}" (projeto {ref}) as chaves google_client_id e google_client_secret. ID do cliente: ________  Chave secreta: ________  Depois confira que a função drive-api responde.' },
+
+ { id:'ia', titulo:'Chaves do atendente virtual', curto:'IAs grátis do restaurante', quem:'voce', tempo:'15 min', modulo:'ia',
+   porque:'O atendente responde os clientes no cardápio. Cada restaurante precisa das PRÓPRIAS chaves (cada chave grátis tem a sua cota).',
+   precisa:['O e-mail do restaurante','Login de Administrador do sistema'],
+   partes:[
+    { t:'Se o módulo "Assistente virtual" estiver desligado, toque em "Pular". O mínimo é GROQ + GEMINI. As outras são reserva: entram quando uma falha ou acaba a cota. Copie cada chave assim que aparecer (algumas só aparecem uma vez).' },
+    { t:'GROQ: entre com o e-mail do restaurante → "Create API Key" → nome {slug} → copie (começa com gsk_).', link:'https://console.groq.com/keys' },
+    { t:'GROQ 2 (reserva): mesmo site, mas com OUTRA conta (outro e-mail) → crie e copie outra chave gsk_.', link:'https://console.groq.com/keys' },
+    { t:'GEMINI: "Criar chave de API" → "Criar chave em um novo projeto" → copie (começa com AIza ou AQ.).', link:'https://aistudio.google.com/apikey' },
+    { t:'GEMINI 2 (reserva): de novo "Criar chave de API", mas escolha criar em OUTRO projeto novo (assim tem cota própria).', link:'https://aistudio.google.com/apikey' },
+    { t:'CLOUDFLARE (reserva, 2 dados): crie a conta, abra o painel e copie o código de 32 letras e números que aparece na barra de endereço (é o Account ID). Depois: perfil → "API Tokens" → "Create Token" → modelo "Workers AI" → "Continue to summary" → "Create Token" → copie (começa com cfut_).', link:'https://dash.cloudflare.com/profile/api-tokens' },
+    { t:'NVIDIA (reserva mais lenta): crie a conta e confirme o e-mail → "Generate API Key" → copie (começa com nvapi-).', link:'https://build.nvidia.com/settings/api-keys' },
+    { t:'Entre no sistema do restaurante como Administrador → Sistema → Integrações e contas → "Chaves das IAs". Em cada uma: colar, digitar a senha de administrador, salvar e tocar em "Testar" (tem que aparecer "Funcionando"). No Cloudflare cole o Account ID e o token.', link:'{site_url}' },
+    { t:'Teste final: no cardápio, toque no botão do atendente e pergunte "qual o horário?". Se responder, está pronto.', link:'{site_url}' }
+   ] },
+
+ { id:'planilhas', titulo:'Planilhas Google de reserva', curto:'Opcional: para vender se o banco cair', quem:'voce', tempo:'30 min', opcional:true, modulo:'planilhas', campos:['contingencia_url','contingencia_chave','api_url'],
+   porque:'Uma cópia do sistema em planilhas do Google. Se o banco cair, o cardápio continua mostrando os produtos e recebendo pedidos numa fila. É opcional.',
+   precisa:['Duas contas Google: a do restaurante (principal) e OUTRA (contingência)','Um computador ajuda, mas dá pelo navegador do celular em modo "versão para computador"'],
+   partes:[
+    { t:'Se o restaurante não vai usar planilhas: desligue o módulo "Planilhas" na etapa "Módulos" e toque em "Pular". Se vai usar, comece pela CONTINGÊNCIA, na OUTRA conta Google.' },
+    { t:'CONTINGÊNCIA (outra conta): crie uma planilha nova com o nome "Contingência {nome}". Menu "Extensões" → "Apps Script". Apague tudo, cole o código abaixo e toque no disquete (Salvar).', link:'https://sheets.new', extra:'cod:gs-modelo-contingencia' },
+    { t:'Ainda na contingência: lá em cima, na lista de funções, escolha "setup" e toque em "Executar". Na primeira vez: "Revisar permissões" → escolha a conta → "Avançado" → "Acessar (não seguro)" → "Permitir".' },
+    { t:'Escolha a função "gerarChaves" → "Executar". Embaixo, no "Registro de execução", aparecem 3 chaves. Cole a CONTINGENCIA_CHAVE_PUBLICA no campo abaixo e salve. Guarde as outras duas (SERVIDOR e INTERNA) para a parte 7.', extra:'campos:contingencia_chave' },
+    { t:'"Implantar" → "Nova implantação" → engrenagem → "App da Web". Executar como: "Eu". Quem pode acessar: "Qualquer pessoa". "Implantar" → copie o endereço que termina em /exec e cole abaixo.', extra:'campos:contingencia_url' },
+    { t:'PRINCIPAL (conta do restaurante): planilha nova "Principal {nome}" → "Extensões" → "Apps Script" → apague tudo e cole o código abaixo. Procure a linha  const CONTINGENCIA_API_URL = \'\';  e cole o endereço /exec da contingência entre as aspas. Salve.', link:'https://sheets.new', extra:'cod:gs-modelo-principal' },
+    { t:'Na principal: rode a função "configurarIdPlanilha" (autorize igual à parte 3). Depois engrenagem "Configurações do projeto" → "Propriedades do script" → "Adicionar propriedade" duas vezes: CONTINGENCIA_CHAVE_SERVIDOR e CONTINGENCIA_CHAVE_INTERNA, com os valores da parte 4. Salve. Rode "conferirChavesContingencia": os 3 testes têm que dar OK.', copiar:'CONTINGENCIA_CHAVE_SERVIDOR\nCONTINGENCIA_CHAVE_INTERNA' },
+    { t:'Na principal: "Implantar" → "Nova implantação" → "App da Web" (Executar como "Eu", acesso "Qualquer pessoa") → copie o /exec e cole abaixo. Salve.', extra:'campos:api_url' },
+    { t:'No SQL Editor do Supabase rode o código abaixo (ele já vem com o /exec da principal). No resultado aparece uma chave: copie. Na principal → "Propriedades do script" → adicione SB_CHAVE_SERVIDOR com essa chave. Depois "Implantar" → "Gerenciar implantações" → lápis → Versão "Nova versão" → "Implantar".', extra:'cod:segredos2', copiar:'SB_CHAVE_SERVIDOR' },
+    { t:'Os endereços e a chave pública vão no config-restaurante.js. Se o site já estiver no ar, baixe de novo só esse arquivo (etapa "Colocar o site no ar") e suba por cima no GitHub.' }
+   ] },
+
+ { id:'leitura', titulo:'Ligar o assistente do painel', curto:'Para a sua IA ler os dados dele', quem:'voce', tempo:'3 min',
+   porque:'Deixa o assistente do SEU painel responder coisas como "quanto esse restaurante vendeu na semana?". É só leitura: nunca muda nada e não vê telefone nem endereço de cliente.',
+   precisa:['Banco do restaurante pronto'],
+   partes:[
+    { t:'Rode no SQL Editor do Supabase do restaurante o código abaixo. Restaurantes novos já vêm com ele; rodar de novo não faz mal.', extra:'codigos', link:SB + '/sql/new' },
+    { t:'Toque em "Gerar chave de leitura". Copie o código que aparecer, rode também no SQL Editor e toque em "Testar a leitura".', extra:'leitura' }
+   ] },
+
+ { id:'app', titulo:'App Android da equipe', curto:'Opcional: app em tela cheia', quem:'voce', tempo:'25 min', opcional:true,
+   porque:'Um app de verdade no celular da equipe (sem a barra do navegador). Instalado pelo arquivo .apk, fora da Play Store. Sem ele, a equipe instala pelo navegador, que também funciona.',
+   precisa:['Site no ar com o ícone do restaurante (etapas "Cores e logos" e "Colocar o site no ar")','Gerenciador de arquivos no celular (para renomear o arquivo)'],
+   partes:[
+    { t:'Abra o PWABuilder, cole o endereço do site e toque em "Start". Espere a nota (avisos amarelos não atrapalham). Toque em "Package For Stores" → "Android" → "Generate Package".', link:'https://www.pwabuilder.com/', copiar:'{site_url}' },
+    { t:'Na janela de opções, troque estes campos pelos valores abaixo (toque para copiar). O "Package ID" PRECISA ser único: se dois restaurantes usarem o mesmo, um app apaga o outro no celular.', extra:'apk' },
+    { t:'Em "Signing key" escolha "Create new". Preencha: Key alias "equipe", uma senha (Key password e Store password podem ser iguais; GUARDE), seu nome, "BR" no país. Toque em "Download Package". Vem um .zip.' },
+    { t:'Dentro do zip: o .apk (app-release-signed.apk), o assetlinks.json, o signing.keystore e o signing-key-info.txt. GUARDE o signing.keystore e o signing-key-info.txt num lugar seguro (ex.: seu Google Drive particular) e NUNCA suba no GitHub: sem eles não dá para atualizar o app.' },
+    { t:'No gerenciador de arquivos do celular, renomeie o app-release-signed.apk para equipe.apk (segure em cima → Renomear).', copiar:'equipe.apk' },
+    { t:'Suba o equipe.apk na pasta downloads do repositório {slug}: "Add file" → "Create new file" → nome downloads/LEIA.txt → escreva "App da equipe" → "Commit changes" (isso cria a pasta). Entre na pasta downloads → "Add file" → "Upload files" → equipe.apk → "Commit changes".', link:'{github_url}/new/main', copiar:'downloads/LEIA.txt' },
+    { t:'O app só abre em tela cheia se o GitHub "provar" que o site é dele. Isso fica num repositório especial chamado exatamente {gh_usuario}.github.io. Se ele ainda não existir: "New repository" → esse nome → Public → "Add a README file" → "Create". (Se já existir de outro restaurante, NÃO crie outro: use o mesmo.)', link:'https://github.com/new', copiar:'{gh_usuario}.github.io' },
+    { t:'Nesse repositório: "Add file" → "Create new file" → nome .well-known/assetlinks.json → no conteúdo cole o texto do assetlinks.json do zip. Se o arquivo JÁ existir (outro restaurante), use o "Juntar" abaixo para não apagar o app do outro. "Commit changes".', extra:'assetlinks', link:'https://github.com/{gh_usuario}/{gh_usuario}.github.io/new/main' },
+    { t:'Ainda nele: "Add file" → "Create new file" → nome .nojekyll → deixe vazio → "Commit changes". Depois "Settings" → "Pages" → Branch "main" e "/ (root)" → "Save". Espere 2 minutos e toque em "Conferir".', copiar:'.nojekyll', extra:'apkconferir' },
+    { t:'Instale num Android: abra o site → "Área de Funcionários" → entre → "Ajuda" → "Baixar o app da equipe" (ou abra o link direto abaixo). Abra o arquivo → "Instalar" (se pedir, permita instalar desta fonte). Tem que abrir em tela cheia. Se aparecer a barra do navegador, espere 10 minutos, desinstale e instale de novo.', link:'{site_url}downloads/equipe.apk' },
+    { t:'Para atualizar o app no futuro: no PWABuilder escolha "Use mine" em Signing key, envie o MESMO signing.keystore com as mesmas senhas e aumente o "App version". Troque o equipe.apk (e o assetlinks.json, se mudar a chave).' }
+   ],
+   pedido:'Estou mandando o zip do PWABuilder do restaurante "{nome}". Coloque o APK como downloads/equipe.apk no repositório do site, publique (ou junte) o assetlinks.json em .well-known no repositório {gh_usuario}.github.io (com .nojekyll) e confira que o app abre em tela cheia. Não guarde o keystore em nenhum repositório.' },
+
  { id:'contas', titulo:'Guardar as contas e senhas', curto:'Para o dono nunca perder um acesso', quem:'voce', tempo:'10 min',
-   porque:'Tudo o que você criou (Supabase, GitHub, Google, IAs) fica anotado dentro do sistema do restaurante, com senha protegida.',
+   porque:'Tudo o que foi criado fica anotado dentro do sistema do restaurante, com as senhas protegidas no cofre do banco.',
    precisa:['Login de Administrador do sistema'],
    partes:[
-    { t:'Entre no sistema como Administrador → Sistema → Integrações e contas → "Contas e acessos".' },
-    { t:'Crie um cartão para cada serviço: Supabase, GitHub, Google Cloud (ID do cliente na observação, chave secreta como senha), planilhas, app da equipe e IAs. As senhas ficam no cofre do banco, nunca no site.' }
+    { t:'Entre no sistema do restaurante como Administrador → Sistema → Integrações e contas → "Contas e acessos".', link:'{site_url}' },
+    { t:'Crie um cartão para cada item da lista abaixo (e-mail, link e observação). As senhas você digita em "Editar": ficam no cofre do banco, nunca no site, e só o Administrador vê, com a senha dele.', extra:'listacontas' }
    ] },
- { id:'teste', titulo:'Teste completo', curto:'Confira tudo antes de entregar', quem:'voce', tempo:'20 min',
+
+ { id:'teste', titulo:'Teste completo', curto:'Confira tudo antes de entregar', quem:'voce', tempo:'25 min',
    porque:'Garante que o cliente não vai encontrar nada quebrado.',
-   precisa:['Um celular'],
-   checklist:['Abrir o site no celular: nome, cores e logo certos (nada de outro restaurante)','Cadastrar um produto e ver no cardápio','Fazer um pedido pelo cardápio e ver na tela da cozinha','Imprimir uma comanda e conferir a logo','Entrar com o Google','Instalar o app na tela inicial e conferir ícone e nome','Receber um aviso no celular','Abrir e fechar o caixa','Gerar um backup em Backup e espaço','Apagar os dados de teste'],
+   precisa:['Um celular (de preferência Android)'],
+   checklist:['Abrir o site no celular: nome, cores e logo certos (nada de outro restaurante)','Cadastrar um produto com foto e ver no cardápio','Fazer um pedido pelo cardápio e ver na tela da cozinha','Imprimir uma comanda e conferir a logo de impressão','Entrar com o Google no cardápio','Instalar o app (APK ou navegador) e conferir ícone e nome','Ativar os avisos e receber um aviso de pedido no celular','Perguntar algo ao atendente virtual no cardápio','Abrir e fechar o caixa','Gerar um backup em Backup e espaço','Abrir a Ajuda e ver as imagens','Entrar com o seu login de Desenvolvedor','Perguntar ao assistente do painel quanto este restaurante vendeu','Apagar os dados de teste (produto de teste, pedido, caixa)'],
    partes:[ { t:'Faça cada teste e marque. Só dá para concluir quando todos estiverem marcados.', extra:'checklist' } ] },
- { id:'entrega', titulo:'Entregar ao cliente', curto:'Equipe, termos e primeira cobrança', quem:'voce', tempo:'15 min',
+
+ { id:'entrega', titulo:'Entregar ao cliente', curto:'Equipe, mensagem, termos e cobrança', quem:'voce', tempo:'20 min',
    porque:'O restaurante começa a usar e você começa a receber.',
-   precisa:['Dados do dono para os termos'],
+   precisa:['Seus dados preenchidos em Mais → Meus dados (vão nos termos)'],
    partes:[
-    { t:'Crie os usuários da equipe (Operador, Cozinha, Entregador) no sistema e mostre ao dono onde fica a Ajuda.' },
-    { t:'Marque como entregue: o dono vai ler e aceitar os termos de uso no primeiro acesso.', extra:'contrato' },
-    { t:'Gere a taxa de implantação e a primeira mensalidade, mude a situação para "Ativo" e pronto!', extra:'cobranca' }
+    { t:'Com o dono, crie os usuários da equipe: Administrador → Loja e equipe → "Usuários e permissões" → "+ Novo acesso" (Operador para o caixa, Cozinha, Garçom e Entregador). Mostre onde fica a Ajuda.', link:'{site_url}' },
+    { t:'Mande a mensagem de boas-vindas ao dono pelo WhatsApp (o painel monta). A senha mande separada, em outra mensagem.', extra:'boasvindas' },
+    { t:'Marque como entregue: no primeiro acesso o dono lê e aceita os termos de uso (com foto e assinatura).', extra:'contrato' },
+    { t:'Gere a taxa de implantação e a primeira mensalidade e mude a situação para "Ativo". Pronto! 🎉', extra:'cobranca' }
    ] }
 ];
-window.FASES = [['Banco e site',['cadastro','supabase','repositorio','banco','funcoes','admin']],['Google e backup',['entrada','drive']],['Recursos',['ia','planilhas','push','leitura']],['Marca e site',['marca','modulos','publicar','app']],['Entrega',['contas','teste','entrega']]];
+window.FASES = [['Banco',['cadastro','supabase','repositorio','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura','app']],['Entrega',['contas','teste','entrega']]];

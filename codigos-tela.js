@@ -49,20 +49,22 @@ function pronto(i, t){ const r = ref(); return (i.subRef && r) ? t.split(PLACEHO
 function especial(k){
   const r = ref() || 'COLE_AQUI_ref_do_projeto', c = cod() || 'COLE_AQUI_codigo_do_restaurante', pub = (window.CD_CTX && window.CD_CTX.chave) || 'COLE_AQUI_chave_publicavel_do_projeto';
   const q = s => String(s).replace(/'/g, "''");
+  const V = window.CD_VALS || {}, ex = (window.CD_CTX && window.CD_CTX.exec) || '';   // valores digitados na tela (não são guardados)
   if(k === 'segredos1') return '-- Cofre de chaves do restaurante (parte 1). Troque COLE_AQUI pelo valor real e rode UMA vez.\n'
    + "select vault.create_secret('" + q(c) + "', 'restaurante_slug');\n"
    + "select vault.create_secret('https://" + q(r) + ".supabase.co', 'supabase_url');\n"
    + "select vault.create_secret('" + q(pub) + "', 'publishable_key');\n"
-   + "select vault.create_secret('COLE_AQUI_service_role', 'service_key');\n";
+   + "select vault.create_secret('" + q(V.service || 'COLE_AQUI_service_role') + "', 'service_key');\n";
   if(k === 'segredos2') return '-- Cofre de chaves (parte 2: planilhas). Troque COLE_AQUI_url_exec pelo endereço /exec e rode UMA vez.\n'
-   + "select vault.create_secret('COLE_AQUI_url_exec_da_planilha_principal', 'sheets_main_url');\n"
+   + "select vault.create_secret('" + q(ex || 'COLE_AQUI_url_exec_da_planilha_principal') + "', 'sheets_main_url');\n"
    + "select vault.create_secret('rstsb-' || replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'chave_servidor_planilha');\n"
    + "-- COPIE o valor abaixo para a propriedade SB_CHAVE_SERVIDOR do Apps Script:\n"
    + "select decrypted_secret as copie_para_SB_CHAVE_SERVIDOR from vault.decrypted_secrets where name = 'chave_servidor_planilha';\n";
   if(k === 'google') return "-- Credenciais do Google (Drive). Cole o ID e a chave secreta como TEXTO e rode UMA vez.\n"
-   + "select vault.create_secret('COLE_AQUI_ID_DO_CLIENTE', 'google_client_id');\n"
-   + "select vault.create_secret('COLE_AQUI_CHAVE_SECRETA', 'google_client_secret');\n";
-  if(k === 'admin2') return "-- Cria o primeiro Administrador. Troque os três valores.\nselect public.instalar_admin_inicial('COLE_AQUI_login', 'COLE_AQUI_senha_minimo_8', 'Administrador');\n";
+   + "select vault.create_secret('" + q(V.gid || 'COLE_AQUI_ID_DO_CLIENTE') + "', 'google_client_id');\n"
+   + "select vault.create_secret('" + q(V.gsec || 'COLE_AQUI_CHAVE_SECRETA') + "', 'google_client_secret');\n";
+  if(k === 'admin2') return "-- Cria o primeiro Administrador. Troque os três valores.\nselect public.instalar_admin_inicial('" + q(V.alogin || 'COLE_AQUI_login') + "', '" + q(V.asenha || 'COLE_AQUI_senha_minimo_8') + "', 'Administrador');\n";
+  if(k === 'dev2') return "-- Cria o SEU login de Desenvolvedor (suporte). Troque a senha (mínimo 8) e rode UMA vez.\nselect public.instalar_desenvolvedor('Lucas', '" + q(V.dsenha || 'COLE_AQUI_sua_senha_minimo_8') + "');\n";
   throw new Error('Código especial desconhecido.');
 }
 async function copiarTxt(t){
