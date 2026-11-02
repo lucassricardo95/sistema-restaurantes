@@ -101,7 +101,7 @@ window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], res
 function telaLista(){
   const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
   const mrr = at.reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0), atr = atrasadas();
-  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvSair()">Sair</button></div></div>'
+  $('app').innerHTML = '<div class="topo"><h1>Restaurantes</h1><div class="acoes"><button class="principal" onclick="rvNovo()">+ Novo restaurante</button><button onclick="rvCodigos()">Códigos</button><button onclick="rvSair()">Sair</button></div></div>'
    + '<div class="resumo"><div class="card"><small>Ativos</small><b>' + at.length + '</b></div><div class="card"><small>Em implantação / teste</small><b>' + im.length + '</b></div>'
    + '<div class="card"><small>Receita mensal</small><b>' + BRL(mrr) + '</b></div><div class="card"><small>Mensalidades em atraso</small><b style="color:' + (atr.length ? 'var(--erro)' : 'inherit') + '">' + atr.length + '</b></div></div>'
    + '<div class="card"><div class="linha"><b>Erros do sistema</b><span class="selo" style="' + (S.erros.length ? 'background:var(--erro);color:#000' : '') + '">' + (S.erros.length ? S.erros.length + ' aberto(s)' : 'nenhum') + '</span></div><small class="mudo">Erros que apareceram na tela dos restaurantes.</small><p style="margin:8px 0 0"><button class="mini' + (S.erros.length ? ' principal' : '') + '" onclick="rvErros()">Ver erros</button></p></div>'
