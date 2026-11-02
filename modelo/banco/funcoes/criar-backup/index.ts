@@ -116,7 +116,24 @@ serve(async (req) => {
           else falhas.push(x.arquivo + ": não conferiu no Drive");
         } else falhas.push(x.arquivo + ": " + (dir.erros.join(" | ") || "nenhum Drive conectado"));
       }
-      return json({ ok: falhas.length === 0, movidos, falhas, message: `${movidos} backup(s) movido(s) para o Drive.` + (falhas.length ? " Falhas: " + falhas.join("; ") : "") });
+      // Sobras no Storage sem registro na tabela backups: copia para o Drive, confere e só então apaga do Storage
+      const { data: todos } = await svc.from("backups").select("arquivo");
+      const conhecidos = new Set((todos || []).map((t: { arquivo: string }) => t.arquivo));
+      const { data: soltos } = await svc.storage.from("backups").list("", { limit: 1000 });
+      let sobras = 0;
+      for (const o of soltos || []) {
+        if (!o.name || conhecidos.has(o.name) || o.id == null) continue;
+        const { data: arq } = await svc.storage.from("backups").download(o.name);
+        if (!arq) { falhas.push(o.name + ": não li do Storage"); continue; }
+        const bytes = new Uint8Array(await arq.arrayBuffer());
+        const dir = await copiarDireto(o.name, bytes, 3650);
+        if (dir.principal === true || dir.contingencia === true) {
+          const conf = await lerBackupDrive(o.name);
+          if (conf.bytes && conf.bytes.length === bytes.length) { await svc.storage.from("backups").remove([o.name]); sobras++; }
+          else falhas.push(o.name + ": não conferiu no Drive");
+        } else falhas.push(o.name + ": " + (dir.erros.join(" | ") || "nenhum Drive conectado"));
+      }
+      return json({ ok: falhas.length === 0, movidos, sobras, falhas, message: `${movidos} backup(s) movido(s) para o Drive` + (sobras ? ` e ${sobras} arquivo(s) solto(s) do Storage guardado(s) no Drive` : "") + "." + (falhas.length ? " Falhas: " + falhas.join("; ") : "") });
     }
 
     const tipo = ["Manual", "Automático", "Pré-restauração"].includes(body.tipo) ? body.tipo : "Manual";
