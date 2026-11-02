@@ -164,10 +164,18 @@ function abaSaude(){
     return '<div class="linha" style="padding:6px 0;gap:8px">' + '<span>' + dot(c) + '<b>' + nome + '</b> <small class="mudo">' + papel + '</small></span><small>' + (ok ? 'Online' + (o.ms != null ? ' · ' + o.ms + ' ms' : '') : o.estado === 'nao_usa' ? 'Não usada' : o.estado === 'sem_resposta' ? 'Sem resposta ainda' : 'Fora do ar' + (o.detalhe ? ' · ' + esc(o.detalhe) : '')) + '</small></div>'; };
   $('corpo').innerHTML = '<div class="card"><div class="linha"><b>' + dot(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>'
     + (sd.geral === 'sem' ? '<p class="mudo" style="margin:6px 0 0">O restaurante parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>') + '</div>'
-    + '<div class="card"><b>Servidores</b>' + linhaSrv('Supabase', 'principal', srv.supabase) + linhaSrv('Planilha principal', 'reserva', srv.planilha) + '</div>'
+    + '<div class="card"><b>Servidores</b>' + linhaSrv('Supabase', 'principal', srv.supabase) + linhaSrv('Planilha principal', 'reserva', srv.planilha) + '<div id="srvCont">' + linhaSrv('Planilha de contingência', 'último recurso', S.rest.contingencia_url ? { estado:'sem_resposta' } : { estado:'nao_usa' }) + '</div></div>'
     + (ruins.length ? '<div class="card"><b>Pede atenção</b>' + ruins.map(i => '<div style="border-left:3px solid ' + SAUDE_COR[i.nivel] + ';padding:4px 0 4px 10px;margin:8px 0;overflow-wrap:anywhere"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</div>' : '')
     + (uso.length ? '<div class="card"><b>📊 Plano grátis do Supabase</b>' + uso.map(barraUso).join('') + '<small class="mudo" style="display:block;margin-top:8px">Chamadas às funções é estimativa pelas últimas 24 h. O número oficial está no Supabase (Settings → Usage).</small></div>' : '')
     + '<div class="card"><b>Todas as verificações (' + itens.length + ')</b>' + itens.map(i => '<div style="padding:6px 0;overflow-wrap:anywhere">' + dot(SAUDE_COR[i.nivel] || SAUDE_COR.sem) + '<b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</div>';
+  medirContingencia_(linhaSrv);
+}
+/* A planilha de contingência é medida aqui, pelo navegador (o banco do restaurante não guarda o endereço dela). */
+async function medirContingencia_(linha){
+  const u = S.rest && S.rest.contingencia_url, box = $('srvCont'); if(!u || !box) return;
+  const t0 = Date.now(); let est;
+  try{ const x = await tempo(u, {}); est = x.ok ? { estado:'ok', ms:Date.now() - t0 } : { estado:'fora', detalhe:'erro ' + x.status }; }catch(e){ est = { estado:'fora', detalhe:e.name === 'AbortError' ? 'sem resposta em 12 s' : 'sem conexão' }; }
+  const b2 = $('srvCont'); if(b2) b2.innerHTML = linha('Planilha de contingência', 'último recurso', est);
 }
 function abaDados(){
   const r = S.rest;
