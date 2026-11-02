@@ -493,6 +493,7 @@ function comandaHtml_(v){
     : `<div class="pago">JÁ PAGO${ehEnt?'<br>NÃO COBRAR':''}</div>`;
   if(ehEnt && v.entregador) h += `<div class="forma">Entregador: <b>${sem(pdEntregadorNome_(v.entregador))}</b></div>`;
   h += `<div class="vers">“Portanto, quando vocês comem, ou bebem, ou fazem qualquer outra coisa, façam tudo para a glória de Deus.”<br><b>1 Coríntios 10:31</b></div>`;
+  try{ const lk = (typeof QR_BASE_URL_ === 'string' && QR_BASE_URL_) || ''; if(lk) h += `<div class="qrapp">${QR_.svg(lk, 2)}<div class="t">BAIXE NOSSO APP!</div><div class="s">Aponte a câmera do celular para o QR Code, abra o link e instale o app para pedir mais rápido.</div></div>`; }catch(e){}
   h += `<div class="rod">Impressa às ${escR(agora)} · ${NOME_H_()}</div></div>`;
   return h;
 }
