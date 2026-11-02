@@ -234,7 +234,7 @@ window.rvEtapa = async (id, feita) => {
 function abaMarca(){
   const m = S.rest.marca = S.rest.marca || {}, c = m.cores = m.cores || {}, lg = m.logos = m.logos || {};
   $('corpo').innerHTML = '<div class="card"><h2>Marca inicial</h2><p class="mudo">Você define a primeira aparência; o dono do restaurante pode ajustar depois em Administrador → Sistema → Aparência.</p>'
-   + '<h3>Tema pronto</h3><div class="temas">' + TEMAS.map(t => '<div class="tema ' + (m.tema === t.id ? 'on' : '') + '" onclick="rvTema(\'' + t.id + '\')" style="background:' + t.fundo + '"><i style="background:' + t.destaque + '"></i><i style="background:' + t.botao + '"></i><br>' + t.nome + '</div>').join('') + '</div>'
+   + '<h3>Tema pronto</h3><div class="temas">' + TEMAS.map(t => '<div class="tema ' + (m.tema === t.id ? 'on' : '') + '" onclick="rvTema(\'' + t.id + '\')" style="background:' + t.fundo + ';color:' + (parseInt(t.fundo.slice(1,3),16)*0.299 + parseInt(t.fundo.slice(3,5),16)*0.587 + parseInt(t.fundo.slice(5,7),16)*0.114 > 150 ? '#1b1b1b' : '#f5efe6') + '"><i style="background:' + t.destaque + '"></i><i style="background:' + t.botao + '"></i><br>' + t.nome + '</div>').join('') + '</div>'
    + '<h3>Ou ajuste as cores</h3><div class="cores">' + [['destaque','Destaque'],['botao','Botão principal'],['fundo','Fundo']].map(k => '<div class="cor-item"><input type="color" data-k="marca.cores.' + k[0] + '" value="' + esc(c[k[0]] || '#000000') + '" oninput="rvPrevia()"><br>' + k[1] + '</div>').join('') + '</div>'
    + '<div class="previa" id="previa"></div>'
    + '<div class="cols"><div>' + campoTxt('Slogan', 'slogan', { path:'marca.slogan' }) + '</div><div>' + campoTxt('Nome do assistente virtual', 'assist', { path:'marca.assistente' }) + '</div></div>'
