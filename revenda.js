@@ -6,7 +6,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL = v => 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const SIT = { implantacao:'Em implantação', teste:'Em teste', ativo:'Ativo', suspenso:'Suspenso', encerrado:'Encerrado' };
-let S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[] };
+let S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[], saude:{} };
 let timerAviso = null;
 function aviso(m, t){ const a = $('aviso'); a.textContent = m; a.className = 'aviso ' + (t || ''); a.hidden = false; clearTimeout(timerAviso); timerAviso = setTimeout(() => { a.hidden = true; }, t === 'erro' ? 9000 : 3500); }
 const erro = m => aviso('⚠️ ' + m, 'erro');
@@ -50,7 +50,19 @@ async function carregar(){
   const [l, c] = await Promise.all([ rest('restaurantes?select=*&order=nome.asc'), rest('cobrancas?select=*&order=competencia.desc') ]);
   S.lista = l || []; S.cob = c || [];
   try{ S.erros = await rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=200') || []; }catch(e){ S.erros = []; }
+  try{ S.saude = {}; (await rest('saude_app?select=*') || []).forEach(x => { S.saude[x.slug] = x; }); }catch(e){ S.saude = {}; }
 }
+/* ---------- saúde e uso do Supabase (enviados pelos restaurantes a cada 15 minutos) ---------- */
+const SAUDE_COR = { ok:'#2f9e44', atencao:'#f0a500', problema:'#e5484d', sem:'#777' }, SAUDE_ROT = { ok:'Tudo certo', atencao:'Atenção', problema:'Precisa de cuidado', sem:'Sem sinal' };
+function saudeDe(slug){ const h = S.saude && S.saude[slug]; if(!h) return { geral:'sem', min:null, h:null }; const min = Math.round((Date.now() - new Date(h.atualizado_em).getTime()) / 60000); return { geral: min > 45 ? 'sem' : (h.geral || 'ok'), min, h }; }
+const haTempo = m => m == null ? 'nunca' : m < 1 ? 'agora' : m < 60 ? 'há ' + m + ' min' : m < 1440 ? 'há ' + Math.round(m / 60) + ' h' : 'há ' + Math.round(m / 1440) + ' d';
+function usoDe(h){ return ((h && h.itens) || []).filter(i => /^Plano grátis:/i.test(i.titulo || '')).map(i => {
+  const m = String(i.texto || '').match(/^(?:Cerca de\s+)?([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s+por mês)?,?\s+de\s+([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s*\(([\d.,]+)%\))?/i); if(!m) return null;
+  const num = x => parseFloat(String(x).replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')), uso = m[1].replace(/[.,]$/, ''), lim = m[2].replace(/[.,]$/, '');
+  const pct = m[3] ? parseFloat(m[3].replace(',', '.')) : num(uso) / num(lim) * 100; if(!isFinite(pct)) return null;
+  return { id:i.id, tit:String(i.titulo).replace(/^Plano grátis:\s*/i, '').replace(/^./, c => c.toUpperCase()), uso, lim, pct:Math.round(pct * 10) / 10 }; }).filter(Boolean); }
+function barraUso(u){ const cor = u.pct >= 90 ? SAUDE_COR.problema : u.pct >= 70 ? SAUDE_COR.atencao : SAUDE_COR.ok;
+  return '<div style="margin:10px 0 2px"><div class="linha" style="gap:8px"><b style="font-size:14px">' + esc(u.tit) + '</b><small>' + esc(u.uso) + ' de ' + esc(u.lim) + ' · <b style="color:' + cor + '">' + String(u.pct).replace('.', ',') + '%</b></small></div><div class="barra"><i style="width:' + Math.min(100, u.pct) + '%;background:' + cor + '"></i></div></div>'; }
 const nEtapas = r => ETAPAS.filter(e => r.etapas && r.etapas[e.id] && r.etapas[e.id].feita).length;
 const hoje = () => new Date().toISOString().slice(0, 10);
 const atrasadas = id => S.cob.filter(c => (!id || c.restaurante_id === id) && !c.pago_em && c.vencimento && c.vencimento < hoje());
@@ -82,7 +94,7 @@ function telaLogin(){
   $('lgB').onclick = () => go(false); $('lgC').onclick = ev => { ev.preventDefault(); go(true); };
   $('lgS').onkeydown = ev => { if(ev.key === 'Enter') go(false); };
 }
-window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[] }; tela(); };
+window.rvSair = () => { sessGravar(null); S = { sess:null, lista:[], cob:[], rest:null, aba:'dados', cobR:[], hist:[], dono:null, erros:[], saude:{} }; tela(); };
 
 function telaLista(){
   const at = S.lista.filter(r => r.situacao === 'ativo'), im = S.lista.filter(r => ['implantacao','teste'].includes(r.situacao));
@@ -96,6 +108,7 @@ function telaLista(){
       return '<div class="card"' + (r.bloqueado ? ' style="border-color:var(--erro)"' : '') + '><div class="linha"><b>' + esc(r.nome) + '</b>' + (r.bloqueado ? '<span class="selo" style="background:var(--erro);color:#000">⛔ Bloqueado</span>' : '<span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span>') + '</div>'
        + '<small class="mudo">' + esc(r.dominio || r.slug) + '</small>'
        + '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + n + ' de ' + ETAPAS.length + ' · ' + p + '%</small>'
+       + (() => { const sd = saudeDe(r.slug), banco = usoDe(sd.h).find(u => u.id === 'uso_banco'); return '<div style="margin-top:10px"><div class="linha"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + SAUDE_COR[sd.geral] + ';margin-right:6px"></span><b style="font-size:14px">' + SAUDE_ROT[sd.geral] + '</b></span><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small></div>' + (banco ? barraUso({ tit:'Banco', uso:banco.uso, lim:banco.lim, pct:banco.pct }) : '') + '</div>'; })()
        + '<p class="mudo" style="margin:8px 0 10px;font-size:13px">' + (r.valor_mensal ? BRL(r.valor_mensal) + '/mês' : 'Sem mensalidade definida') + (a ? ' · <b style="color:var(--erro)">' + a + ' em atraso</b>' : '') + '</p>'
        + '<button class="mini principal" onclick="rvAbrir(\'' + r.id + '\')">Gerenciar</button> '
        + (r.site_url ? '<a class="btn mini" style="text-decoration:none;display:inline-block;padding:6px 10px" href="' + esc(r.site_url) + '" target="_blank" rel="noopener">Abrir site</a>' : '') + '</div>';
@@ -116,13 +129,13 @@ window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r
 window.rvVoltar = async () => { S.rest = null; try{ await carregar(); }catch(e){ erro(e.message); } telaLista(); };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); }catch(e){ erro(e.message); } }
 
-const ABAS = [['dados','Dados'],['passo','Passo a passo'],['ligacoes','Ligações'],['marca','Marca'],['modulos','Módulos'],['cobranca','Cobrança'],['hist','Histórico']];
+const ABAS = [['dados','Dados'],['saude','Saúde'],['passo','Passo a passo'],['ligacoes','Ligações'],['marca','Marca'],['modulos','Módulos'],['cobranca','Cobrança'],['hist','Histórico']];
 function telaRest(){
   const r = S.rest, n = nEtapas(r);
   $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span></div>'
    + '<h1>' + esc(r.nome) + '</h1><small class="mudo">' + esc(r.slug) + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small><div class="barra"><i style="width:' + Math.round(n / ETAPAS.length * 100) + '%"></i></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>';
-  ({ dados:abaDados, passo:abaPasso, ligacoes:abaLig, marca:abaMarca, modulos:abaMod, cobranca:abaCob, hist:abaHist })[S.aba]();
+  ({ dados:abaDados, saude:abaSaude, passo:abaPasso, ligacoes:abaLig, marca:abaMarca, modulos:abaMod, cobranca:abaCob, hist:abaHist })[S.aba]();
 }
 window.rvAba = a => { S.aba = a; telaRest(); };
 function campoTxt(rot, k, o){ o = o || {}; const v = o.path ? get(S.rest, o.path) : S.rest[k]; return '<label for="f_' + k + '">' + rot + '</label><input id="f_' + k + '" data-k="' + (o.path || k) + '" type="' + (o.tipo || 'text') + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(o.ph || '') + '">'; }
@@ -142,6 +155,20 @@ async function salvar(msg){
 window.rvSalvar = async () => { if(await salvar()) { await hist(S.rest.id, 'Dados salvos', S.aba); telaRest(); } };
 const botSalvar = '<p><button class="principal" onclick="rvSalvar()">Salvar</button></p>';
 
+function abaSaude(){
+  const sd = saudeDe(S.rest.slug), h = sd.h;
+  if(!h){ $('corpo').innerHTML = '<div class="card"><b>Sem sinal ainda</b><p class="mudo">Este restaurante ainda não enviou o resumo de saúde. Ele envia sozinho a cada 15 minutos depois que o banco recebe o arquivo 119-saude-para-painel.sql e o código do restaurante no cofre.</p></div>'; return; }
+  const itens = h.itens || [], ruins = itens.filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')), uso = usoDe(h), srv = h.servidores || {};
+  const dot = c => '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:8px"></span>';
+  const linhaSrv = (nome, papel, o) => { o = o || {}; const ok = o.estado === 'ok', c = ok ? SAUDE_COR.ok : o.estado === 'nao_usa' || o.estado === 'sem_resposta' ? SAUDE_COR.sem : SAUDE_COR.problema;
+    return '<div class="linha" style="padding:6px 0;gap:8px">' + '<span>' + dot(c) + '<b>' + nome + '</b> <small class="mudo">' + papel + '</small></span><small>' + (ok ? 'Online' + (o.ms != null ? ' · ' + o.ms + ' ms' : '') : o.estado === 'nao_usa' ? 'Não usada' : o.estado === 'sem_resposta' ? 'Sem resposta ainda' : 'Fora do ar' + (o.detalhe ? ' · ' + esc(o.detalhe) : '')) + '</small></div>'; };
+  $('corpo').innerHTML = '<div class="card"><div class="linha"><b>' + dot(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>'
+    + (sd.geral === 'sem' ? '<p class="mudo" style="margin:6px 0 0">O restaurante parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>') + '</div>'
+    + '<div class="card"><b>Servidores</b>' + linhaSrv('Supabase', 'principal', srv.supabase) + linhaSrv('Planilha principal', 'reserva', srv.planilha) + '</div>'
+    + (ruins.length ? '<div class="card"><b>Pede atenção</b>' + ruins.map(i => '<div style="border-left:3px solid ' + SAUDE_COR[i.nivel] + ';padding:4px 0 4px 10px;margin:8px 0;overflow-wrap:anywhere"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</div>' : '')
+    + (uso.length ? '<div class="card"><b>📊 Plano grátis do Supabase</b>' + uso.map(barraUso).join('') + '<small class="mudo" style="display:block;margin-top:8px">Chamadas às funções é estimativa pelas últimas 24 h. O número oficial está no Supabase (Settings → Usage).</small></div>' : '')
+    + '<div class="card"><b>Todas as verificações (' + itens.length + ')</b>' + itens.map(i => '<div style="padding:6px 0;overflow-wrap:anywhere">' + dot(SAUDE_COR[i.nivel] || SAUDE_COR.sem) + '<b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</div>';
+}
 function abaDados(){
   const r = S.rest;
   $('corpo').innerHTML = '<div class="card"><div class="cols"><div>' + campoTxt('Nome do restaurante', 'nome') + '</div><div><label>Código (não muda)</label><input value="' + esc(r.slug) + '" disabled></div></div>'
