@@ -49,6 +49,7 @@ async function entrar(email, senha, criar){
 async function carregar(){
   const [l, c] = await Promise.all([ rest('restaurantes?select=*&order=nome.asc'), rest('cobrancas?select=*&order=competencia.desc') ]);
   S.lista = l || []; S.cob = c || [];
+  try{ S.termos = (await rest('termos_uso?select=id,versao,fornecedor_nome,fornecedor_doc,foro,contato,atualizado_em') || [])[0] || null; }catch(e){ S.termos = null; }
   try{ S.prom = await rest('promessas?select=*&order=criada_em.desc') || []; }catch(e){ S.prom = []; }
   try{ S.erros = await rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=200') || []; }catch(e){ S.erros = []; }
   try{ S.saude = {}; (await rest('saude_app?select=*') || []).forEach(x => { S.saude[x.slug] = x; }); }catch(e){ S.saude = {}; }
@@ -131,15 +132,15 @@ window.rvNovo = async () => {
 async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
 window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); const et0 = S.rest.etapas || {}; Object.keys(et0).forEach(k => { if(!et0[k] || typeof et0[k] !== 'object') et0[k] = { feita: !!et0[k] && et0[k] !== 'pendente' }; }); S.rest.etapas = et0; S.aba = 'dados'; S.res = {}; await carregarRest(); telaRest(); };
 window.rvVoltar = async () => { S.rest = null; try{ await carregar(); }catch(e){ erro(e.message); } telaLista(); };
-async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); }catch(e){ erro(e.message); } }
+async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); try{ S.aceite = (await rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1') || [])[0] || null; }catch(e){ S.aceite = null; } }catch(e){ erro(e.message); } }
 
-const ABAS = [['dados','Dados'],['saude','Saúde'],['passo','Passo a passo'],['ligacoes','Ligações'],['marca','Marca'],['modulos','Módulos'],['cobranca','Cobrança'],['hist','Histórico']];
+const ABAS = [['dados','Dados'],['saude','Saúde'],['passo','Passo a passo'],['ligacoes','Ligações'],['marca','Marca'],['modulos','Módulos'],['cobranca','Cobrança'],['termos','Termos'],['hist','Histórico']];
 function telaRest(){
   const r = S.rest, n = nEtapas(r);
   $('app').innerHTML = '<div class="topo"><div><button class="mini" onclick="rvVoltar()">← Restaurantes</button></div><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao]) + '</span></div>'
    + '<h1>' + esc(r.nome) + '</h1><small class="mudo">' + esc(r.slug) + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small><div class="barra"><i style="width:' + Math.round(n / ETAPAS.length * 100) + '%"></i></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>';
-  ({ dados:abaDados, saude:abaSaude, passo:abaPasso, ligacoes:abaLig, marca:abaMarca, modulos:abaMod, cobranca:abaCob, hist:abaHist })[S.aba]();
+  ({ dados:abaDados, saude:abaSaude, passo:abaPasso, ligacoes:abaLig, marca:abaMarca, modulos:abaMod, cobranca:abaCob, termos:abaTermos, hist:abaHist })[S.aba]();
 }
 window.rvAba = a => { S.aba = a; telaRest(); };
 function campoTxt(rot, k, o){ o = o || {}; const v = o.path ? get(S.rest, o.path) : S.rest[k]; return '<label for="f_' + k + '">' + rot + '</label><input id="f_' + k + '" data-k="' + (o.path || k) + '" type="' + (o.tipo || 'text') + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(o.ph || '') + '">'; }
@@ -357,6 +358,63 @@ window.rvPromessa = async (id, ok) => {
   }else if(!confirm('Recusar o pedido de promessa?')) return;
   try{ await rpc('decidir_promessa', { p_id:id, p_aprovar:ok, p_ate:ate }); await carregar(); await carregarRest(); aviso(ok ? 'Promessa aprovada. O acesso volta em até 4 minutos.' : 'Promessa recusada.', 'ok'); abaCob(); }
   catch(e){ erro(e.message); }
+};
+
+/* ---------- termos de uso e entrega ---------- */
+function abaTermos(){
+  const r = S.rest, t = S.termos || {}, a = S.aceite, fmt = d => esc(new Date(d).toLocaleString('pt-BR'));
+  const completo = !!(t.fornecedor_nome && t.fornecedor_doc && t.foro);
+  let ent;
+  if(!r.entregue_em){
+    ent = '<p class="mudo">Em <b>desenvolvimento</b>: você mexe no sistema livremente e o cliente não vê nenhuma tela de termos.</p>'
+      + (completo ? '' : '<p style="color:var(--erro)">Preencha seus dados abaixo antes de entregar.</p>')
+      + '<button class="principal"' + (completo ? '' : ' disabled') + ' onclick="rvEntregar(true)">📦 Marcar como entregue</button><p class="mudo" style="font-size:13px">Depois de entregue, o Admin do restaurante precisa ler, aceitar, mandar a foto do rosto e assinar para usar o painel administrativo. A equipe e o cardápio continuam funcionando.</p>';
+  }else if(!a){
+    ent = '<p><b style="color:#f0a500">⏳ Entregue em ' + fmt(r.entregue_em) + '. Aguardando o aceite do cliente.</b></p><p class="mudo">O Admin do restaurante só vê a tela dos termos até aceitar. Você (Desenvolvedor) continua entrando normalmente.</p><button class="mini" onclick="rvEntregar(false)">Voltar para desenvolvimento</button>';
+  }else{
+    ent = '<p><b style="color:#2f9e44">✅ Termos aceitos em ' + fmt(a.aceito_em) + '</b> (versão ' + esc(a.versao) + ')</p>'
+      + '<div class="linha" style="gap:12px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:200px"><p style="margin:0">' + esc(a.nome) + '<br><small class="mudo">' + esc(a.cargo || '—') + ' · CPF/CNPJ ' + esc(a.documento) + '<br>' + esc(a.email || '') + ' ' + esc(a.telefone || '') + '<br>IP ' + esc(a.ip || '—') + '<br>Aparelho: ' + esc((a.aparelho || '').slice(0, 90)) + '<br>Impressão digital do texto (SHA-256):<br><code style="word-break:break-all;font-size:11px">' + esc(a.hash_texto) + '</code></small></p></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap"><img src="' + esc(a.foto) + '" alt="Foto" style="width:110px;height:110px;object-fit:cover;border-radius:12px;border:1px solid #333"><img src="' + esc(a.assinatura) + '" alt="Assinatura" style="width:160px;height:110px;object-fit:contain;background:#fff;border-radius:12px"></div></div>'
+      + '<p style="margin:10px 0 0"><button class="principal mini" onclick="rvComprovante()">🖨️ Imprimir comprovante (PDF)</button></p>';
+  }
+  $('corpo').innerHTML = '<div class="card"><h2>Entrega e aceite dos termos</h2>' + ent + '</div>'
+    + '<div class="card"><h2>Seus dados nos termos</h2><p class="mudo">Aparecem no texto que o cliente assina (valem para todos os restaurantes).</p>'
+    + '<label class="mudo" style="font-size:13px">Seu nome ou razão social</label><input id="tNome" value="' + esc(t.fornecedor_nome || '') + '" maxlength="120">'
+    + '<label class="mudo" style="font-size:13px">Seu CPF ou CNPJ</label><input id="tDoc" value="' + esc(t.fornecedor_doc || '') + '" maxlength="30">'
+    + '<label class="mudo" style="font-size:13px">Cidade/UF do foro (ex.: Jaboticabal/SP)</label><input id="tForo" value="' + esc(t.foro || '') + '" maxlength="80">'
+    + '<label class="mudo" style="font-size:13px">Seu contato (e-mail ou WhatsApp)</label><input id="tCont" value="' + esc(t.contato || '') + '" maxlength="120">'
+    + '<p style="margin:10px 0 0"><button class="principal" onclick="rvSalvarTermos()">Salvar</button> <button class="mini" onclick="rvVerTermos()">Ver o texto dos termos</button></p>'
+    + '<p class="mudo" style="font-size:12px">Versão atual dos termos: ' + esc(t.versao || '—') + '. Este modelo foi feito para proteger você, mas não substitui a revisão de um advogado.</p></div>';
+}
+window.rvSalvarTermos = async () => {
+  const d = { fornecedor_nome:$('tNome').value.trim(), fornecedor_doc:$('tDoc').value.trim(), foro:$('tForo').value.trim(), contato:$('tCont').value.trim(), atualizado_em:new Date().toISOString() };
+  try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); abaTermos(); }catch(e){ erro(e.message); }
+};
+window.rvVerTermos = async () => {
+  try{ const t = (await rest('termos_uso?select=texto,versao,fornecedor_nome,fornecedor_doc,foro,contato') || [])[0] || {};
+    const txt = String(t.texto || '').replace(/\{\{FORNECEDOR\}\}/g, t.fornecedor_nome || '[preencher]').replace(/\{\{DOCUMENTO\}\}/g, t.fornecedor_doc || '[preencher]').replace(/\{\{FORO\}\}/g, t.foro || '[preencher]').replace(/\{\{CONTATO\}\}/g, t.contato || '[preencher]').replace(/\{\{RESTAURANTE\}\}/g, S.rest ? S.rest.nome : '[restaurante]');
+    const w = window.open('', '_blank'); if(!w) return erro('Libere pop-ups para ver o texto.');
+    w.document.write('<meta charset="utf-8"><title>Termos de uso</title><body style="font:15px/1.5 system-ui;max-width:760px;margin:20px auto;padding:0 16px">' + htmlTermos(txt) + '</body>'); w.document.close();
+  }catch(e){ erro(e.message); }
+};
+function htmlTermos(txt){ return String(txt).split('\n').map(l => /^## /.test(l) ? '<h3 style="margin:18px 0 6px">' + esc(l.slice(3)) + '</h3>' : (l.trim() ? '<p style="margin:0 0 8px">' + esc(l) + '</p>' : '')).join(''); }
+window.rvEntregar = async on => {
+  const r = S.rest;
+  if(!confirm(on ? 'Marcar "' + r.nome + '" como ENTREGUE?\n\nA partir de agora o Admin do restaurante só usa o painel administrativo depois de ler e aceitar os termos, mandar a foto do rosto e assinar.' : 'Voltar "' + r.nome + '" para desenvolvimento?\n\nO cliente deixa de ver a tela dos termos.')) return;
+  const d = { entregue_em: on ? new Date().toISOString() : null };
+  try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', d); Object.assign(r, d); const x = S.lista.find(z => z.id === r.id); if(x) Object.assign(x, d); await hist(r.id, on ? 'Marcado como ENTREGUE (termos exigidos)' : 'Voltou para desenvolvimento', ''); aviso(on ? 'Entregue. O Admin verá os termos ao entrar.' : 'De volta ao desenvolvimento.', 'ok'); abaTermos(); }
+  catch(e){ erro(/entregue_em|column|schema/i.test(e.message) ? 'O banco do painel ainda não tem os termos. Rode o SQL 007 (peça ao Claude).' : e.message); }
+};
+window.rvComprovante = () => {
+  const r = S.rest, a = S.aceite; if(!a) return;
+  const w = window.open('', '_blank'); if(!w) return erro('Libere pop-ups para imprimir.');
+  w.document.write('<meta charset="utf-8"><title>Comprovante de aceite - ' + esc(r.nome) + '</title><body style="font:14px/1.5 system-ui;max-width:780px;margin:20px auto;padding:0 16px"><h2>Comprovante de aceite dos termos de uso</h2>'
+    + '<table style="border-collapse:collapse;width:100%"><tr><td><b>Estabelecimento</b></td><td>' + esc(r.nome) + '</td></tr><tr><td><b>Signatário</b></td><td>' + esc(a.nome) + ' (' + esc(a.cargo || '—') + ')</td></tr><tr><td><b>CPF/CNPJ</b></td><td>' + esc(a.documento) + '</td></tr><tr><td><b>Contato</b></td><td>' + esc(a.email || '') + ' ' + esc(a.telefone || '') + '</td></tr>'
+    + '<tr><td><b>Data e hora</b></td><td>' + esc(new Date(a.aceito_em).toLocaleString('pt-BR')) + '</td></tr><tr><td><b>IP</b></td><td>' + esc(a.ip || '—') + '</td></tr><tr><td><b>Aparelho</b></td><td>' + esc(a.aparelho || '') + '</td></tr><tr><td><b>Versão dos termos</b></td><td>' + esc(a.versao) + '</td></tr><tr><td><b>SHA-256 do texto</b></td><td style="word-break:break-all">' + esc(a.hash_texto) + '</td></tr></table>'
+    + '<p><b>Confirmações marcadas:</b> ' + esc(Object.keys(a.marcas || {}).filter(k => a.marcas[k]).join(', ')) + '</p>'
+    + '<div style="display:flex;gap:16px;align-items:center"><img src="' + esc(a.foto) + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px"><img src="' + esc(a.assinatura) + '" style="width:260px;height:120px;object-fit:contain;border:1px solid #ccc"></div>'
+    + '<h3 style="page-break-before:always">Texto aceito</h3>' + htmlTermos(a.texto_aceito) + '<script>setTimeout(function(){window.print()},400)<\/script></body>');
+  w.document.close();
 };
 window.rvGerarCob = async () => {
   const r = S.rest; if(!r.valor_mensal) return erro('Defina a mensalidade na aba Dados e salve antes.');
