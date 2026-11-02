@@ -110,7 +110,7 @@ window.rvNovo = async () => {
   }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
 };
 async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
-window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); S.aba = 'dados'; S.res = {}; await carregarRest(); telaRest(); };
+window.rvAbrir = async id => { S.rest = JSON.parse(JSON.stringify(S.lista.find(r => r.id === id))); const et0 = S.rest.etapas || {}; Object.keys(et0).forEach(k => { if(!et0[k] || typeof et0[k] !== 'object') et0[k] = { feita: !!et0[k] && et0[k] !== 'pendente' }; }); S.rest.etapas = et0; S.aba = 'dados'; S.res = {}; await carregarRest(); telaRest(); };
 window.rvVoltar = async () => { S.rest = null; try{ await carregar(); }catch(e){ erro(e.message); } telaLista(); };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=competencia.desc'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=40'); }catch(e){ erro(e.message); } }
 
