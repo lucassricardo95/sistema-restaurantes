@@ -196,12 +196,13 @@ function vInicio(){
    + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', S.erros.length, S.erros.length ? 'erro' : '') + '</div>'
    + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>');
 }
+window.rvBemvindoOk = async () => { if(await salvarAjustes({ bemvindo_ok:true }, 'Pronto! Você pode rever o guia em Mais → Guia.')) vInicio(); };
 function boasPainel(){
   return '<div class="card bem-vindo"><h2>👋 Bem-vindo ao seu Painel de Revenda</h2><p>Aqui você cria e cuida dos sistemas dos seus restaurantes. Embaixo da tela ficam as 5 partes:</p><ul class="lista-bv">'
    + '<li><b>🏠 Início</b>: o que precisa de você hoje e como está o mês.</li><li><b>🍽️ Restaurantes</b>: cada cliente. Lá dentro, o <b>passo a passo</b> que monta um restaurante novo do zero, uma parte por vez.</li>'
    + '<li><b>🩺 Saúde</b>: se os sistemas estão funcionando e os erros que aparecem nas telas.</li><li><b>💰 Dinheiro</b>: mensalidades, quem pagou, suas despesas e o lucro.</li><li><b>☰ Mais</b>: propostas de venda, seus dados, Pix, planos e o assistente.</li></ul>'
    + '<p>O botão <b>✨</b> é o seu assistente: pergunte qualquer coisa ou peça para ele preparar uma cobrança.</p>'
-   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvIr(\'guia\')">📘 Como criar um restaurante</button><button class="mini" onclick="salvarAjustes({ bemvindo_ok:true }, \'Pronto! Você pode rever o guia em Mais.\').then(()=>vInicio())">Entendi</button></div></div>';
+   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvIr(\'guia\')">📘 Como criar um restaurante</button><button class="mini" onclick="rvBemvindoOk()">Entendi</button></div></div>';
 }
 const dica = t => '<p class="dica">💡 ' + t + '</p>';
 const kpi = (t, v, c) => '<div class="kpi ' + (c ? 'k-' + c : '') + '"><small>' + esc(t) + '</small><b>' + v + '</b></div>';
