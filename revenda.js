@@ -165,9 +165,9 @@ function abaLig(){
 
 /* ---------- arquivo de configuração do restaurante ---------- */
 function configTexto(r){
-  const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {};
+  const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {}, mo = (r.motor || 'https://lucassricardo95.github.io/motor/estavel/').replace(/texas-estavel\/$/, 'estavel/').replace(/texas-(v[\d.]+)\/$/, '$1/');
   const o = { motor:r.motor || 'https://lucassricardo95.github.io/motor/estavel/', slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
-    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || 'img/icon-512.png' } }, modulos:mod };
+    marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
   return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Para mudar, gere de novo no painel. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
 }
 window.rvGerarConfig = async () => {
