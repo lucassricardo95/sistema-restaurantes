@@ -904,3 +904,41 @@ async function ifoodUniaoDesfazer_(sId){
     salvarCache(); renderClientes(); abrirPerfilCliente(sId); showMsg('mMsg', r.message, 'ok');
   }catch(e){ showMsg('mMsg', 'Não foi possível desfazer agora. Nada foi alterado.', 'warn'); }
 }
+
+/* =====================================================================
+   TELAS FIXAS (Início e Caixa): tudo aparece de uma vez e a página não rola.
+   Se o conteúdo for maior que a tela, ele é reduzido para caber (nunca abaixo de 72%); só se ainda assim não couber
+   (Caixa com muitos itens), a rolagem fica DENTRO da própria tela, com a página parada.
+   ===================================================================== */
+(function(){
+  'use strict';
+  const FIXAS = ['tab-inicio', 'tab-caixa'];
+  let tm = null;
+  function limpar(x){ x.style.zoom = ''; x.style.maxHeight = ''; x.style.overflowY = ''; }
+  function ajustar(){
+    try{
+      const s = document.querySelector('section.tab.active');
+      document.querySelectorAll('section.tab').forEach(x => { if(x !== s) limpar(x); });
+      if(!s || FIXAS.indexOf(s.id) < 0){ document.documentElement.classList.remove('tela-fixa'); return; }
+      document.documentElement.classList.add('tela-fixa');
+      limpar(s);
+      const nav = document.getElementById('navInf'), navH = nav && nav.offsetHeight ? nav.offsetHeight : 0;
+      const avail = window.innerHeight - s.getBoundingClientRect().top - navH - 8, need = s.scrollHeight;
+      if(avail > 120 && need > avail){
+        const z = Math.max(0.72, avail / need);
+        s.style.zoom = String(z);
+        if(need * z > avail + 1){ s.style.maxHeight = (avail / z) + 'px'; s.style.overflowY = 'auto'; }
+      }
+    }catch(e){}
+  }
+  function agendar(){ clearTimeout(tm); tm = setTimeout(ajustar, 90); }
+  function iniciar(){
+    const raiz = document.getElementById('mainWrap') || document.body;
+    new MutationObserver(agendar).observe(raiz, { attributes:true, attributeFilter:['class'], subtree:true });
+    FIXAS.forEach(id => { const el = document.getElementById(id); if(el) new MutationObserver(agendar).observe(el, { childList:true, subtree:true, characterData:true }); });
+    window.addEventListener('resize', agendar); window.addEventListener('orientationchange', agendar);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(agendar);
+    [300, 1200, 3000].forEach(ms => setTimeout(ajustar, ms)); ajustar();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
+})();

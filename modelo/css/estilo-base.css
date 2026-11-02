@@ -858,3 +858,10 @@ html,body,body *{touch-action:pan-x pan-y;}
 /* v1.27: logo padrão (branca) escurece em fundo claro */
 html[data-modo=claro] img[src$="img/logo.png"]{filter:invert(1);mix-blend-mode:normal;}
 html.sem-mesas #atalhoMesas{display:none !important;}
+
+/* Telas fixas (Início e Caixa): a página não rola; o ajuste de tamanho é feito pelo app-02-abas.js */
+html.tela-fixa{overflow:hidden;height:100%;}
+html.tela-fixa body{height:100vh;height:100dvh;min-height:0;overflow:hidden;padding-bottom:0;box-sizing:border-box;}
+html.tela-fixa footer{display:none;}
+html.tela-fixa section.tab.active{scrollbar-width:none;overscroll-behavior:contain;}
+html.tela-fixa section.tab.active::-webkit-scrollbar{display:none;}
