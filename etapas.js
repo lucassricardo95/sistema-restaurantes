@@ -71,6 +71,7 @@ window.ETAPAS = [
            'Confira o outro lado: no Supabase, Authentication → Sign In / Providers → Google tem que estar Enable com o mesmo ID e a mesma chave.',
            'Depois, entre no sistema como Administrador → Sistema → Backup e espaço → cartão "Google Drive" → Conectar o Drive principal. Escolha a conta Google do restaurante e aceite o acesso ao Drive. Volta para o sistema com "Drive principal conectado".',
            'Se o restaurante usar a contingência (segundo Drive), repita em "Drive da contingência" com OUTRA conta Google.',
+           'Os BACKUPS do sistema moram no Drive conectado (Drive direto): o Storage do Supabase fica livre para dados antigos arquivados. Se nenhum Drive estiver conectado ou a cópia falhar, o backup fica no Storage só como segurança, o erro aparece na tela de Backup e o botão "Enviar ao Drive" repete (e depois tira do Storage). Restaurar e excluir backup também usam o Drive; excluir manda o arquivo para a lixeira do Drive (recuperável por 30 dias).',
            'Na tela "O Google não verificou este app": toque em Avançado → Acessar (nome do app) (não seguro) e aceite. É normal: o app segue sem verificação.',
            'Se aparecer "O Google não devolveu a autorização permanente": abra myaccount.google.com/permissions, remova o acesso do app e conecte de novo.'],
    pedido:'Guarde no cofre (Vault) do Supabase do restaurante "{nome}" (projeto {ref}) as chaves google_client_id e google_client_secret. ID do cliente: ________  Chave secreta: ________  Depois confira que a função drive-api responde.' },
