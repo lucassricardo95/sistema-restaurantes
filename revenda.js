@@ -127,7 +127,7 @@ function campoTxt(rot, k, o){ o = o || {}; const v = o.path ? get(S.rest, o.path
 function get(o, p){ return p.split('.').reduce((a, k) => (a == null ? a : a[k]), o); }
 function set(o, p, v){ const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => { a = a[k] = a[k] || {}; }); a[ks[ks.length - 1]] = v; }
 function lerForm(){ document.querySelectorAll('#corpo [data-k]').forEach(el => { let v = el.type === 'checkbox' ? el.checked : el.value.trim(); if(el.type === 'number') v = v === '' ? null : Number(v); else if(v === '' && !el.type.match(/checkbox/) && !/^(marca|modulos)\./.test(el.dataset.k)) v = null; set(S.rest, el.dataset.k, v); }); }
-const COLS = ['nome','situacao','dominio','site_url','supabase_url','supabase_chave','api_url','contingencia_url','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','plano','valor_mensal','dia_vencimento','inicio_em','observacoes'];
+const COLS = ['nome','situacao','dominio','site_url','supabase_url','supabase_chave','api_url','contingencia_url','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','plano','valor_mensal','dia_vencimento','motor','inicio_em','observacoes'];
 async function salvar(msg){
   lerForm();
   const corpo = {}; COLS.forEach(c => { corpo[c] = S.rest[c]; });
@@ -155,7 +155,7 @@ function abaLig(){
    + campoTxt('Endereço do banco (Project URL do Supabase)', 'supabase_url', { ph:'https://xxxx.supabase.co' }) + campoTxt('Chave pública (publishable)', 'supabase_chave', { ph:'sb_publishable_…' })
    + campoTxt('Planilha principal (endereço /exec do Apps Script) — opcional', 'api_url') + campoTxt('Planilha de contingência (endereço /exec) — opcional', 'contingencia_url')
    + campoTxt('Chave pública dos avisos no celular (push)', 'push_chave_publica')
-   + campoTxt('Endereço (domínio) do site — só o nome', 'dominio', { ph:'churros.meusistema.com.br' }) + campoTxt('Endereço completo do site', 'site_url', { ph:'https://churros.meusistema.com.br/' })
+   + campoTxt('Endereço (domínio) do site — só o nome', 'dominio', { ph:'churros.meusistema.com.br' }) + campoTxt('Endereço completo do site', 'site_url', { ph:'https://churros.meusistema.com.br/' }) + campoTxt('Versão do sistema (motor) — deixe em branco para acompanhar as atualizações', 'motor', { ph:'https://lucassricardo95.github.io/motor/estavel/' })
    + botSalvar + '<h3>Testes</h3><div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvTeste(\'supabase\')">Testar ligação</button><button class="mini" onclick="rvTeste(\'banco\')">Testar banco</button><button class="mini" onclick="rvTeste(\'funcoes\')">Testar funções</button><button class="mini" onclick="rvTeste(\'site\')">Testar site</button></div><div id="resTeste"></div>'
    + '<h3>Arquivo de configuração do restaurante</h3><p class="mudo" style="font-size:13px">Preencha tudo acima, salve e gere. Este arquivo vai para o GitHub do restaurante e é o único que muda de um restaurante para outro.</p><button class="mini principal" onclick="rvGerarConfig()">Gerar config-restaurante.js</button><div id="cfgGerado"></div></div>';
   mostrarRes('resTeste', ['supabase','banco','funcoes','site']);
@@ -164,7 +164,7 @@ function abaLig(){
 /* ---------- arquivo de configuração do restaurante ---------- */
 function configTexto(r){
   const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {};
-  const o = { motor:'https://lucassricardo95.github.io/motor/estavel/', slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
+  const o = { motor:r.motor || 'https://lucassricardo95.github.io/motor/estavel/', slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), pushChave:r.push_chave_publica || '',
     marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || 'img/icon-512.png' } }, modulos:mod };
   return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Para mudar, gere de novo no painel. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
 }
