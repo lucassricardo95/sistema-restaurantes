@@ -25,3 +25,8 @@ insert into public.sync_estado (id) values (true) on conflict (id) do nothing;
 insert into public.ifood_loja (id, fechada_por_nos) values (true, false) on conflict (id) do nothing;
 insert into public.fiscal_empresa (id, regime, serie, aliquota_simples) values (true, 'simples', 1, 0) on conflict (id) do nothing;
 insert into public.ai_config (id) values (true) on conflict (id) do nothing;
+
+-- linhas únicas que as telas esperam existir (sem elas a aba do iFood e o Caixa ficam em "Carregando…")
+insert into public.caixa_config (id) values (true) on conflict (id) do nothing;
+insert into public.ifood_estado (id) values (true) on conflict (id) do nothing;
+insert into public.ifood_token (id) values (true) on conflict (id) do nothing;
