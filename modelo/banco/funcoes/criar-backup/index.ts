@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { CORS, json, svcClient, autorizar, cfg } from "./auth.ts";
-import { contaConectada, acharOuCriarPasta, enviarArquivo, apagarAntigos } from "./drive.ts";
+import { contaConectada, acharOuCriarPasta, enviarArquivo, apagarAntigos, lerBackupDrive, PASTA_BACKUP_DIRETO } from "./drive.ts";
 
 // A lista de tabelas vem do banco (backup_tabelas): tudo do schema public, menos segredos e dados deriváveis
 // (ver _backup_excluidas no SQL 2026-10-15-backup-restauracao.sql). Tabela nova entra sozinha.
@@ -18,7 +18,8 @@ const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Segunda cópia do backup: vai para uma pasta do Google Drive pela planilha principal (Apps Script).
 // Tenta até 2 vezes (no máx. ~45 s, para caber no limite da função) (a planilha pode estar ocupada ou "acordando") e grava o motivo REAL do erro.
-// Se falhar, o backup continua válido no Storage; o motivo fica em backups.copia_drive_erro e o botão "Enviar ao Drive" repete depois.
+// O backup mora no DRIVE (Storage do Supabase fica livre para dados antigos arquivados). Só se NENHUM Drive direto aceitar a cópia é que o arquivo fica no Storage como segurança;
+// aí o motivo real fica em backups.copia_drive_erro, aparece na tela e o botão "Enviar ao Drive" repete depois (e tira do Storage).
 async function copiarParaDrive(nome: string, gz: Uint8Array, retencaoDias: number): Promise<{ ok: boolean; erro?: string }> {
   const url = await cfg("SHEETS_MAIN_URL"), chave = await cfg("PRINCIPAL_CHAVE_SERVIDOR");
   if (!url || !chave) return { ok: false, erro: "Planilha principal não configurada." };
@@ -41,7 +42,7 @@ async function copiarParaDrive(nome: string, gz: Uint8Array, retencaoDias: numbe
 
 // Caminho direto (sem Apps Script): envia o backup pelo Drive autorizado por OAuth. Pasta própria em cada Drive conectado.
 // Só os backups AUTOMÁTICOS antigos saem da pasta (manuais e pré-restauração ficam), igual ao Storage.
-const PASTA_DIRETA = "Backups (Drive direto)";
+const PASTA_DIRETA = PASTA_BACKUP_DIRETO;
 async function copiarDireto(nome: string, gz: Uint8Array, retencaoDias: number): Promise<{ principal: boolean | null; contingencia: boolean | null; erros: string[] }> {
   const r: { principal: boolean | null; contingencia: boolean | null; erros: string[] } = { principal: null, contingencia: null, erros: [] };
   for (const conta of ["principal", "contingencia"] as const) {
@@ -64,6 +65,14 @@ function resumoDrive(apps: { ok: boolean; erro?: string }, d: { principal: boole
   return { ok, erro: avisos.length ? avisos.join(" ").slice(0, 400) : null };
 }
 
+// Lê o arquivo de um backup de onde ele estiver (Drive ou, nos antigos/de segurança, Storage).
+async function lerBackupArquivo(svc: any, b: { arquivo: string; armazenado_em?: string }): Promise<{ bytes?: Uint8Array; erro?: string }> {
+  if (b.armazenado_em === "drive") return await lerBackupDrive(b.arquivo);
+  const { data: arq, error } = await svc.storage.from("backups").download(b.arquivo);
+  if (error || !arq) return { erro: "Não consegui ler o arquivo do backup no Storage." };
+  return { bytes: new Uint8Array(await arq.arrayBuffer()) };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const a = await autorizar(req, ["Admin"]);
@@ -75,17 +84,39 @@ serve(async (req) => {
 
     // Reenviar ao Drive um backup que ficou sem cópia (não cria backup novo)
     if (body.reenviarDrive) {
-      const { data: b } = await svc.from("backups").select("id,arquivo,status").eq("id", body.reenviarDrive).maybeSingle();
+      const { data: b } = await svc.from("backups").select("id,arquivo,status,armazenado_em").eq("id", body.reenviarDrive).maybeSingle();
       if (!b?.arquivo || b.status !== "Sucesso") return json({ ok: false, message: "Backup não encontrado." }, 404);
-      const { data: arq, error: ed } = await svc.storage.from("backups").download(b.arquivo);
-      if (ed || !arq) return json({ ok: false, message: "Não consegui ler o arquivo do backup." }, 500);
+      const lido = await lerBackupArquivo(svc, b);
+      if (!lido.bytes) return json({ ok: false, message: lido.erro || "Não consegui ler o arquivo do backup." }, 500);
       const { data: c2 } = await svc.from("backup_config").select("auto_retencao_dias").eq("id", true).single();
-      const bytesArq = new Uint8Array(await arq.arrayBuffer());
+      const bytesArq = lido.bytes;
       const d = await copiarParaDrive(b.arquivo, bytesArq, c2?.auto_retencao_dias ?? 7);
       const dir = await copiarDireto(b.arquivo, bytesArq, c2?.auto_retencao_dias ?? 7);
       const res = resumoDrive(d, dir);
+      const noDrive = dir.principal === true || dir.contingencia === true;
+      if (noDrive && b.armazenado_em === "storage") { await svc.storage.from("backups").remove([b.arquivo]); await svc.from("backups").update({ armazenado_em: "drive" }).eq("id", b.id); }
       await svc.from("backups").update(res.ok ? { copia_drive_em: new Date().toISOString(), copia_drive_erro: res.erro } : { copia_drive_erro: res.erro }).eq("id", b.id);
       return json({ ok: res.ok, drive: res.ok, message: res.ok ? (res.erro ? "Cópia enviada ao Drive. Aviso: " + res.erro : "Cópia enviada ao Drive.") : (res.erro || "Falhou.") });
+    }
+
+    // Move para o Drive os backups que ainda estão no Storage (uso único; depois de confirmar a cópia no Drive, apaga do Storage)
+    if (body.moverParaDrive) {
+      const { data: lista } = await svc.from("backups").select("id,arquivo,armazenado_em").eq("status", "Sucesso").eq("armazenado_em", "storage");
+      const { data: c3 } = await svc.from("backup_config").select("auto_retencao_dias").eq("id", true).single();
+      let movidos = 0; const falhas: string[] = [];
+      for (const x of lista || []) {
+        if (!x.arquivo) continue;
+        const { data: arq } = await svc.storage.from("backups").download(x.arquivo);
+        if (!arq) { falhas.push(x.arquivo + ": não li do Storage"); continue; }
+        const bytes = new Uint8Array(await arq.arrayBuffer());
+        const dir = await copiarDireto(x.arquivo, bytes, 3650);
+        if (dir.principal === true || dir.contingencia === true) {
+          const conf = await lerBackupDrive(x.arquivo);   // só apaga do Storage depois de reler do Drive
+          if (conf.bytes && conf.bytes.length === bytes.length) { await svc.storage.from("backups").remove([x.arquivo]); await svc.from("backups").update({ armazenado_em: "drive", copia_drive_em: new Date().toISOString(), copia_drive_erro: null }).eq("id", x.id); movidos++; }
+          else falhas.push(x.arquivo + ": não conferiu no Drive");
+        } else falhas.push(x.arquivo + ": " + (dir.erros.join(" | ") || "nenhum Drive conectado"));
+      }
+      return json({ ok: falhas.length === 0, movidos, falhas, message: `${movidos} backup(s) movido(s) para o Drive.` + (falhas.length ? " Falhas: " + falhas.join("; ") : "") });
     }
 
     const tipo = ["Manual", "Automático", "Pré-restauração"].includes(body.tipo) ? body.tipo : "Manual";
@@ -129,28 +160,32 @@ serve(async (req) => {
 
     const gz = await gzip(new TextEncoder().encode(JSON.stringify(dados)));
     const nome = `backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}-${tipo === "Pré-restauração" ? "pre" : tipo === "Automático" ? "auto" : "manual"}.json.gz`;
-    const { error: up } = await svc.storage.from("backups").upload(nome, gz, { contentType: "application/gzip", upsert: false });
-    if (up) throw new Error(up.message);
-    await svc.from("backups").update({ status: "Sucesso", arquivo: nome, tamanho_bytes: gz.length }).eq("id", bkId);
-
     const { data: cfg2 } = await svc.from("backup_config").select("auto_retencao_dias").eq("id", true).single();
     const retDias = cfg2?.auto_retencao_dias ?? 7;
 
-    // Segunda cópia no Google Drive (não derruba o backup se falhar)
+    // 1) Copia para o Drive (direto = o que dá para ler de volta e restaurar; Apps Script = segunda via). Nada disso derruba o backup.
+    const direto = await copiarDireto(nome, gz, retDias);
     const apps = await copiarParaDrive(nome, gz, retDias);
-    const direto = await copiarDireto(nome, gz, retDias);   // caminho direto: copia mesmo se o Apps Script estiver bem (e no Drive da contingência, se conectado)
     const res = resumoDrive(apps, direto);
+    const noDrive = direto.principal === true || direto.contingencia === true;
+
+    // 2) Só se NENHUM Drive direto aceitou a cópia, o arquivo fica no Storage (segurança); senão o Storage não é usado.
+    if (!noDrive) {
+      const { error: up } = await svc.storage.from("backups").upload(nome, gz, { contentType: "application/gzip", upsert: false });
+      if (up) throw new Error("Sem cópia no Drive e o Storage também recusou: " + up.message + (res.erro ? " | " + res.erro : ""));
+    }
+    await svc.from("backups").update({ status: "Sucesso", arquivo: nome, tamanho_bytes: gz.length, armazenado_em: noDrive ? "drive" : "storage" }).eq("id", bkId);
     const drive = { ok: res.ok, erro: res.erro || undefined };
-    await svc.from("backups").update(res.ok ? { copia_drive_em: new Date().toISOString(), copia_drive_erro: res.erro } : { copia_drive_erro: res.erro }).eq("id", bkId);
+    await svc.from("backups").update(res.ok ? { copia_drive_em: new Date().toISOString(), copia_drive_erro: res.erro } : { copia_drive_erro: (res.erro || "Nenhum Drive conectado") + (noDrive ? "" : " O backup ficou guardado no Storage do Supabase até o Drive voltar.") }).eq("id", bkId);
 
     // Retenção: só apaga backups AUTOMÁTICOS antigos (manuais e pré-restauração ficam)
     const corte = new Date(Date.now() - retDias * 86400000).toISOString();
-    const { data: antigos } = await svc.from("backups").select("id,arquivo").eq("tipo", "Automático").lt("data_hora", corte);
+    const { data: antigos } = await svc.from("backups").select("id,arquivo,armazenado_em").eq("tipo", "Automático").lt("data_hora", corte);
     for (const x of antigos || []) {
-      if (x.arquivo) await svc.storage.from("backups").remove([x.arquivo]);
+      if (x.arquivo && x.armazenado_em === "storage") await svc.storage.from("backups").remove([x.arquivo]);
       await svc.from("backups").delete().eq("id", x.id);
     }
-    return json({ ok: true, arquivo: nome, tamanho: gz.length, drive: drive.ok, driveErro: drive.erro });
+    return json({ ok: true, arquivo: nome, tamanho: gz.length, drive: drive.ok, driveErro: drive.erro, guardadoEm: noDrive ? "drive" : "storage" });
   } catch (e) {
     if (bkId) await svc.from("backups").update({ status: "Erro", erro: (e as Error).message.slice(0, 500) }).eq("id", bkId);
     return json({ ok: false, message: (e as Error).message }, 500);

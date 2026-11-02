@@ -89,3 +89,39 @@ export async function apagarAntigos(conta: string, pastaId: string, antesDeISO: 
 export async function contaConectada(conta: string): Promise<boolean> {
   const { data } = await sv().from("drive_contas").select("conta").eq("conta", conta).maybeSingle(); return !!data;
 }
+
+// ---- Backups guardados SÓ no Drive (o Storage do Supabase fica livre para dados antigos arquivados) ----
+export const PASTA_BACKUP_DIRETO = "Backups (Drive direto)";
+async function acharBackup(conta: string, nome: string): Promise<string | null> {
+  const pasta = await acharOuCriarPasta(conta, PASTA_BACKUP_DIRETO, "root");
+  const u = new URL("https://www.googleapis.com/drive/v3/files");
+  u.searchParams.set("q", `name='${esc(nome)}' and '${esc(pasta)}' in parents and trashed=false`); u.searchParams.set("fields", "files(id)");
+  const j = await (await g(conta, u.toString())).json();
+  return j.files?.[0]?.id || null;
+}
+/** Lê o arquivo do backup no Drive (principal primeiro, depois a contingência). Devolve o motivo se não achar. */
+export async function lerBackupDrive(nome: string): Promise<{ bytes?: Uint8Array; erro?: string }> {
+  const erros: string[] = [];
+  for (const conta of CONTAS) {
+    try {
+      if (!(await contaConectada(conta))) continue;
+      const id = await acharBackup(conta, nome);
+      if (!id) { erros.push(`${conta === "principal" ? "Drive principal" : "Drive da contingência"}: arquivo não encontrado`); continue; }
+      const r = await g(conta, `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`);
+      return { bytes: new Uint8Array(await r.arrayBuffer()) };
+    } catch (e) { erros.push((e as Error).message); }
+  }
+  return { erro: erros.length ? erros.join(" | ").slice(0, 300) : "Nenhum Drive conectado para ler o backup." };
+}
+/** Manda o arquivo do backup para a lixeira do Drive (recuperável por 30 dias) em todas as contas conectadas. */
+export async function apagarBackupDrive(nome: string): Promise<{ apagados: number; erros: string[] }> {
+  let apagados = 0; const erros: string[] = [];
+  for (const conta of CONTAS) {
+    try {
+      if (!(await contaConectada(conta))) continue;
+      const id = await acharBackup(conta, nome);
+      if (id) { await g(conta, `https://www.googleapis.com/drive/v3/files/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: true }) }); apagados++; }
+    } catch (e) { erros.push((e as Error).message); }
+  }
+  return { apagados, erros };
+}
