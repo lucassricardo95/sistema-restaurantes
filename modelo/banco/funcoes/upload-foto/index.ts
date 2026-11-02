@@ -30,8 +30,18 @@ serve(async (req) => {
   if (!a.ok) return json({ ok: false, message: a.message }, a.status);
   try {
     const svc = svcClient();
-    const { produtoId, comboId, nomeBase, base64Data, mimeType, destino } = await req.json();
+    const { produtoId, comboId, nomeBase, base64Data, mimeType, destino, marca } = await req.json();
     if (!base64Data) return json({ ok: false, message: "Imagem ausente." }, 400);
+
+    // Logos da Aparência (Administrador → Sistema → Aparência): vão para o mesmo Drive das fotos, mas não ficam presas a produto ou combo.
+    if (marca) {
+      if (!["cardapio", "impressao", "icone"].includes(marca)) return json({ ok: false, message: "Tipo de logo inválido." }, 400);
+      const nv = a.usuario?.nivel;
+      if (!a.servico && nv !== "Admin" && nv !== "Desenvolvedor") return json({ ok: false, message: "Só o Admin troca as logos." }, 403);
+      const jm = await planilha({ action: "uploadFotoSb", nomeBase: "logo-" + marca, base64Data, mimeType, copiarContingencia: true });
+      if (!jm?.ok) return json({ ok: false, message: jm?.message || "Falha ao salvar a logo no Drive." }, 502);
+      return json({ ok: true, id_principal: jm.fotoId, id_contingencia: jm.fotoReservaId || null });
+    }
     if (!produtoId && !comboId) return json({ ok: false, message: "Informe produto ou combo." }, 400);
     if (!["principal", "contingencia", "ambos"].includes(destino)) return json({ ok: false, message: "Destino inválido." }, 400);
 
