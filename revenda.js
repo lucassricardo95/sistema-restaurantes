@@ -468,7 +468,7 @@ function desenharExtra(et, tipo, box){
     testetudo: () => '<button class="principal" onclick="rvTesteTudo()">🧪 Testar tudo com um clique</button><div id="res_tudo"></div>',
     teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
     codigos: () => codigosHtml(et.id),
-    conectar: () => conectarEtapaHtml() + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><div class="cols" style="margin-top:8px"><label>Login do dono<input id="tdLogin" autocomplete="off" placeholder="ex.: maria" maxlength="30"></label><label>Senha do dono<input id="tdSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label><label>O seu login de suporte<input id="tdDLogin" autocomplete="off" value="Lucas" maxlength="30"></label><label>A sua senha de suporte<input id="tdDSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label></div><small class="mudo">As senhas só passam direto para o banco do restaurante: o painel não guarda nenhuma.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
+    conectar: () => conectarEtapaHtml() + '<div class="res" style="margin-top:12px"><b>🌐 Ligar o site (GitHub Pages)</b><br><small>O painel liga o Pages e já preenche o endereço do site. Pode pular as partes 4 e 5 da etapa "Criar o endereço do site".</small><div class="linha" style="justify-content:flex-start;margin-top:8px"><button class="mini principal" onclick="rvLigarPages()">Ligar o site agora</button></div><div id="pages_' + S.rest.id + '"></div></div>' + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><div class="cols" style="margin-top:8px"><label>Login do dono<input id="tdLogin" autocomplete="off" placeholder="ex.: maria" maxlength="30"></label><label>Senha do dono<input id="tdSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label><label>O seu login de suporte<input id="tdDLogin" autocomplete="off" value="Lucas" maxlength="30"></label><label>A sua senha de suporte<input id="tdDSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label></div><small class="mudo">As senhas só passam direto para o banco do restaurante: o painel não guarda nenhuma.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
     bancoauto: () => bancoAutoHtml(),
     googleauto: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> cole os dois e toque no botão. O painel liga o "Entrar com o Google" no Supabase e já guarda as credenciais no cofre (a etapa do Drive usa as mesmas).'
       + '<label for="gaId">ID do cliente (termina em .apps.googleusercontent.com)</label><input id="gaId" autocomplete="off" value="' + esc((window.CD_VALS || {}).gid || '') + '"><label for="gaSec">Chave secreta do cliente (começa com GOCSPX-)</label><input id="gaSec" type="password" autocomplete="off">'
@@ -1357,11 +1357,11 @@ window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) retur
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
 const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador']];
-async function chamarConector(corpo){
+async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
-  try{ const r = await fetch(URL_ + '/functions/v1/conector', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
-    if(r.status === 404) throw new Error('A função "conector" ainda não foi publicada no servidor do painel (veja "Preparar o painel" em Mais → Conectores).');
+  try{ const r = await fetch(URL_ + '/functions/v1/' + (fn || 'conector'), { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
+    if(r.status === 404) throw new Error('A função "' + (fn || 'conector') + '" ainda não foi publicada no servidor do painel (veja "Preparar o painel" em Mais → Conectores).');
     const j = await r.json().catch(() => null); if(!j) throw new Error('O conector não respondeu (erro ' + r.status + ').'); return j;
   }catch(e){ throw new Error(e.name === 'AbortError' ? 'O conector demorou demais.' : e.message); } finally { clearTimeout(t); }
 }
@@ -1377,12 +1377,12 @@ function conSel(r, k, rot, dica, link){
 function conectorHtml(r){
   return '<details class="como"><summary>📖 Como ligar (passo a passo)</summary><ol class="pequeno">'
    + '<li><b>Supabase:</b> abra o link do token (botão abaixo), entre com a conta do <b>restaurante</b>, toque em <b>Generate new token</b>, nome <code>painel-' + esc(r.slug || 'restaurante') + '</code>, e copie o token (começa com <code>sbp_</code>; só aparece uma vez). Cole no primeiro campo e toque em Salvar.</li>'
-   + '<li><b>GitHub:</b> abra o link, entre com a conta do restaurante. Nome <code>painel-' + esc(r.slug || 'restaurante') + '</code>, validade a maior possível. Em <i>Repository access</i> marque <b>Only select repositories</b> e escolha o repositório deste restaurante (crie o repositório antes, etapa "Criar o endereço do site"). Em <i>Permissions → Repository permissions</i> deixe <b>Contents: Read and write</b>. Toque em Generate token, copie e cole no segundo campo.</li>'
+   + '<li><b>GitHub:</b> abra o link, entre com a conta do restaurante. Nome <code>painel-' + esc(r.slug || 'restaurante') + '</code>, validade a maior possível. Em <i>Repository access</i> marque <b>Only select repositories</b> e escolha o repositório deste restaurante (crie o repositório antes, etapa "Criar o endereço do site"). Em <i>Permissions → Repository permissions</i> deixe <b>Contents: Read and write</b> e também <b>Pages: Read and write</b>. Toque em Generate token, copie e cole no segundo campo.</li>'
    + '<li>Toque em <b>Testar ligações</b>. Tem que aparecer ✅ nos dois.</li>'
    + '<li>Cada restaurante tem o <b>seu</b> par de tokens, guardados separados no cofre do painel: ligar um não mexe nos outros. Para desligar, toque na lixeira.</li>'
    + '<li>Seguro? O token nunca volta para o navegador (só os 4 últimos dígitos), e o conector só escreve no repositório e no projeto cadastrados neste restaurante. Tudo fica no Registro.</li></ol></details>'
    + conSel(r, kSb(r), '🗄️ Supabase', 'Token de acesso da conta Supabase do restaurante.', 'https://supabase.com/dashboard/account/tokens')
-   + conSel(r, kGh(r), '🐙 GitHub', 'Token só deste repositório, com "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new')
+   + conSel(r, kGh(r), '🐙 GitHub', 'Token só deste repositório, com "Contents" e "Pages" em Read and write.', 'https://github.com/settings/personal-access-tokens/new')
    + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + '<button class="mini" onclick="rvConConferir(\'' + r.id + '\')">✅ Conferir implantação</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\')">⬆️ Publicar funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
 }
 const conMsg = (id, html) => { const b = $('con_' + id); if(b) b.innerHTML = html; };
@@ -1471,11 +1471,19 @@ window.rvConConferir = async id => {
   hist(id, 'Conferência da implantação', precisaBanco || precisaFuncoes || precisaSite ? 'faltam itens' : 'completa');
 };
 /* IMPLANTAR TUDO: banco, funções do servidor, logins e site, numa tela só, com uma confirmação */
+window.rvLigarPages = async () => {
+  const r = S.rest; if(!r) return; if(!temGh(r)) return erro('Antes, salve o token do GitHub deste restaurante e toque em Testar ligações.');
+  if(!r.github_url) return erro('Preencha antes o endereço do GitHub (etapa "Criar o endereço do site").');
+  conMsg('pages_' + r.id, '<small class="mudo">⏳ Ligando o GitHub Pages…</small>');
+  let p; try{ p = await chamarConector({ acao:'gh_pages', restaurante_id:r.id }, 'conector-pages'); }catch(e){ p = { ok:false, erro:e.message }; }
+  if(p.ok && p.url){ r.site_url = p.url; S.rest.site_url = p.url; try{ await salvar(''); }catch(e){} }
+  conMsg('pages_' + r.id, conLinha(p.ok, p.ok ? 'Pages ligado. Endereço do site preenchido: ' + esc(p.url) + (p.criado ? '. Leva 1 a 2 minutos para ficar no ar.' : '') : esc(p.erro || 'erro')));
+};
 window.rvImplantarTudo = async () => {
   const r = S.rest; if(!r) return;
   if(!temSb(r) || !temGh(r)) return erro('Antes, salve os dois tokens (GitHub e Supabase) deste restaurante e toque em Testar ligações.');
   if(!/^[a-z0-9]{20}$/.test(refDe(r))) return erro('Preencha antes o endereço do banco (etapa "Criar o banco de dados").');
-  if(!r.site_url || !r.github_url) return erro('Preencha antes o endereço do site e do GitHub (etapa "Criar o endereço do site").');
+  if(!r.github_url) return erro('Preencha antes o endereço do GitHub (etapa "Criar o endereço do site"). O endereço do site o painel preenche sozinho.');
   if(r.situacao !== 'implantacao') return erro('Este restaurante não está "em implantação". Por segurança, o painel só monta o banco de restaurante novo. Se for refazer de propósito, mude a situação para "Em implantação" na aba Contrato.');
   const val = id => (($(id) || {}).value || ''), aLogin = val('tdLogin').trim(), aSenha = val('tdSenha'), dLogin = val('tdDLogin').trim(), dSenha = val('tdDSenha');
   const senhaOk = x => x.length >= 8 && /[A-Za-z]/.test(x) && /[0-9]/.test(x), loginOk = x => /^[A-Za-z0-9._-]{3,30}$/.test(x);
@@ -1488,6 +1496,7 @@ window.rvImplantarTudo = async () => {
   const passo = async (rotulo, fn) => { if(!ok) return; tela(rotulo + '…'); let x; try{ x = await fn(); }catch(e){ x = { ok:false, erro:e.message }; } h += conLinha(x.ok, esc(rotulo) + (x.ok ? ' ✓' : ': ' + esc(x.erro || 'erro'))); if(!x.ok) ok = false; return x; };
   const q = v => String(v).replace(/'/g, "''");
   try{
+    await passo('Ligando o site (GitHub Pages)', async () => { const p = await chamarConector({ acao:'gh_pages', restaurante_id:r.id }, 'conector-pages'); if(p.ok && p.url){ r.site_url = p.url; S.rest.site_url = p.url; } return { ok:!!p.ok, erro:p.erro }; });
     ctxCod(r, []);
     await passo('1/7 Estrutura do banco', () => conRodarSilencioso(r, bancoAutoItens(1), (n, t, rot) => tela('1/7 Estrutura do banco: parte ' + n + ' de ' + t + ' (' + rot + ')')));
     await passo('2/7 Cofre de chaves e dados iniciais', async () => {
