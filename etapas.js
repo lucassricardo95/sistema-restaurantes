@@ -78,7 +78,7 @@ window.ETAPAS = [
     { t:'Bom saber: o plano grátis pausa o projeto depois de 7 dias sem uso. O sistema manda sinal a cada 15 minutos e isso o mantém vivo. Se um dia aparecer "Paused" no Supabase, abra o projeto e toque em "Restore project".' }
    ] },
 
- { id:'repositorio', titulo:'Criar o endereço do site', curto:'Repositório no GitHub', quem:'voce', tempo:'5 min', teste:'site', campos:['github_url','site_url'],
+ { id:'repositorio', titulo:'Criar o endereço do site', curto:'Repositório no GitHub', quem:'voce', tempo:'5 min', teste:'pages', campos:['github_url','site_url'],
    porque:'O GitHub coloca o site no ar de graça. O endereço vai ser usuario.github.io/{slug}.',
    precisa:['Conta no GitHub (pode ser a sua)'],
    partes:[
