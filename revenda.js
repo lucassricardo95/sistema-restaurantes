@@ -75,6 +75,8 @@ async function carregar(){
 async function carregarSaude(){
   const er = await tenta(() => rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=300'), null);
   if(er) S.erros = er; else if(!S.erros) S.erros = [];
+  const vg = await tenta(() => rest('vigia_estado?select=*'), null); if(vg){ S.vigia = {}; vg.forEach(x => { S.vigia[x.slug] = x; }); }
+  const vgG = await tenta(() => rest('vigia_geral?select=*'), null); if(vgG && vgG[0]) S.vigiaG = vgG[0];
   const sa = await tenta(() => rest('saude_app?select=*'), null);   // se a leitura falhar, mantém o que já tinha (não vira "sem sinal" por engano)
   if(sa){ S.saude = {}; sa.forEach(x => { S.saude[x.slug] = x; }); S.saudeEm = Date.now(); }
   else if(!S.saude) S.saude = {};
@@ -202,6 +204,7 @@ function alertas(){
     else if(sd.geral === 'sem' && nEtapas(r) >= 8) L.push([2, '📡', r.nome + ': sem sinal ' + (sd.h ? haTempo(sd.min) : 'ainda'), 'O banco dele pode estar pausado ou o site fora do ar.', "rvIr('saude')"]);
     usoDe(sd.h).filter(u => u.pct >= 70).forEach(u => L.push([u.pct >= 90 ? 3 : 2, '📊', r.nome + ': ' + u.tit + ' em ' + String(u.pct).replace('.', ',') + '%', 'Plano grátis do Supabase perto do limite.', "rvIr('saude')"]));
     const av = (S.avCache || {})[r.id]; if(av && av.d.projeto && av.d.projeto.estado === 'INACTIVE' && r.situacao !== 'implantacao') L.push([3, '⏸️', r.nome + ': banco PAUSADO pelo Supabase', 'O site dele não funciona. Toque para reativar.', "rvAbrir('" + r.id + "','saude')"]);
+    const vg = (S.vigia || {})[r.slug]; if(vg && vg.ligado && r.situacao !== 'implantacao') (vg.problemas || []).filter(p => p.id !== 'erros').forEach(p => L.push([p.nivel === 'alto' ? 3 : p.nivel === 'medio' ? 2 : 1, '🛡️', r.nome + ': ' + p.texto, 'Vigia · ' + (p.acao === 'atualizar_banco' ? 'toque para aplicar o que falta' : 'toque para ver'), p.acao === 'atualizar_banco' ? "rvConAtualizar('" + r.id + "')" : p.acao === 'conectores' ? "rvAbrir('" + r.id + "','passo')" : "rvAbrir('" + r.id + "','saude')"]));
     if(r.bloqueado) L.push([1, '⛔', r.nome + ': acesso bloqueado', 'Libere quando ele pagar.', "rvAbrir('" + r.id + "','dinheiro')"]);
     const px = proxEtapa(r); if(px && ['implantacao','teste'].includes(r.situacao)) L.push([1, '🛠️', r.nome + ': próximo passo', px.titulo, "rvAbrir('" + r.id + "','passo')"]);
   });
@@ -749,9 +752,44 @@ function medirContingencia_(rests){
 function errosHtml(lista, comNome){
   return lista.map(e => '<div class="erro-item"><div class="linha"><b>' + (comNome ? esc(nomeSlug(e.slug)) + ' · ' : '') + esc(e.mensagem) + '</b><span class="selo">' + e.ocorrencias + 'x</span></div>'
     + '<small class="mudo">Tela: ' + esc(e.tela || '—') + ' · versão ' + esc(e.versao || '—') + ' · último ' + esc(new Date(e.ultimo_em).toLocaleString('pt-BR')) + '</small>'
+    + triagemHtml(e)
     + (e.detalhe || e.aparelho ? '<details><summary class="mudo pequeno">Detalhe técnico</summary><small class="mudo pre">' + esc((e.aparelho || '') + '\n' + (e.detalhe || '')) + '</small></details>' : '')
     + '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvErroOk(' + e.id + ')">✓ Resolvido</button><button class="mini" onclick="rvErroClaude(' + e.id + ')">🤖 Copiar para o Claude</button></div></div>').join('');
 }
+const TRI_ROTULO = { cache_antigo:['🟢','Provavelmente já corrigido (aparelho com versão antiga)'], conexao:['📶','Falha de conexão do aparelho'], falha_real:['🔴','Falha real do sistema'], outro:['🟡','Erro a investigar'] };
+function triagemHtml(e){ const t = e.triagem; if(!t || !t.resumo) return '<small class="mudo">🔎 Ainda sem explicação do vigia (ele analisa os erros novos a cada 6 horas).</small>';
+  const k = TRI_ROTULO[t.classe] || TRI_ROTULO.outro;
+  return '<div class="tri"><b>' + k[0] + ' ' + k[1] + '</b><br><small>' + esc(t.resumo) + (t.causa ? ' <span class="mudo">Causa provável: ' + esc(t.causa) + '</span>' : '') + (t.acao ? ' <b>O que fazer:</b> ' + esc(t.acao) : '') + '</small></div>'; }
+function vigiaCard(){
+  const G = S.vigiaG || {}, V = S.vigia || {}, L = S.lista.filter(r => ['ativo','teste'].includes(r.situacao));
+  const quando = G.executou_em ? haTempo(Math.round((Date.now() - new Date(G.executou_em).getTime()) / 60000)) : 'ainda não rodou';
+  const usos = G.ia_dia === hoje() ? Number(G.ia_usos) || 0 : 0;
+  return '<div class="card"><div class="linha"><b>🛡️ Vigia</b><button class="principal mini" onclick="rvVigiaRodar()">Rodar agora</button></div>'
+   + '<small class="mudo">Confere sozinho, de 6 em 6 horas, só os restaurantes ativos: projeto no ar, atualizações do banco que faltam, tarefas que falharam, fila da planilha e tamanho do banco. Só lê, nunca muda nada. Avisa no celular quando algo muda. Última conferência: ' + quando + '.</small>'
+   + '<div class="linha"><small class="mudo">Uso da IA hoje</small><small>' + usos + ' de 10 · só gasta com problema novo</small></div><div class="barra"><i style="width:' + Math.min(100, usos * 10) + '%"></i></div>'
+   + L.map(r => { const v = V[r.slug] || {}, lig = v.ligado !== false && !(r.slug === 'texas-burger' && !V[r.slug]); const P = v.problemas || [];
+      return '<div class="linha vg-l"><div><b>' + esc(r.nome) + '</b><br><small class="mudo">' + (!lig ? 'Desligado: o vigia não se conecta ao banco dele.' : !v.verificado_em ? 'Ainda não conferido.' : P.length ? esc(v.resumo || P.map(p => p.texto).join(' ')) : '✅ Tudo em ordem.') + '</small></div>'
+        + '<label class="mini-sw"><input type="checkbox" ' + (lig ? 'checked ' : '') + 'onchange="rvVigiaLigar(\'' + esc(r.slug) + '\', this.checked)"> ligado</label></div>'; }).join('')
+   + '</div>';
+}
+window.rvVigiaLigar = async (slug, on) => {
+  const r = S.lista.find(x => x.slug === slug); if(!r) return;
+  if(on && slug === 'texas-burger' && !confirm('Ligar o vigia no Texas Burger?\n\nEle vai se conectar ao banco do Texas só para LER (a cada 6 horas). Nada é alterado.')){ desenhar(); return; }
+  try{ await rest('vigia_estado?on_conflict=slug', 'POST', { slug, ligado:on }, { Prefer:'resolution=merge-duplicates,return=representation' }); (S.vigia = S.vigia || {})[slug] = Object.assign(S.vigia[slug] || { slug, problemas:[] }, { ligado:on }); aviso(on ? 'Vigia ligado em ' + r.nome + '.' : 'Vigia desligado em ' + r.nome + '.', 'ok'); }catch(e){ erro('Não salvou: ' + e.message); }
+  desenhar();
+};
+window.rvVigiaRodar = async () => {
+  aviso('O vigia está conferindo…', 'ok');
+  try{
+    if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 120000);
+    const r = await fetch(URL_ + '/functions/v1/vigia', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:'{"acao":"rodar"}' }); clearTimeout(t);
+    if(r.status === 404) throw new Error('A função "vigia" ainda não foi publicada no servidor do painel.');
+    const j = await r.json().catch(() => null); if(!j || !j.ok) throw new Error((j && j.erro) || 'O vigia não respondeu.');
+    await carregarSaude(); aviso('Conferido: ' + j.resumo + (j.erros_explicados ? ' · ' + j.erros_explicados + ' erro(s) explicado(s)' : ''), 'ok');
+  }catch(e){ erro(e.name === 'AbortError' ? 'O vigia demorou demais.' : e.message); }
+  desenhar();
+};
 const nomeSlug = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
 function abaSaude(){ const r = S.rest, er = errosDe(r.slug); C(aoVivoCaixa(r) + saudeHtml(r, false) + '<div class="card"><div class="linha"><h2>🐞 Erros abertos</h2>' + (er.length ? '<button class="mini" onclick="rvErrosOk(\'' + esc(r.slug) + '\')">Marcar todos resolvidos</button>' : '') + '</div>' + (er.length ? errosHtml(er, false) : '<p class="mudo">Nenhum erro aberto. 👍</p>') + '</div>'); medirContingencia_([r]); aoVivoCarregar(r); }
 /* ---------- AO VIVO pelo conector do Supabase: estado do projeto, serviços, plano grátis, tarefas, erros, login e segurança ---------- */
@@ -853,6 +891,7 @@ function vSaude(){
   const ordem = { problema:0, atencao:1, sem:2, ok:3, impl:4 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
   T('<div class="topo"><h1>Saúde</h1><small class="mudo">atualiza sozinho · ' + haTempo(Math.round((Date.now() - (S.saudeEm || Date.now())) / 60000)) + '</small></div>'
    + dica('Cada restaurante manda um resumo a cada 15 minutos. Erros que aparecem nas telas deles chegam aqui; toque em "Copiar para o Claude" para pedir a correção.') + '<div class="kpis quatro">' + kpi('🟢 Tudo certo', cont.ok, 'ok') + kpi('🟡 Atenção', cont.atencao, cont.atencao ? 'aviso' : '') + kpi('🔴 Problema', cont.problema, cont.problema ? 'erro' : '') + kpi('⚪ Sem sinal', cont.sem, '') + '</div>'
+   + vigiaCard()
    + (L.some(temSb) ? '<div class="card"><div class="linha"><b>📡 Conferir todos agora</b><button class="principal mini" onclick="rvConferirTodos()">Conferir</button></div><small class="mudo">Mede ao vivo, pelo conector, todos os restaurantes ligados e junta aqui só o que precisa de atenção.</small><div id="avTodos"></div></div>' : '')
    + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h && sd.geral !== 'impl' ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
       return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
