@@ -73,10 +73,16 @@ async function carregar(){
   await carregarSaude();
 }
 async function carregarSaude(){
-  S.erros = await tenta(() => rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=300'), []);
-  S.saude = {}; (await tenta(() => rest('saude_app?select=*'), [])).forEach(x => { S.saude[x.slug] = x; });
-  S.saudeEm = Date.now();
+  const er = await tenta(() => rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=300'), null);
+  if(er) S.erros = er; else if(!S.erros) S.erros = [];
+  const sa = await tenta(() => rest('saude_app?select=*'), null);   // se a leitura falhar, mantém o que já tinha (não vira "sem sinal" por engano)
+  if(sa){ S.saude = {}; sa.forEach(x => { S.saude[x.slug] = x; }); S.saudeEm = Date.now(); }
+  else if(!S.saude) S.saude = {};
 }
+/* ao voltar para o painel (celular que estava em segundo plano), atualiza a saúde na hora em vez de mostrar sinal velho */
+if(!window._saudeVisOn){ window._saudeVisOn = true; document.addEventListener('visibilitychange', async () => {
+  if(document.hidden || !S.saudeEm || Date.now() - S.saudeEm < 60000) return;
+  try{ await carregarSaude(); if(['inicio','saude'].includes(S.view) && !document.querySelector('.modal')) desenhar(); }catch(e){} }); }
 function normalizar(r){ const e = r.etapas || {}; Object.keys(e).forEach(k => { if(!e[k] || typeof e[k] !== 'object') e[k] = { feita: !!e[k] && e[k] !== 'pendente' }; }); r.etapas = e; r.marca = r.marca || {}; r.modulos = r.modulos || {}; return r; }
 async function hist(id, acao, det){ try{ await rest('historico', 'POST', { restaurante_id:id, acao, detalhe:det || null }); }catch(e){} }
 async function salvarAjustes(novo, msg){ try{ const d = Object.assign({}, S.aj, novo); await rest('revenda_ajustes?id=eq.true', 'PATCH', { dados:d, atualizado_em:new Date().toISOString() }); S.aj = d; aviso(msg || 'Salvo.', 'ok'); return true; }catch(e){ erro(e.message); return false; } }
@@ -1244,7 +1250,7 @@ function conectorHtml(r){
    + '<li>Seguro? O token nunca volta para o navegador (só os 4 últimos dígitos), e o conector só escreve no repositório e no projeto cadastrados neste restaurante. Tudo fica no Registro.</li></ol></details>'
    + conSel(r, kSb(r), '🗄️ Supabase', 'Token de acesso da conta Supabase do restaurante.', 'https://supabase.com/dashboard/account/tokens')
    + conSel(r, kGh(r), '🐙 GitHub', 'Token só deste repositório, com "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new')
-   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\')">⬆️ Publicar funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
+   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + '<button class="mini" onclick="rvConConferir(\'' + r.id + '\')">✅ Conferir implantação</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\')">⬆️ Publicar funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
 }
 const conMsg = (id, html) => { const b = $('con_' + id); if(b) b.innerHTML = html; };
 async function conRecarregar(r){ S.segs = await tenta(() => rpc('revenda_segredos_status'), S.segs); if(S.view === 'conectores') vConectores(); else if(S.view === 'rest' && S.aba === 'passo') abaPasso(); }
@@ -1277,6 +1283,50 @@ window.rvConTestar = async id => {
   try{ const a = await chamarConector({ acao:'sb_testar', restaurante_id:id }); h += conLinha(a.ok, a.ok ? 'Supabase: projeto "' + esc(a.nome || a.ref) + '" (' + esc(a.estado || '') + ')' : 'Supabase: ' + esc(a.erro)); }catch(e){ h += conLinha(false, 'Supabase: ' + esc(e.message)); }
   try{ const b = await chamarConector({ acao:'gh_testar', restaurante_id:id }); h += conLinha(b.ok, b.ok ? 'GitHub: ' + esc(b.repo) + ' (pode gravar)' : 'GitHub: ' + esc(b.erro)); }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
   conMsg(id, h);
+};
+
+/* CONFERIR IMPLANTAÇÃO: banco (comparado com o restaurante de referência), funções do servidor e site no GitHub */
+const amarela = t => '<div class="res" style="border-left:3px solid #f0b429;">⚠️ ' + t + '</div>';
+const listaCurta = (a, n = 8) => a.slice(0, n).map(esc).join(', ') + (a.length > n ? ' e mais ' + (a.length - n) : '');
+window.rvConConferir = async id => {
+  const r = S.lista.find(x => x.id === id); if(!r) return;
+  const box = 'con_' + id; conMsg(id, '<small class="mudo">⏳ Conferindo o banco e o GitHub de ' + esc(r.nome) + '…</small>');
+  let h = '<div class="res"><b>Conferência de ' + esc(r.nome) + '</b> <small class="mudo">· ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '</small></div>', precisaBanco = false, precisaFuncoes = false, precisaSite = false;
+  if(!temSb(r)) h += amarela('Banco: ligue o token do Supabase deste restaurante para conferir.');
+  else try{
+    const a = await chamarConector({ acao:'sb_conferir', restaurante_id:id });
+    if(!a.ok) h += conLinha(false, 'Banco: ' + esc(a.erro || 'não consegui conferir'));
+    else if(a.referencia) h += conLinha(true, 'Este é o restaurante de referência (o mais novo): nada a comparar.');
+    else {
+      const t0 = a.totais || {};
+      if(!a.faltamTabelas.length && !a.faltamColunas.length && !a.faltamFuncoes.length && !a.faltamCron.length) h += conLinha(true, 'Banco completo: ' + t0.tabelas + ' tabelas e ' + t0.funcoes + ' funções iguais às do modelo.');
+      else { precisaBanco = true;
+        h += conLinha(false, 'Banco incompleto: faltam ' + a.faltamTabelas.length + ' tabela(s), ' + a.faltamColunas.length + ' coluna(s), ' + a.faltamFuncoes.length + ' função(ões)' + (a.faltamCron.length ? ' e ' + a.faltamCron.length + ' rotina(s) automática(s)' : '') + '.'
+          + (a.faltamTabelas.length ? '<br><small>Tabelas: ' + listaCurta(a.faltamTabelas) + '</small>' : '') + (a.faltamColunas.length ? '<br><small>Colunas: ' + listaCurta(a.faltamColunas) + '</small>' : '') + (a.faltamFuncoes.length ? '<br><small>Funções: ' + listaCurta(a.faltamFuncoes) + '</small>' : '') + (a.faltamCron.length ? '<br><small>Rotinas: ' + listaCurta(a.faltamCron) + '</small>' : '')); }
+      if(a.diferentes && a.diferentes.length) h += amarela(a.diferentes.length + ' função(ões) do banco diferem do modelo (desatualizadas ou personalizadas deste restaurante).' + (precisaBanco ? '' : ' Se acabou de atualizar o sistema, toque em Atualizar banco.') + '<br><small>' + listaCurta(a.diferentes, 6) + '</small>');
+      if(a.diferentes && a.diferentes.length) precisaBanco = true;
+      if(a.edgeFaltam && a.edgeFaltam.length){ precisaFuncoes = true; h += conLinha(false, 'Funções do servidor não publicadas: ' + listaCurta(a.edgeFaltam)); }
+      else h += conLinha(true, 'Funções do servidor: todas publicadas.');
+    }
+  }catch(e){ h += conLinha(false, 'Banco: ' + esc(e.message)); }
+  if(!temGh(r)) h += amarela('GitHub: ligue o token do GitHub deste restaurante para conferir.');
+  else try{
+    const g = await chamarConector({ acao:'gh_conferir', restaurante_id:id });
+    if(!g.ok) h += conLinha(false, 'GitHub: ' + esc(g.erro || 'não consegui conferir'));
+    else {
+      const faltam = g.arquivos.filter(x => !x.existe).map(x => x.nome);
+      h += conLinha(!faltam.length, faltam.length ? 'Site no GitHub: faltam arquivos (' + esc(faltam.join(', ')) + ').' : 'Site no GitHub: os 4 arquivos estão em ' + esc(g.repo) + '.');
+      if(faltam.length) precisaSite = true;
+      if(!g.motor) { h += conLinha(false, 'Não achei o endereço do motor em config-restaurante.js.'); precisaSite = true; }
+      else if(!g.motorOk){ h += conLinha(false, 'O motor (' + esc(g.motor) + ') não respondeu: confira o endereço.'); precisaSite = true; }
+      else h += conLinha(!g.ultima || g.versao === g.ultima, 'Motor em uso: ' + esc(g.versao) + (g.ultima && g.versao !== g.ultima ? ' (a última é ' + esc(g.ultima) + ')' : ' (a última)'));
+    }
+  }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
+  const bt = []; if(precisaBanco && temSb(r)) bt.push('<button class="principal mini" onclick="rvConAtualizar(\'' + id + '\')">⬆️ Atualizar banco</button>');
+  if(precisaFuncoes && temSb(r)) bt.push('<button class="mini" onclick="rvConPublicarFuncoes(\'' + id + '\')">⬆️ Publicar funções</button>');
+  if(!precisaBanco && !precisaFuncoes && !precisaSite && h.indexOf('class="res erro"') < 0 && h.indexOf('⚠️') < 0) h += '<div class="res ok"><b>🎉 Tudo implantado.</b></div>';
+  conMsg(id, h + (bt.length ? '<div class="linha" style="justify-content:flex-start">' + bt.join('') + '</div>' : ''));
+  hist(id, 'Conferência da implantação', precisaBanco || precisaFuncoes || precisaSite ? 'faltam itens' : 'completa');
 };
 window.rvConFuncoes = async id => {
   conMsg(id, '<small class="mudo">Consultando…</small>');

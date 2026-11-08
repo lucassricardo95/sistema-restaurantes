@@ -70,7 +70,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 62
   },
   {
    "etapa": "banco",
@@ -82,7 +82,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 63
   },
   {
    "etapa": "banco",
@@ -94,7 +94,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -106,7 +106,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 68
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -130,7 +130,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -142,7 +142,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -154,7 +154,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 63
   },
   {
    "etapa": "banco",
@@ -166,7 +166,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -190,7 +190,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -202,7 +202,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 63
+   "kb": 67
   },
   {
    "etapa": "banco",
@@ -214,7 +214,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 62
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -238,7 +238,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -250,7 +250,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -358,7 +358,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 21
+   "kb": 37
   },
   {
    "etapa": "banco",
@@ -405,7 +405,7 @@ window.CODIGOS = {
    "quando": "Depois do cofre de chaves.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "As tarefas agendadas só funcionam com o cofre preenchido.",
-   "kb": 9
+   "kb": 10
   },
   {
    "etapa": "banco",
@@ -604,6 +604,17 @@ window.CODIGOS = {
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode na ordem 135 a 142.",
    "kb": 2
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd142",
+   "titulo": "Atualização 142 · caixa mais profissional",
+   "arq": "banco-restaurante/142-caixa-profissional.sql",
+   "desc": "Suprimento (reforço de troco), limite de sobra/falta com motivo e aviso no celular, Leitura X, passar o caixa entre operadores, fundo sugerido e resumo por operador.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 142.",
+   "kb": 25
   }
  ]
 };
