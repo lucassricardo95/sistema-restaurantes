@@ -92,15 +92,15 @@ window.ETAPAS = [
    ] },
 
  { id:'conectar', titulo:'Ligar o GitHub e o Supabase', curto:'Os conectores: o painel faz o resto sozinho', opcional:true, quem:'voce', tempo:'5 min',
-   porque:'Com os dois tokens do restaurante guardados no cofre do painel, ele monta o banco e publica o site sozinho nas próximas etapas. Cada restaurante tem os seus tokens: ligar um não tira o outro. Se preferir, pule: todas as etapas seguintes continuam tendo o jeito manual.',
+   porque:'Com os dois tokens do restaurante guardados no cofre do painel, o botão "Implantar tudo agora" monta o banco, publica as funções do servidor, cria os logins, gera as chaves de aviso e grava o site, tudo de uma vez (uns 6 a 10 minutos). Cada restaurante tem os seus tokens: ligar um não tira o outro. Se preferir, pule: todas as etapas seguintes continuam tendo o jeito manual.',
    precisa:['As contas do restaurante (etapa 1)','O projeto do Supabase e o repositório do GitHub já criados (etapas 2 e 3)','A função "conector" publicada no painel (Mais → Conectores → Preparar o painel, uma vez só)'],
    partes:[
     { t:'Siga o passo a passo abaixo: crie o token do Supabase e o do GitHub deste restaurante, cole cada um no seu campo e toque em Salvar. Depois toque em "Testar ligações": tem que aparecer ✅ nos dois.', extra:'conectar' },
-    { t:'Pronto. Nas etapas "Montar as tabelas do banco" e "Colocar o site no ar" vai aparecer o botão ⚡ para o painel fazer sozinho. As partes que dependem de uma senha ou conta sua (logins, Google, avisos) continuam com você.' }
+    { t:'Com os dois ✅, preencha os 4 campos de "Implantar tudo" (login e senha do dono, o seu login e a sua senha de suporte) e toque em "⚡ Implantar tudo agora". Deixe a tela aberta até aparecer "Pronto". Depois da conferência automática, só faltam as etapas que dependem das suas contas: cores e logos, Entrar com o Google, Drive, chaves das IAs e planilhas (opcional).' }
    ] },
 
  { id:'banco', titulo:'Montar as tabelas do banco', curto:'Copiar e colar os códigos', quem:'voce', tempo:'25 min', teste:'banco',
-   porque:'O banco vem vazio. Estes códigos criam todas as tabelas, regras de segurança e funções do sistema.',
+   porque:'O banco vem vazio. Estes códigos criam todas as tabelas, regras de segurança e funções do sistema. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['O banco criado (etapa 2)','A chave secreta do Supabase (a parte 2 mostra onde)','Paciência: são várias partes, uma de cada vez'],
    partes:[
     { t:'Com o Supabase ligado (etapa anterior), o painel monta tudo sozinho. Sem isso, pule esta parte e faça as seguintes à mão.', extra:'bancoauto' },
@@ -112,7 +112,7 @@ window.ETAPAS = [
    pedido:'Aplique o banco completo do sistema no restaurante "{nome}" (código {slug}, projeto Supabase {ref}): estrutura, ajustes em ordem, cofre de chaves e conferência de segurança. Não use nenhum dado do Texas Burger.' },
 
  { id:'funcoes', titulo:'Publicar as funções do servidor', curto:'O painel publica sozinho (ou o GitHub)', quem:'voce', tempo:'10 min', teste:'funcoes',
-   porque:'São os "robôs" do servidor: avisos no celular, backup, iFood, pagamentos e IAs. O próprio GitHub do restaurante publica as 33 funções: você só toca em um botão.',
+   porque:'São os "robôs" do servidor: avisos no celular, backup, iFood, pagamentos e IAs. O próprio GitHub do restaurante publica as 33 funções: você só toca em um botão. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['O repositório do GitHub (etapa 3)','O login do Supabase do restaurante'],
    partes:[
     { t:'Crie uma chave de acesso do Supabase: abra o link → "Generate new token" → nome: publicar-{slug} → validade: a maior que tiver → "Generate token". COPIE a chave (começa com sbp_). Ela só aparece uma vez.', link:'https://supabase.com/dashboard/account/tokens', copiar:'publicar-{slug}' },
@@ -124,7 +124,7 @@ window.ETAPAS = [
    pedido:'Publique as 33 funções do servidor (edge functions) no projeto Supabase {ref} do restaurante "{nome}" ({site_url}), com verify_jwt desligado e o segredo SITE_URL, e confira que a função ping responde.' },
 
  { id:'admin', titulo:'Criar os logins', curto:'Administrador do dono e o seu de suporte', quem:'voce', tempo:'5 min',
-   porque:'O Administrador é o login do dono. O Desenvolvedor é o SEU login de suporte: entra mesmo com o restaurante bloqueado e sem a tela dos termos.',
+   porque:'O Administrador é o login do dono. O Desenvolvedor é o SEU login de suporte: entra mesmo com o restaurante bloqueado e sem a tela dos termos. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['Escolher login e senha do dono','Sua senha de Desenvolvedor'],
    partes:[
     { t:'Rode os 4 códigos abaixo no SQL Editor, na ordem. No 2º, escreva o login e a senha do dono nos campos (a senha precisa de 8 letras ou números) e o código já sai pronto. No 4º, escreva a SUA senha de Desenvolvedor. Nada disso fica guardado no painel.', extra:'codigos', link:SB + '/sql/new' },
@@ -133,7 +133,7 @@ window.ETAPAS = [
    pedido:'Crie o primeiro Administrador do restaurante "{nome}" (projeto {ref}) com o login: ________ e o meu login de Desenvolvedor (Lucas). Gere a senha do Administrador e me entregue só a mim.' },
 
  { id:'push', titulo:'Avisos no celular', curto:'O painel gera as chaves para você', quem:'voce', tempo:'3 min', campos:['push_chave_publica'],
-   porque:'Faz o celular da equipe apitar quando chega pedido e avisa o cliente quando o pedido sai.',
+   porque:'Faz o celular da equipe apitar quando chega pedido e avisa o cliente quando o pedido sai. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['Nada: o painel cria as chaves'],
    partes:[
     { t:'Toque em "Gerar chaves agora". O painel cria as duas chaves deste restaurante e já guarda a pública.', extra:'push' },
@@ -155,7 +155,7 @@ window.ETAPAS = [
    partes:[ { t:'Ligue só o que o restaurante contratou e toque em Salvar. iFood, nota fiscal, Mercado Pago e InfinitePay só funcionam depois que o restaurante cadastrar as contas dele no sistema (Administrador → Sistema → Integrações e contas).', extra:'modulos' } ] },
 
  { id:'publicar', titulo:'Colocar o site no ar', curto:'4 arquivos no GitHub', quem:'voce', tempo:'5 min', teste:'site',
-   porque:'O site do restaurante é só uma "porta" com 4 arquivos pequenos. O sistema em si vem do motor e se atualiza sozinho.',
+   porque:'O site do restaurante é só uma "porta" com 4 arquivos pequenos. O sistema em si vem do motor e se atualiza sozinho. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['Banco, endereço do site e marca feitos'],
    partes:[
     { t:'Com o GitHub ligado, o painel grava os 4 arquivos sozinho. Sem isso, pule esta parte e use o jeito manual.', extra:'publicarauto' },
