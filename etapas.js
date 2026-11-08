@@ -180,7 +180,7 @@ window.ETAPAS = [
     { t:'Em "Origens JavaScript autorizadas" (campo de cima) adicione SÓ o endereço abaixo (sem barra no fim).', copiar:'{site_origem}' },
     { t:'Em "URIs de redirecionamento autorizados" (campo de baixo) adicione os DOIS endereços abaixo, um de cada vez. Toque em "Criar".', copiar:'{supabase_url}/auth/v1/callback\n{supabase_url}/functions/v1/drive-oauth' },
     { t:'Vai aparecer o "ID do cliente" (termina em .apps.googleusercontent.com) e a "Chave secreta do cliente" (começa com GOCSPX-). Copie os dois e GUARDE: a etapa do Drive usa os mesmos. A chave secreta só aparece inteira agora.' },
-    { t:'Volte ao SUPABASE → Authentication → Sign In / Providers → Google → ligue "Enable Sign in with Google", cole o ID do cliente e a chave secreta → Save.', link:SB + '/auth/providers' },
+    { t:'Volte ao SUPABASE → Authentication → Sign In / Providers → Google → ligue "Enable Sign in with Google", cole o ID do cliente e a chave secreta → Save. Com o conector do Supabase ligado, use o jeito rápido abaixo (ele também guarda as credenciais para o Drive).', link:SB + '/auth/providers', extra:'googleauto' },
     { t:'Teste: abra o site, toque em "Entrar" no cardápio e entre com um e-mail Google. Erro "redirect_uri_mismatch" = algum endereço da parte 9 está diferente. "Acesso bloqueado" = falta publicar o app (parte 6).', link:'{site_url}' },
     { t:'(Recomendado, tira o aviso "app não verificado") Search Console com o MESMO e-mail → "Adicionar propriedade" → "Prefixo do URL" → cole {site_url} → método "Arquivo HTML" → baixe o google….html → suba NA RAIZ do GitHub (igual ao privacidade.html) → volte e toque em "Verificar". Depois, no Google Cloud → Branding → "Ver problemas" → "Corrigi os problemas". Nunca apague esse arquivo.', link:'https://search.google.com/search-console/welcome' }
    ],
@@ -237,24 +237,6 @@ window.ETAPAS = [
     { t:'Toque em "Gerar chave de leitura". Copie o código que aparecer, rode também no SQL Editor e toque em "Testar a leitura".', extra:'leitura' }
    ] },
 
- { id:'app', titulo:'App Android da equipe', curto:'Opcional: app em tela cheia', quem:'voce', tempo:'25 min', opcional:true,
-   porque:'Um app de verdade no celular da equipe (sem a barra do navegador). Instalado pelo arquivo .apk, fora da Play Store. Sem ele, a equipe instala pelo navegador, que também funciona.',
-   precisa:['Site no ar com o ícone do restaurante (etapas "Cores e logos" e "Colocar o site no ar")','Gerenciador de arquivos no celular (para renomear o arquivo)'],
-   partes:[
-    { t:'Abra o PWABuilder, cole o endereço do site e toque em "Start". Espere a nota (avisos amarelos não atrapalham). Toque em "Package For Stores" → "Android" → "Generate Package".', link:'https://www.pwabuilder.com/', copiar:'{site_url}' },
-    { t:'Na janela de opções, troque estes campos pelos valores abaixo (toque para copiar). O "Package ID" PRECISA ser único: se dois restaurantes usarem o mesmo, um app apaga o outro no celular.', extra:'apk' },
-    { t:'Em "Signing key" escolha "Create new". Preencha: Key alias "equipe", uma senha (Key password e Store password podem ser iguais; GUARDE), seu nome, "BR" no país. Toque em "Download Package". Vem um .zip.' },
-    { t:'Dentro do zip: o .apk (app-release-signed.apk), o assetlinks.json, o signing.keystore e o signing-key-info.txt. GUARDE o signing.keystore e o signing-key-info.txt num lugar seguro (ex.: seu Google Drive particular) e NUNCA suba no GitHub: sem eles não dá para atualizar o app.' },
-    { t:'No gerenciador de arquivos do celular, renomeie o app-release-signed.apk para equipe.apk (segure em cima → Renomear).', copiar:'equipe.apk' },
-    { t:'Suba o equipe.apk na pasta downloads do repositório {slug}: "Add file" → "Create new file" → nome downloads/LEIA.txt → escreva "App da equipe" → "Commit changes" (isso cria a pasta). Entre na pasta downloads → "Add file" → "Upload files" → equipe.apk → "Commit changes".', link:'{github_url}/new/main', copiar:'downloads/LEIA.txt' },
-    { t:'O app só abre em tela cheia se o GitHub "provar" que o site é dele. Isso fica num repositório especial chamado exatamente {gh_usuario}.github.io. Se ele ainda não existir: "New repository" → esse nome → Public → "Add a README file" → "Create". (Se já existir de outro restaurante, NÃO crie outro: use o mesmo.)', link:'https://github.com/new', copiar:'{gh_usuario}.github.io' },
-    { t:'Nesse repositório: "Add file" → "Create new file" → nome .well-known/assetlinks.json → no conteúdo cole o texto do assetlinks.json do zip. Se o arquivo JÁ existir (outro restaurante), use o "Juntar" abaixo para não apagar o app do outro. "Commit changes".', extra:'assetlinks', link:'https://github.com/{gh_usuario}/{gh_usuario}.github.io/new/main' },
-    { t:'Ainda nele: "Add file" → "Create new file" → nome .nojekyll → deixe vazio → "Commit changes". Depois "Settings" → "Pages" → Branch "main" e "/ (root)" → "Save". Espere 2 minutos e toque em "Conferir".', copiar:'.nojekyll', extra:'apkconferir' },
-    { t:'Instale num Android: abra o site → "Área de Funcionários" → entre → "Ajuda" → "Baixar o app da equipe" (ou abra o link direto abaixo). Abra o arquivo → "Instalar" (se pedir, permita instalar desta fonte). Tem que abrir em tela cheia. Se aparecer a barra do navegador, espere 10 minutos, desinstale e instale de novo.', link:'{site_url}downloads/equipe.apk' },
-    { t:'Para atualizar o app no futuro: no PWABuilder escolha "Use mine" em Signing key, envie o MESMO signing.keystore com as mesmas senhas e aumente o "App version". Troque o equipe.apk (e o assetlinks.json, se mudar a chave).' }
-   ],
-   pedido:'Estou mandando o zip do PWABuilder do restaurante "{nome}". Coloque o APK como downloads/equipe.apk no repositório do site, publique (ou junte) o assetlinks.json em .well-known no repositório {gh_usuario}.github.io (com .nojekyll) e confira que o app abre em tela cheia. Não guarde o keystore em nenhum repositório.' },
-
  { id:'contas', titulo:'Guardar as contas e senhas', curto:'Para o dono nunca perder um acesso', quem:'voce', tempo:'10 min',
    porque:'Tudo o que foi criado fica anotado dentro do sistema do restaurante, com as senhas protegidas no cofre do banco.',
    precisa:['Login de Administrador do sistema'],
@@ -266,7 +248,7 @@ window.ETAPAS = [
  { id:'teste', titulo:'Teste completo', curto:'Confira tudo antes de entregar', quem:'voce', tempo:'25 min',
    porque:'Garante que o cliente não vai encontrar nada quebrado.',
    precisa:['Um celular (de preferência Android)'],
-   checklist:['Abrir o site no celular: nome, cores e logo certos (nada de outro restaurante)','Cadastrar um produto com foto e ver no cardápio','Fazer um pedido pelo cardápio e ver na tela da cozinha','Imprimir uma comanda e conferir a logo de impressão','Entrar com o Google no cardápio','Instalar o app (APK ou navegador) e conferir ícone e nome','Ativar os avisos e receber um aviso de pedido no celular','Perguntar algo ao atendente virtual no cardápio','Abrir e fechar o caixa','Gerar um backup em Backup e espaço','Abrir a Ajuda e ver as imagens','Entrar com o seu login de Desenvolvedor','Perguntar ao assistente do painel quanto este restaurante vendeu','Apagar os dados de teste (produto de teste, pedido, caixa)'],
+   checklist:['Abrir o site no celular: nome, cores e logo certos (nada de outro restaurante)','Cadastrar um produto com foto e ver no cardápio','Fazer um pedido pelo cardápio e ver na tela da cozinha','Imprimir uma comanda e conferir a logo de impressão','Entrar com o Google no cardápio','Instalar o app pelo navegador e conferir ícone e nome','Ativar os avisos e receber um aviso de pedido no celular','Perguntar algo ao atendente virtual no cardápio','Abrir e fechar o caixa','Gerar um backup em Backup e espaço','Abrir a Ajuda e ver as imagens','Entrar com o seu login de Desenvolvedor','Perguntar ao assistente do painel quanto este restaurante vendeu','Apagar os dados de teste (produto de teste, pedido, caixa)'],
    partes:[ { t:'Faça cada teste e marque. Só dá para concluir quando todos estiverem marcados.', extra:'checklist' } ] },
 
  { id:'entrega', titulo:'Entregar ao cliente', curto:'Equipe, mensagem, termos e cobrança', quem:'voce', tempo:'20 min',
@@ -279,4 +261,4 @@ window.ETAPAS = [
     { t:'Gere a taxa de implantação e a primeira mensalidade e mude a situação para "Ativo". Pronto! 🎉', extra:'cobranca' }
    ] }
 ];
-window.FASES = [['Banco',['cadastro','supabase','repositorio','conectar','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura','app']],['Entrega',['contas','teste','entrega']]];
+window.FASES = [['Banco',['cadastro','supabase','repositorio','conectar','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura']],['Entrega',['contas','teste','entrega']]];

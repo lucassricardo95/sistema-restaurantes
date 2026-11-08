@@ -449,9 +449,6 @@ function desenharExtra(et, tipo, box){
   const ex = {
     cadastro: () => '<div class="cols">' + ['nome','contato_nome','contato_telefone','cidade','plano','valor_mensal','taxa_implantacao','dia_vencimento'].map(k => '<div>' + campo(k) + '</div>').join('') + '</div>' + botSalvar(),
     contas: () => '<div class="contas">' + CONTAS.map(c => '<div><b>' + esc(c[0]) + '</b><small>' + esc(c[1]) + '</small>' + (c[2] ? '<a class="btn mini" href="' + c[2] + '" target="_blank" rel="noopener">Abrir ↗</a>' : '') + '</div>').join('') + '</div>',
-    apk: () => apkHtml(),
-    assetlinks: () => assetHtml(),
-    apkconferir: () => '<button class="principal" onclick="rvApkConferir()">🔎 Conferir</button><div id="apkRes"></div>',
     boasvindas: () => boasHtml(),
     listacontas: () => listaContasHtml(),
     campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
@@ -459,6 +456,9 @@ function desenharExtra(et, tipo, box){
     codigos: () => codigosHtml(et.id),
     conectar: () => conectarEtapaHtml(),
     bancoauto: () => bancoAutoHtml(),
+    googleauto: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> cole os dois e toque no botão. O painel liga o "Entrar com o Google" no Supabase e já guarda as credenciais no cofre (a etapa do Drive usa as mesmas).'
+      + '<label for="gaId">ID do cliente (termina em .apps.googleusercontent.com)</label><input id="gaId" autocomplete="off" value="' + esc((window.CD_VALS || {}).gid || '') + '"><label for="gaSec">Chave secreta do cliente (começa com GOCSPX-)</label><input id="gaSec" type="password" autocomplete="off">'
+      + '<button class="principal" style="margin-top:8px" onclick="rvGoogleAuto()">⚡ Ligar o Google agora</button><div id="con_ga_' + r.id + '"></div></div>' : '',
     loginurls: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> o painel grava os dois endereços no Supabase sozinho.<br><button class="principal" style="margin-top:8px" onclick="rvLoginUrls()">⚡ Configurar os endereços agora</button><div id="con_lu_' + r.id + '"></div></div>' : '',
     publicarauto: () => publicarAutoHtml(),
     push: () => pushHtml(),
@@ -524,9 +524,16 @@ const b64url = u8 => btoa(String.fromCharCode.apply(null, Array.from(u8))).repla
 function pushHtml(){
   const r = S.rest;
   return (r.push_chave_publica ? '<div class="res ok">✓ Este restaurante já tem chave pública: <code class="quebra">' + esc(r.push_chave_publica.slice(0, 24)) + '…</code></div>' : '')
+   + (temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> o servidor cria as chaves e já guarda no cofre do banco (a privada nunca passa por aqui). Não precisa rodar código.<br><button class="principal" style="margin-top:8px" onclick="rvPushAuto()">🔑 ' + (r.push_chave_publica ? 'Gerar chaves novas e guardar' : 'Gerar e guardar agora') + '</button><div id="con_pa_' + r.id + '"></div></div><details class="como"><summary>Jeito manual</summary>' : '')
    + '<button class="principal" onclick="rvGerarPush()">🔑 ' + (r.push_chave_publica ? 'Gerar chaves novas' : 'Gerar chaves agora') + '</button>'
-   + (S.pushSQL && S.pushSQL.id === r.id ? '<p class="pequeno">Copie e rode no SQL Editor do Supabase do restaurante (só aparece agora; se perder, gere de novo):</p><div class="copiar" id="pushSql">' + esc(S.pushSQL.sql) + '</div><button class="principal" onclick="rvCopiar(\'pushSql\')">📋 Copiar código</button>' : '');
+   + (S.pushSQL && S.pushSQL.id === r.id ? '<p class="pequeno">Copie e rode no SQL Editor do Supabase do restaurante (só aparece agora; se perder, gere de novo):</p><div class="copiar" id="pushSql">' + esc(S.pushSQL.sql) + '</div><button class="principal" onclick="rvCopiar(\'pushSql\')">📋 Copiar código</button>' : '') + (temSb(r) ? '</details>' : '');
 }
+window.rvPushAuto = async () => {
+  const r = S.rest; if(r.push_chave_publica && !confirm('Gerar chaves NOVAS? Os celulares já cadastrados vão precisar ativar os avisos de novo.')) return;
+  conMsg('pa_' + r.id, '<small class="mudo">Gerando…</small>');
+  try{ const a = await chamarConector({ acao:'sb_vapid', restaurante_id:r.id }); if(!a.ok){ conMsg('pa_' + r.id, conLinha(false, esc(a.erro))); return; }
+    r.push_chave_publica = a.chave_publica; if(await salvar('Chaves dos avisos prontas e guardadas no cofre.')){ await hist(r.id, 'Chaves de aviso geradas pelo conector', ''); abaPasso(); } }catch(e){ conMsg('pa_' + r.id, conLinha(false, esc(e.message))); }
+};
 window.rvGerarPush = async () => {
   const r = S.rest; if(r.push_chave_publica && !confirm('Gerar chaves NOVAS? Os celulares já cadastrados vão precisar ativar os avisos de novo.')) return;
   try{
@@ -557,8 +564,7 @@ const ARQS_SITE = [
   ['privacidade.html','Aviso de privacidade (o Google exige)','raiz',false,'etapa Entrar com o Google'],
   ['google….html','Verificação do Google (opcional)','raiz',false,'baixado no Search Console'],
   ['README.md','Criado pelo GitHub','raiz',false,'pode deixar'],
-  ['publicar-funcoes.yml','Publica as funções do servidor','pasta .github/workflows',false,'etapa Publicar as funções'],
-  ['equipe.apk','App Android da equipe (opcional)','pasta downloads',false,'etapa App Android']
+  ['publicar-funcoes.yml','Publica as funções do servidor','pasta .github/workflows',false,'etapa Publicar as funções']
 ];
 function workflowTexto(r){
   return 'name: Publicar funções do servidor\n# Publica as 33 funções do sistema no Supabase de ' + r.nome + '. Rode em Actions → Run workflow.\non: workflow_dispatch\njobs:\n  publicar:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          repository: lucassricardo95/sistema-restaurantes\n          path: sr\n      - uses: supabase/setup-cli@v1\n        with:\n          version: latest\n      - name: Publicar as funções\n        env:\n          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}\n        run: |\n          cd sr/modelo/banco\n          chmod +x implantar-funcoes.sh\n          ./implantar-funcoes.sh ' + refDe(r) + ' ' + r.site_url + '\n';
@@ -800,6 +806,37 @@ function aoVivoHtml(r, d){
   h += '<div class="av-sec"><div class="linha"><b>🧩 Funções do servidor</b><small>' + (d.funcoes || []).length + ' publicadas</small></div>' + ((d.funcoes || []).length ? '<small class="mudo">Última atualização: ' + esc(new Date(Math.max(...d.funcoes.map(x => Number(x.em) || Date.parse(x.em) || 0))).toLocaleString('pt-BR')) + '</small>' : '') + '<p style="margin:6px 0 0"><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\',\'avf_' + r.id + '\')">⬆️ Publicar / atualizar as funções</button></p><div id="con_avf_' + r.id + '"></div></div>';
   return h;
 }
+/* o que precisa de atenção num resultado "ao vivo" (lista de textos; vazio = tudo certo) */
+function avProblemas(r, d){
+  const L = [], p = d.projeto || {}, b = d.banco || {}, f = d.funcoes24h || {}, lg = d.login, im = r.situacao === 'implantacao';
+  if(p.estado === 'INACTIVE') L.push([3, 'Banco PAUSADO pelo Supabase: o site não funciona']);
+  else if(p.estado && p.estado !== 'ACTIVE_HEALTHY') L.push([2, 'Projeto: ' + ((avEstado[p.estado] || [p.estado])[0])]);
+  (d.servicos || []).filter(x => !x.ok).forEach(x => L.push([2, 'Serviço com falha: ' + ({ db:'Banco', rest:'API', auth:'Login', storage:'Arquivos', realtime:'Tempo real' }[x.nome] || x.nome)]));
+  if(b.banco > AV_LIM.banco * 0.7) L.push([b.banco > AV_LIM.banco * 0.9 ? 3 : 2, 'Banco em ' + Math.round(b.banco / AV_LIM.banco * 100) + '% do plano grátis']);
+  if(b.storage > AV_LIM.storage * 0.7) L.push([2, 'Arquivos em ' + Math.round(b.storage / AV_LIM.storage * 100) + '% do plano grátis']);
+  if(f.total * 30 > AV_LIM.funcoesMes * 0.7) L.push([2, 'Funções do servidor: ~' + Math.round(f.total * 30 / AV_LIM.funcoesMes * 100) + '% do mês']);
+  if(b.tarefas_falhas) L.push([2, b.tarefas_falhas + ' tarefa(s) agendada(s) falharam: ' + (b.falhas_lista || []).map(x => x.tarefa).filter((x, i, a) => a.indexOf(x) === i).join(', ')]);
+  if(f.erros) L.push([2, f.erros + ' erro(s) nas funções do servidor']);
+  if(d.erros_banco24h) L.push([1, d.erros_banco24h + ' erro(s) no banco']);
+  if(b.chamadas_saida_erro) L.push([1, b.chamadas_saida_erro + ' chamada(s) para fora falharam']);
+  if(b.fila_planilha > 50) L.push([1, b.fila_planilha + ' itens presos na fila da planilha']);
+  if(d.seguranca && d.seguranca.erro) L.push([3, d.seguranca.erro + ' alerta(s) grave(s) de segurança do Supabase']);
+  if(lg && r.site_url && lg.site !== r.site_url.replace(/\/?$/, '/')) L.push([2, 'Endereços do login diferentes do site']);
+  if(lg && !lg.google && !im) L.push([1, '"Entrar com o Google" desligado']);
+  return im ? L.filter(x => x[1].indexOf('PAUSADO') >= 0 || x[0] === 3).map(x => [1, x[1]]) : L;
+}
+window.rvConferirTodos = async () => {
+  const L = S.lista.filter(r => r.situacao !== 'encerrado' && temSb(r)), box = $('avTodos'); if(!box) return;
+  box.innerHTML = '<small class="mudo">Medindo ' + L.length + ' restaurante(s)…</small>';
+  const res = await Promise.all(L.map(async r => { let d; try{ d = await chamarConector({ acao:'sb_ao_vivo', restaurante_id:r.id }); }catch(e){ d = { ok:false, erro:e.message }; } if(d.ok) (S.avCache = S.avCache || {})[r.id] = { t:Date.now(), d }; return [r, d]; }));
+  let h = '', ok = 0;
+  res.forEach(([r, d]) => { const P = d.ok ? avProblemas(r, d) : [[3, 'Não consegui medir: ' + (d.erro || 'sem resposta')]];
+    if(!P.length){ ok++; return; }
+    h += '<div class="av-sec"><div class="linha"><b>' + esc(r.nome) + '</b><button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'saude\')">Abrir ›</button></div>'
+      + P.sort((a, b) => b[0] - a[0]).map(x => '<div class="av-i">' + ponto(x[0] >= 3 ? SAUDE_COR.problema : x[0] === 2 ? SAUDE_COR.atencao : SAUDE_COR.sem) + '<span>' + esc(x[1]) + '</span></div>').join('') + '</div>'; });
+  box.innerHTML = (ok ? conLinha(true, ok + ' de ' + L.length + ' sem nada para resolver.') : '') + h + '<small class="mudo">Medido às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '.</small>';
+  L.forEach(aoVivoMini);
+};
 window.rvReativar = async () => { const r = S.rest; const nome = prompt('Reativar o banco de "' + r.nome + '"? Leva uns minutos.\n\nPara confirmar, digite o nome do restaurante:'); if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere.');
   try{ const a = await chamarConector({ acao:'sb_reativar', restaurante_id:r.id, confirmar:r.nome }); if(!a.ok) return erro(a.erro || 'Não consegui reativar.'); hist(r.id, 'Banco reativado pelo painel', ''); aviso('Pedido enviado. Em alguns minutos o banco volta; toque em Medir agora.', 'ok'); }catch(e){ erro(e.message); } };
 function vSaude(){
@@ -807,6 +844,7 @@ function vSaude(){
   const ordem = { problema:0, atencao:1, sem:2, ok:3, impl:4 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
   T('<div class="topo"><h1>Saúde</h1><small class="mudo">atualiza sozinho · ' + haTempo(Math.round((Date.now() - (S.saudeEm || Date.now())) / 60000)) + '</small></div>'
    + dica('Cada restaurante manda um resumo a cada 15 minutos. Erros que aparecem nas telas deles chegam aqui; toque em "Copiar para o Claude" para pedir a correção.') + '<div class="kpis quatro">' + kpi('🟢 Tudo certo', cont.ok, 'ok') + kpi('🟡 Atenção', cont.atencao, cont.atencao ? 'aviso' : '') + kpi('🔴 Problema', cont.problema, cont.problema ? 'erro' : '') + kpi('⚪ Sem sinal', cont.sem, '') + '</div>'
+   + (L.some(temSb) ? '<div class="card"><div class="linha"><b>📡 Conferir todos agora</b><button class="principal mini" onclick="rvConferirTodos()">Conferir</button></div><small class="mudo">Mede ao vivo, pelo conector, todos os restaurantes ligados e junta aqui só o que precisa de atenção.</small><div id="avTodos"></div></div>' : '')
    + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h && sd.geral !== 'impl' ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
       return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
        + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo' + (sd.geral === 'impl' ? '' : ' erro') + '">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
@@ -1100,45 +1138,6 @@ function vGuia(){
    + '<button class="principal grande" onclick="rvNovo()">＋ Começar um restaurante agora</button>');
 }
 
-/* ---------- APP ANDROID (PWABuilder) ---------- */
-function apkValores(r){
-  const gh = (ghUsuario(r) || 'usuario').toLowerCase(), host = (r.site_url || '').replace(/^https?:\/\//, '').split('/')[0] || gh + '.github.io';
-  const caminho = '/' + (r.site_url || '').replace(/^https?:\/\/[^/]+\/?/, '');
-  let pkg = r.slug.toLowerCase().replace(/[^a-z0-9]/g, ''); if(!/^[a-z]/.test(pkg)) pkg = 'r' + pkg;
-  const c = (r.marca && r.marca.cores) || {}, nomeCurto = r.nome.length > 12 ? r.nome.split(' ')[0].slice(0, 12) : r.nome;
-  return [['Package ID', 'io.github.' + gh.replace(/[^a-z0-9_]/g, '_') + '.' + pkg, 'único para este restaurante'], ['App name', r.nome, ''], ['Launcher name', nomeCurto, 'nome curto embaixo do ícone'],
-    ['App version', '1.0.0.0', ''], ['App version code', '1', ''], ['Host', host, ''], ['Start URL', caminho || '/', ''],
-['Icon URL', (r.marca && r.marca.logos && r.marca.logos.icone) || '(envie o ícone na etapa Cores e logos)', ''], ['Display mode', 'Standalone', '']];
-}
-function apkHtml(){
-  const r = S.rest; if(!r.site_url) return '<div class="res erro">Antes, coloque o site no ar (etapa "Colocar o site no ar").</div>';
-  return '<div class="tabela-copia">' + apkValores(r).map((v, i) => '<div class="linha-copia"><small class="mudo">' + esc(v[0]) + (v[2] ? ' · ' + esc(v[2]) : '') + '</small><div class="linha"><code id="apk_' + i + '">' + esc(v[1]) + '</code><button class="mini" onclick="rvCopiar(\'apk_' + i + '\')">📋</button></div></div>').join('') + '</div>';
-}
-function assetHtml(){
-  return '<details class="como"><summary>🔗 Juntar com um assetlinks.json que já existe</summary><p class="pequeno mudo">Só se o repositório ' + esc((ghUsuario(S.rest) || 'usuario') + '.github.io') + ' já tiver o arquivo de outro restaurante. Cole os dois e toque em Juntar: sai um arquivo com os dois apps.</p>'
-   + '<label for="alNovo">assetlinks.json NOVO (do zip deste restaurante)</label><textarea id="alNovo" rows="4"></textarea>'
-   + '<label for="alVelho">assetlinks.json que JÁ está no GitHub</label><textarea id="alVelho" rows="4"></textarea>'
-   + '<p><button class="principal mini" onclick="rvJuntarAsset()">Juntar</button></p><div id="alRes"></div></details>';
-}
-window.rvJuntarAsset = () => {
-  const box = $('alRes'), ler = id => { const t = (($(id) || {}).value || '').trim(); if(!t) return []; const j = JSON.parse(t); return Array.isArray(j) ? j : [j]; };
-  try{ const L = ler('alVelho').concat(ler('alNovo')), vistos = {}, out = [];
-    L.forEach(x => { const t = x && x.target || {}, k = (t.package_name || '') + '|' + (t.sha256_cert_fingerprints || []).join(','); if(!t.package_name || vistos[k]) return; vistos[k] = 1; out.push(x); });
-    if(!out.length) throw new Error('nenhum app encontrado');
-    box.innerHTML = '<p class="pequeno"><b>Pronto: ' + out.length + ' app(s).</b> Copie e cole no lugar do conteúdo do arquivo no GitHub (lápis → apague tudo → cole → Commit).</p><div class="copiar" id="alOut">' + esc(JSON.stringify(out, null, 2)) + '</div><button class="principal mini" onclick="rvCopiar(\'alOut\')">📋 Copiar</button>';
-  }catch(e){ box.innerHTML = '<div class="res erro">❌ Um dos textos não é um assetlinks.json válido (' + esc(e.message) + '). Copie o arquivo inteiro, do [ até o ].</div>'; }
-};
-window.rvApkConferir = async () => {
-  const r = S.rest, box = $('apkRes'), gh = ghUsuario(r); if(!gh) return erro('Preencha o endereço do repositório (etapa "Criar o endereço do site").');
-  box.innerHTML = '<div class="res aviso">⏳ Conferindo…</div>'; const out = [], pkg = apkValores(r)[0][1];
-  try{ const x = await tempo('https://' + gh + '.github.io/.well-known/assetlinks.json?t=' + Date.now(), { cache:'no-store' });
-    if(!x.ok) out.push(['erro', 'assetlinks.json não encontrado em ' + gh + '.github.io/.well-known/ (confira o nome do repositório, o .nojekyll e o Pages ligado)']);
-    else { const j = await x.json().catch(() => null), L = Array.isArray(j) ? j : []; const tem = L.some(a => a && a.target && a.target.package_name === pkg);
-      out.push(L.length ? [tem ? 'ok' : 'aviso', L.length + ' app(s) no assetlinks.json' + (tem ? ', incluindo este (' + pkg + ')' : '. Este app (' + pkg + ') não está lá: se você usou outro Package ID, tudo bem; senão, junte o arquivo novo.')] : ['erro', 'O assetlinks.json existe, mas não é uma lista válida.']); } }catch(e){ out.push(['erro', 'Não abriu o assetlinks.json (' + e.message + ').']); }
-  try{ const x = await tempo(r.site_url + 'downloads/equipe.apk', { method:'HEAD', cache:'no-store' }); out.push(x.ok ? ['ok', 'equipe.apk está no site'] : ['erro', 'equipe.apk não encontrado em downloads/ (confira o nome e a pasta)']); }catch(e){ out.push(['aviso', 'Não deu para conferir o equipe.apk daqui; abra o link da próxima parte.']); }
-  box.innerHTML = out.map(o => '<div class="res ' + o[0] + '">' + ({ ok:'✅', aviso:'⚠️', erro:'❌' }[o[0]]) + ' ' + esc(o[1]) + '</div>').join('');
-};
-
 /* ---------- entrega: mensagem de boas-vindas e lista de contas ---------- */
 function boasHtml(){
   const r = S.rest; if(!r.contato_telefone) return '<div class="res aviso">Cadastre o WhatsApp do dono (etapa 1) para mandar a mensagem.</div>';
@@ -1158,7 +1157,6 @@ function listaContasHtml(){
     ['Chave de publicar funções', 'Token sbp_ do Supabase (está no GitHub → Settings → Secrets)', 'https://supabase.com/dashboard/account/tokens'],
     ['Planilha principal', 'Conta Google do restaurante · link: endereço /exec', r.api_url || ''],
     ['Planilha de contingência', 'A OUTRA conta Google · link: endereço /exec', r.contingencia_url || ''],
-    ['App da equipe', 'Link do APK · observação: Package ID e onde está o signing.keystore · senha: senha da chave', r.site_url ? r.site_url + 'downloads/equipe.apk' : ''],
     ['Groq e Groq 2', 'E-mail de cada conta', 'https://console.groq.com/keys'], ['Gemini e Gemini 2', 'E-mail da conta Google', 'https://aistudio.google.com/apikey'],
     ['Cloudflare', 'E-mail · observação: Account ID', 'https://dash.cloudflare.com/'], ['NVIDIA', 'E-mail', 'https://build.nvidia.com/'],
     ['Search Console', 'E-mail do restaurante', 'https://search.google.com/search-console']];
@@ -1344,6 +1342,13 @@ function bancoAutoHtml(){
    + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o painel guarda as chaves no cofre do banco sozinho (a chave secreta é lida direto no Supabase e não passa por aqui) e depois roda os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Cofre de chaves e dados iniciais</button><div id="con_banco2_' + r.id + '"></div>'
    + '<p class="pequeno" style="margin-top:12px;"><b>Opcional</b>: um cardápio de exemplo (3 categorias, 9 produtos com preço, marcados "exemplo") para o dono ver como fica e testar um pedido. Só entra com o cardápio vazio.</p><button class="mini" onclick="rvBancoExemplo()">🍔 Pôr o cardápio de exemplo</button><div id="con_banco3_' + r.id + '"></div>';
 }
+window.rvGoogleAuto = async () => {
+  const r = S.rest, cid = jv('gaId'), csec = jv('gaSec'), box = 'ga_' + r.id; if(!cid || !csec) return erro('Cole o ID do cliente e a chave secreta.');
+  conMsg(box, '<small class="mudo">Ligando…</small>');
+  try{ const a = await chamarConector({ acao:'sb_google', restaurante_id:r.id, cid, csec }); const ip = $('gaSec'); if(ip) ip.value = '';
+    conMsg(box, a.ok ? conLinha(true, '"Entrar com o Google" ligado no Supabase.') + (a.cofre ? conLinha(true, 'Credenciais guardadas no cofre (Drive).') : conLinha(false, 'Não guardei no cofre: ' + esc(a.erro_cofre || '') + '. Use o código da etapa do Drive.')) : conLinha(false, esc(a.erro)));
+    if(a.ok){ hist(r.id, 'Login com Google ligado pelo conector', ''); (window.CD_VALS = window.CD_VALS || {}).gid = cid; } }catch(e){ conMsg(box, conLinha(false, esc(e.message))); }
+};
 window.rvLoginUrls = async () => {
   const r = S.rest; if(!r.site_url) return erro('Preencha antes o endereço do site.'); const box = 'lu_' + r.id; conMsg(box, '<small class="mudo">Gravando…</small>');
   try{ const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); conMsg(box, conLinha(a.ok, a.ok ? 'Site URL e Redirect URL gravados: ' + esc(a.site) : esc(a.erro))); if(a.ok) hist(r.id, 'Endereços do login configurados pelo conector', a.site); }catch(e){ conMsg(box, conLinha(false, esc(e.message))); }
