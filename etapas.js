@@ -83,7 +83,7 @@ window.ETAPAS = [
    precisa:['Conta no GitHub (pode ser a sua)'],
    partes:[
     { t:'Entre no GitHub (ou crie a conta em github.com/signup). Toque no "+" lá em cima → "New repository".', link:'https://github.com/new' },
-    { t:'Repository name: {slug}. Marque "Public". Marque "Add a README file". Toque em "Create repository".', copiar:'{slug}' },
+    { t:'Repository name: {slug}. Em "Choose visibility" deixe "Public". Role a tela e em "Add README" ligue a chave (de "Off" para "On"): é obrigatório, sem isso o repositório nasce vazio e o site não funciona. Toque em "Create repository".', copiar:'{slug}' },
     { t:'Copie o endereço da página do repositório que abriu (ex.: https://github.com/usuario/{slug}) e cole abaixo. Salve.', extra:'campos:github_url' },
     { t:'No repositório: "Settings" → "Pages". Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
     { t:'Espere 1 minuto e atualize a página Pages: aparece "Your site is live at https://usuario.github.io/{slug}/". Copie esse endereço (com a barra no fim) e cole abaixo. Toque em "Salvar e testar".', link:'{github_url}/settings/pages', extra:'campos:github_url,site_url' },
