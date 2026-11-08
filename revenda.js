@@ -178,8 +178,8 @@ const NAV_PC = [['vendas','🤝','Vendas e propostas'],['conectores','🔌','Con
 function desenhar(){
   clearInterval(timerAuto);
   const v = S.view, alertaSaude = errosAlerta().length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
-  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente, conectores:vConectores }[v] || vInicio;
-  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais', conectores:'mais' }[v] || v;
+  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente, conectores:vConectores, usuarios:vUsuarios }[v] || vInicio;
+  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais', conectores:'mais', usuarios:'mais' }[v] || v;
   $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a">' + (v === 'rest' || v === 'novo' ? '<button class="mini" onclick="rvChat()" title="Assistente">✨</button> ' : '') + '<button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
     + '<main id="tela"></main>'
     + '<nav class="nav" aria-label="Menu"><div class="nav-marca" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div>' + NAV.map(n => '<button class="' + (navOn === n[0] && !(n[0] === 'mais' && NAV_PC.some(x => x[0] === v)) ? 'on' : '') + (n[0] === 'mais' ? ' nav-mais' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('')
@@ -461,7 +461,7 @@ function desenharExtra(et, tipo, box){
     campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
     teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
     codigos: () => codigosHtml(et.id),
-    conectar: () => conectarEtapaHtml(),
+    conectar: () => conectarEtapaHtml() + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
     bancoauto: () => bancoAutoHtml(),
     googleauto: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> cole os dois e toque no botão. O painel liga o "Entrar com o Google" no Supabase e já guarda as credenciais no cofre (a etapa do Drive usa as mesmas).'
       + '<label for="gaId">ID do cliente (termina em .apps.googleusercontent.com)</label><input id="gaId" autocomplete="off" value="' + esc((window.CD_VALS || {}).gid || '') + '"><label for="gaSec">Chave secreta do cliente (começa com GOCSPX-)</label><input id="gaSec" type="password" autocomplete="off">'
@@ -1100,9 +1100,39 @@ window.rvPropTexto = async id => {
 };
 window.rvPropFechar = id => { const p = S.prop.find(x => x.id === id); rvNovo(p); };
 
+/* ---------- USUÁRIOS DO PAINEL (conector: usr_*) ---------- */
+async function vUsuarios(){
+  T('<h1>Usuários do painel</h1><div class="card"><small class="mudo">Carregando…</small></div>');
+  let a; try{ a = await chamarConector({ acao:'usr_listar' }); if(!a.ok) throw new Error(a.erro || 'Não consegui carregar.'); }catch(e){ return T('<h1>Usuários do painel</h1><div class="card">' + conLinha(false, esc(e.message)) + '</div>'); }
+  const dt = x => x ? new Date(x).toLocaleDateString('pt-BR') : '—';
+  T('<h1>Usuários do painel</h1><div class="card"><h2>🙋 Meus dados</h2><p class="mudo pequeno">Troque o seu e-mail e/ou a sua senha. Vai pedir a senha atual.</p><p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvUsrEu()">✏️ Editar meu acesso</button></p><div id="usr_eu_res"></div></div>'
+   + '<div class="card"><h2>👥 Quem entra no painel</h2><p class="mudo pequeno">' + (a.souDono ? 'Você é o dono: só você cria, troca a senha e remove os outros. Cada um entra com o próprio e-mail e vê tudo.' : 'Só o dono cria e remove usuários.') + '</p>'
+   + a.usuarios.map(u => '<div class="linha mapa-l"><span><b>' + esc(u.email) + '</b> <small class="mudo">' + (u.dono ? 'dono' : 'usuário') + (u.eu ? ' · você' : '') + ' · último acesso ' + dt(u.ultimo) + '</small></span>'
+      + (a.souDono && !u.eu ? '<span><button class="mini" onclick="rvUsrSenha(\'' + u.id + '\')">🔑 Senha</button> <button class="mini" onclick="rvUsrRemover(\'' + u.id + '\')">🗑️ Remover</button></span>' : '') + '</div>').join('')
+   + (a.souDono ? '<p class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvUsrCriar()">➕ Novo usuário</button></p>' : '') + '<div id="usr_res"></div></div>');
+}
+const usrMsg = (id, h) => { const b = $(id); if(b) b.innerHTML = h; };
+window.rvUsrCriar = async () => {
+  const email = prompt('E-mail do novo usuário:'); if(!email) return; const senha = prompt('Senha para ele (mínimo 8, com letras e números):'); if(!senha) return;
+  try{ const a = await chamarConector({ acao:'usr_criar', email, senha }); if(!a.ok) throw new Error(a.erro || 'Não criou.'); aviso(a.message || 'Criado.', 'ok'); vUsuarios(); }catch(e){ usrMsg('usr_res', conLinha(false, esc(e.message))); }
+};
+window.rvUsrSenha = async id => {
+  const senha = prompt('Nova senha para esse usuário (mínimo 8, com letras e números):'); if(!senha) return;
+  try{ const a = await chamarConector({ acao:'usr_senha', id, senha }); if(!a.ok) throw new Error(a.erro || 'Não trocou.'); aviso(a.message || 'Senha trocada.', 'ok'); }catch(e){ usrMsg('usr_res', conLinha(false, esc(e.message))); }
+};
+window.rvUsrRemover = async id => {
+  if(!confirm('Remover esse usuário do painel? Ele não poderá mais entrar.')) return;
+  try{ const a = await chamarConector({ acao:'usr_remover', id }); if(!a.ok) throw new Error(a.erro || 'Não removeu.'); aviso('Removido.', 'ok'); vUsuarios(); }catch(e){ usrMsg('usr_res', conLinha(false, esc(e.message))); }
+};
+window.rvUsrEu = async () => {
+  const atual = prompt('Sua senha ATUAL:'); if(!atual) return;
+  const email = prompt('Novo e-mail (deixe em branco para manter o atual):') || '', senha = prompt('Nova senha (deixe em branco para manter a atual; mínimo 8, com letras e números):') || '';
+  if(!email && !senha) return;
+  try{ const a = await chamarConector({ acao:'usr_eu', atual, email, senha }); if(!a.ok) throw new Error(a.erro || 'Não mudou.'); aviso(a.message || 'Pronto.', 'ok'); if(a.sair) setTimeout(() => rvSair(), 1200); }catch(e){ usrMsg('usr_eu_res', conLinha(false, esc(e.message))); }
+};
 /* ---------- MAIS / AJUSTES / GUIA ---------- */
 function vMais(){
-  const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['conectores','🔌','Conectores','Ligar o painel ao GitHub e ao Supabase de cada restaurante'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
+  const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['conectores','🔌','Conectores','Ligar o painel ao GitHub e ao Supabase de cada restaurante'],['usuarios','👤','Usuários do painel','Seus dados de acesso e quem mais pode entrar'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
   T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
    + '<div class="card"><small class="mudo">Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
 }
@@ -1291,7 +1321,7 @@ const listaCurta = (a, n = 8) => a.slice(0, n).map(esc).join(', ') + (a.length >
 window.rvConConferir = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
   const box = 'con_' + id; conMsg(id, '<small class="mudo">⏳ Conferindo o banco e o GitHub de ' + esc(r.nome) + '…</small>');
-  let h = '<div class="res"><b>Conferência de ' + esc(r.nome) + '</b> <small class="mudo">· ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '</small></div>', precisaBanco = false, precisaFuncoes = false, precisaSite = false;
+  let h = '<div class="res"><b>Conferência de ' + esc(r.nome) + '</b> <small class="mudo">· ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '</small></div>', precisaBanco = false, precisaFuncoes = false, precisaSite = false, precisaSync = false;
   if(!temSb(r)) h += amarela('Banco: ligue o token do Supabase deste restaurante para conferir.');
   else try{
     const a = await chamarConector({ acao:'sb_conferir', restaurante_id:id });
@@ -1303,8 +1333,8 @@ window.rvConConferir = async id => {
       else { precisaBanco = true;
         h += conLinha(false, 'Banco incompleto: faltam ' + a.faltamTabelas.length + ' tabela(s), ' + a.faltamColunas.length + ' coluna(s), ' + a.faltamFuncoes.length + ' função(ões)' + (a.faltamCron.length ? ' e ' + a.faltamCron.length + ' rotina(s) automática(s)' : '') + '.'
           + (a.faltamTabelas.length ? '<br><small>Tabelas: ' + listaCurta(a.faltamTabelas) + '</small>' : '') + (a.faltamColunas.length ? '<br><small>Colunas: ' + listaCurta(a.faltamColunas) + '</small>' : '') + (a.faltamFuncoes.length ? '<br><small>Funções: ' + listaCurta(a.faltamFuncoes) + '</small>' : '') + (a.faltamCron.length ? '<br><small>Rotinas: ' + listaCurta(a.faltamCron) + '</small>' : '')); }
-      if(a.diferentes && a.diferentes.length) h += amarela(a.diferentes.length + ' função(ões) do banco diferem do modelo (desatualizadas ou personalizadas deste restaurante).' + (precisaBanco ? '' : ' Se acabou de atualizar o sistema, toque em Atualizar banco.') + '<br><small>' + listaCurta(a.diferentes, 6) + '</small>');
-      if(a.diferentes && a.diferentes.length) precisaBanco = true;
+      if(a.diferentes && a.diferentes.length) h += amarela(a.diferentes.length + ' função(ões) do banco diferem do modelo (desatualizadas ou personalizadas deste restaurante).' + ' Pode ser só versão antiga: toque em "Sincronizar funções" para copiar as do modelo (a versão antiga fica guardada).' + '<br><small>' + listaCurta(a.diferentes, 6) + '</small>');
+      if(a.diferentes && a.diferentes.length) precisaSync = true;
       if(a.edgeFaltam && a.edgeFaltam.length){ precisaFuncoes = true; h += conLinha(false, 'Funções do servidor não publicadas: ' + listaCurta(a.edgeFaltam)); }
       else h += conLinha(true, 'Funções do servidor: todas publicadas.');
     }
@@ -1325,10 +1355,57 @@ window.rvConConferir = async id => {
   (window._confEst = window._confEst || {})[id] = { banco:precisaBanco && temSb(r), funcoes:precisaFuncoes && temSb(r), site:precisaSite && temGh(r) && !!((window._confSite || {})[id] || []).length };
   const bt = []; if(window._confEst[id].banco || window._confEst[id].funcoes || window._confEst[id].site) bt.push('<button class="principal" onclick="rvConCorrigir(\'' + id + '\')">🔧 Corrigir tudo que foi encontrado</button>');
   if(precisaBanco && temSb(r)) bt.push('<button class="principal mini" onclick="rvConAtualizar(\'' + id + '\')">⬆️ Atualizar banco</button>');
+  if(precisaSync && temSb(r)) bt.push('<button class="mini" onclick="rvConSincronizar(\'' + id + '\')">🔄 Sincronizar funções</button>');
   if(precisaFuncoes && temSb(r)) bt.push('<button class="mini" onclick="rvConPublicarFuncoes(\'' + id + '\')">⬆️ Publicar funções</button>');
   if(!precisaBanco && !precisaFuncoes && !precisaSite && h.indexOf('class="res erro"') < 0 && h.indexOf('⚠️') < 0) h += '<div class="res ok"><b>🎉 Tudo implantado.</b></div>';
   conMsg(id, h + (bt.length ? '<div class="linha" style="justify-content:flex-start">' + bt.join('') + '</div>' : ''));
   hist(id, 'Conferência da implantação', precisaBanco || precisaFuncoes || precisaSite ? 'faltam itens' : 'completa');
+};
+/* IMPLANTAR TUDO: banco, funções do servidor, logins e site, numa tela só, com uma confirmação */
+window.rvImplantarTudo = async () => {
+  const r = S.rest; if(!r) return;
+  if(!temSb(r) || !temGh(r)) return erro('Antes, salve os dois tokens (GitHub e Supabase) deste restaurante e toque em Testar ligações.');
+  if(!/^[a-z0-9]{20}$/.test(refDe(r))) return erro('Preencha antes o endereço do banco (etapa "Criar o banco de dados").');
+  if(!r.site_url || !r.github_url) return erro('Preencha antes o endereço do site e do GitHub (etapa "Criar o endereço do site").');
+  const aLogin = prompt('Login do DONO do restaurante (Administrador). Ex.: nome do dono, sem espaços:'); if(!aLogin) return;
+  const aSenha = prompt('Senha do dono (mínimo 8, com letras e números). Você entrega a ele depois:'); if(!aSenha) return;
+  const dLogin = prompt('O SEU login de Desenvolvedor (suporte) neste restaurante:', 'Lucas'); if(!dLogin) return;
+  const dSenha = prompt('A SUA senha de Desenvolvedor (mínimo 8, com letras e números):'); if(!dSenha) return;
+  if(!confirm('O painel vai montar o banco VAZIO de "' + r.nome + '", publicar as funções, criar os dois logins e gravar o site no GitHub. Leva uns 6 a 10 minutos: deixe esta tela aberta. Só use em restaurante NOVO. Continuar?')) return;
+  const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  const caixa = 'tudo_' + r.id; let h = '', ok = true; const tela = t => conMsg(caixa, h + (t ? '<small class="mudo">⏳ ' + esc(t) + '</small>' : ''));
+  const passo = async (rotulo, fn) => { if(!ok) return; tela(rotulo + '…'); let x; try{ x = await fn(); }catch(e){ x = { ok:false, erro:e.message }; } h += conLinha(x.ok, esc(rotulo) + (x.ok ? ' ✓' : ': ' + esc(x.erro || 'erro'))); if(!x.ok) ok = false; return x; };
+  const q = v => String(v).replace(/'/g, "''");
+  try{
+    ctxCod(r, []);
+    await passo('1/6 Estrutura do banco', () => conRodarSilencioso(r, bancoAutoItens(1), (n, t, rot) => tela('1/6 Estrutura do banco: parte ' + n + ' de ' + t + ' (' + rot + ')')));
+    await passo('2/6 Cofre de chaves e dados iniciais', async () => {
+      const c = await chamarConector({ acao:'sb_cofre1', restaurante_id:r.id, confirmar:r.nome }); if(!c.ok) return { ok:false, erro:'Cofre: ' + (c.erro || 'erro') };
+      if(c.chave_publica && !r.supabase_chave){ r.supabase_chave = c.chave_publica; await salvar('Chave pública preenchida.'); }
+      ctxCod(r, []); return conRodarSilencioso(r, bancoAutoItens(2), (n, t, rot) => tela('2/6 Dados iniciais: parte ' + n + ' de ' + t)); });
+    await passo('3/6 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f'); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
+    await passo('4/6 Logins (dono e Desenvolvedor)', async () => {
+      const sql = "select public.instalar_admin_inicial('" + q(aLogin) + "', '" + q(aSenha) + "', 'Administrador');\nselect public.instalar_desenvolvedor('" + q(dLogin) + "', '" + q(dSenha) + "');";
+      const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:'Logins iniciais', confirmar:r.nome }); return { ok:!!a.ok, erro:a.erro }; });
+    await passo('5/6 Endereços de login (Supabase)', async () => { const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); return { ok:!!a.ok, erro:a.erro }; });
+    await passo('6/6 Site no GitHub', async () => {
+      const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
+      for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) return { ok:false, erro:'não achei ' + n }; arqs.push({ caminho:n, conteudo:await x.text() }); }
+      const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' }); return { ok:!!a.ok, erro:a.erro || 'algum arquivo falhou' }; });
+  }catch(e){ h += conLinha(false, esc(e.message)); ok = false; }
+  hist(r.id, 'Implantação automática', ok ? 'completa' : 'parou com erro');
+  conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> Falta o que depende das suas contas: avisos no celular, Entrar com o Google, Drive e chaves das IAs (próximas etapas). Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou no passo que deu erro. Resolva e toque de novo: os passos já feitos podem rodar outra vez sem estragar (menos em banco que já tem dados).</div>'));
+};
+window.rvConSincronizar = async id => {
+  const r = S.lista.find(x => x.id === id); if(!r) return;
+  const nome = prompt('Vai copiar para o banco de "' + r.nome + '" as funções do modelo (Restaurante Teste) que estão diferentes. A versão antiga de cada uma fica guardada na tabela _funcoes_backup, e se der erro nada é mudado.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  conMsg(id, '<small class="mudo">⏳ Comparando e copiando as funções…</small>');
+  try{ const a = await chamarConector({ acao:'sb_sincronizar', restaurante_id:id, confirmar:nome }); if(!a.ok) throw new Error(a.erro || 'Não foi possível.');
+    hist(id, 'Funções sincronizadas com o modelo', (a.trocadas || 0) + ' trocadas');
+    conMsg(id, conLinha(true, esc(a.message || 'Pronto.')) + ((a.ignoradas || []).length ? amarela((a.ignoradas.length) + ' função(ões) ficaram como estão por terem dados específicos do restaurante de referência.<br><small>' + listaCurta(a.ignoradas, 6) + '</small>') : '') + '<small class="mudo">⏳ Conferindo de novo…</small>');
+    await rvConConferir(id);
+  }catch(e){ conMsg(id, conLinha(false, esc(e.message))); }
 };
 window.rvConCorrigir = async id => {
   const r = S.lista.find(x => x.id === id), E = (window._confEst || {})[id]; if(!r || !E) return;
@@ -1349,9 +1426,10 @@ window.rvConCorrigir = async id => {
   if(ok) await rvConConferir(id); else conMsg(id, h);
 };
 /* roda as atualizações sem escrever na tela; devolve {ok, erro} */
-async function conRodarSilencioso(r, lista){
+async function conRodarSilencioso(r, lista, cb){
   if(typeof window.cdObter !== 'function') return { ok:false, erro:'A tela de códigos ainda não carregou. Abra Restaurantes e volte.' };
-  for(const u of lista){ try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
+  let n = 0;
+  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
   return { ok:true };
 }
 window.rvConFuncoes = async id => {
@@ -1573,7 +1651,7 @@ const CHAT_K = 'rv_chat_v1';
 function chatLer(){ try{ return JSON.parse(localStorage.getItem(CHAT_K) || '[]'); }catch(e){ return []; } }
 function chatGravar(){ try{ localStorage.setItem(CHAT_K, JSON.stringify((S.chat || []).slice(-40))); }catch(e){} }
 const SUGESTOES = ['Como está o meu mês?','Quem está com mensalidade atrasada?','Algum restaurante com problema agora?','Quanto cada restaurante vendeu nesta semana?','O que falta para terminar a implantação do Teste?','Quanto cobram sistemas de cardápio digital hoje no Brasil?'];
-function telaAtual(){ const v = S.view; if(v === 'rest' && S.rest) return 'restaurante ' + S.rest.nome + ', aba ' + S.aba; return { inicio:'Início', restaurantes:'lista de restaurantes', saude:'Saúde', dinheiro:'Dinheiro, mês ' + S.mes, vendas:'Vendas (propostas)', mais:'Mais', ajustes:'Ajustes', guia:'Guia', assistente:'configuração do assistente', novo:'criar restaurante' }[v] || v; }
+function telaAtual(){ const v = S.view; if(v === 'rest' && S.rest) return 'restaurante ' + S.rest.nome + ', aba ' + S.aba; return { inicio:'Início', restaurantes:'lista de restaurantes', saude:'Saúde', dinheiro:'Dinheiro, mês ' + S.mes, vendas:'Vendas (propostas)', mais:'Mais', ajustes:'Ajustes', guia:'Guia', assistente:'configuração do assistente', usuarios:'usuários do painel', novo:'criar restaurante' }[v] || v; }
 function md(t){ let h = esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
   return h.split('\n').map(l => /^\s*([-•*]|\d+[.)])\s+/.test(l) ? '<li>' + l.replace(/^\s*([-•*]|\d+[.)])\s+/, '') + '</li>' : (l.trim() ? '<p>' + l + '</p>' : '')).join('').replace(/(<li>.*?<\/li>)+/g, m => '<ul>' + m + '</ul>'); }
 const ROT_ACAO = { gerar_cobranca:'💰 Gerar cobrança', registrar_recebimento:'💵 Registrar recebimento', criar_despesa:'🧾 Lançar despesa', criar_proposta:'🤝 Criar proposta', atualizar_proposta:'✏️ Atualizar proposta', enviar_whatsapp:'💬 Mandar WhatsApp', marcar_erros_resolvidos:'🐞 Marcar erros como resolvidos', abrir_tela:'➡️ Abrir tela' };
