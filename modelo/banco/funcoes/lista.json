@@ -1,0 +1,148 @@
+{
+ "funcoes": {
+  "ai-assistente": [
+   "index.ts"
+  ],
+  "ai-gateway": [
+   "index.ts"
+  ],
+  "ai-publico-atendente": [
+   "index.ts"
+  ],
+  "ai-publico-recepcao": [
+   "index.ts"
+  ],
+  "arquivar-antigos": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "conferir-integridade": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "criar-backup": [
+   "auth.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "drive-api": [
+   "auth.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "drive-direto": [
+   "auth.ts",
+   "drive-acoes.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "drive-oauth": [
+   "auth.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "evidencia-foto": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "excluir-backup": [
+   "auth.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "ifood-rastreio": [
+   "index.ts"
+  ],
+  "ifood-sync": [
+   "analytics.ts",
+   "catalogo.ts",
+   "financeiro.ts",
+   "index.ts",
+   "shipping.ts"
+  ],
+  "ifood-teste": [
+   "index.ts"
+  ],
+  "ip-criar": [
+   "index.ts",
+   "ip.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "ip-status": [
+   "index.ts",
+   "ip.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "ip-webhook": [
+   "index.ts",
+   "ip.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "mp-cancelar": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "mp-criar": [
+   "index.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "mp-reembolsar": [
+   "index.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "mp-status": [
+   "index.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "mp-webhook": [
+   "index.ts",
+   "mp-puro.ts",
+   "mp.ts"
+  ],
+  "nfce-emitir": [
+   "index.ts"
+  ],
+  "nota-anexo": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "ping": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "planilha-admin": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "ponto-foto": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "push-enviar": [
+   "index.ts"
+  ],
+  "remover-foto": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "restaurar-backup": [
+   "auth.ts",
+   "drive.ts",
+   "index.ts"
+  ],
+  "sync-fila": [
+   "auth.ts",
+   "index.ts"
+  ],
+  "upload-foto": [
+   "auth.ts",
+   "index.ts"
+  ]
+ }
+}

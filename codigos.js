@@ -58,7 +58,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -358,7 +358,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 19
+   "kb": 20
   },
   {
    "etapa": "banco",
@@ -370,7 +370,7 @@ window.CODIGOS = {
    "quando": "Depois de TODAS as partes de estrutura.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Pode demorar alguns segundos. Se o editor reclamar de tamanho, cole em duas vezes (corte numa linha em branco entre duas funções).",
-   "kb": 95
+   "kb": 99
   },
   {
    "etapa": "banco",
@@ -406,6 +406,18 @@ window.CODIGOS = {
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "As tarefas agendadas só funcionam com o cofre preenchido.",
    "kb": 9
+  },
+  {
+   "etapa": "banco",
+   "id": "exemplo",
+   "titulo": "Cardápio de exemplo (opcional)",
+   "arq": "banco-restaurante/cardapio-exemplo.sql",
+   "opcional": true,
+   "desc": "Põe 3 categorias e 9 produtos com preço (marcados \"exemplo\") para o dono ver como o cardápio fica e já testar um pedido. Só entra se o cardápio estiver vazio.",
+   "quando": "Depois dos dados iniciais, se quiser.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Para tirar depois: o fim do arquivo tem as 3 linhas que apagam só o que é exemplo.",
+   "kb": 3
   }
  ],
  "admin": [
@@ -430,6 +442,89 @@ window.CODIGOS = {
    "quando": "Logo depois do item anterior.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Troque COLE_AQUI_login, COLE_AQUI_senha (mínimo 8 letras) e o nome. Anote o login e a senha para entregar ao dono. Responde \"criado\"."
+  },
+  {
+   "etapa": "admin",
+   "id": "dev",
+   "titulo": "Função do seu acesso de Desenvolvedor",
+   "arq": "banco-restaurante/134-desenvolvedor-funcao.sql",
+   "desc": "Cria a função que faz o SEU login de suporte (Desenvolvedor) neste restaurante. Restaurantes novos já vêm com ela.",
+   "quando": "Depois do Administrador.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Este só cria a função; o próximo cria o seu login.",
+   "kb": 2
+  },
+  {
+   "etapa": "admin",
+   "id": "dev2",
+   "titulo": "Criar o seu login de Desenvolvedor (suporte)",
+   "arq": null,
+   "especial": "dev2",
+   "desc": "O seu acesso para dar suporte: entra mesmo com o restaurante bloqueado e não precisa aceitar os termos. Só existe um por restaurante.",
+   "quando": "Depois do código anterior.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Troque a senha (mínimo 8) antes de rodar. Use a mesma dos outros restaurantes se quiser lembrar fácil. Se responder \"ja_existe\", ele já foi criado."
+  }
+ ],
+ "planilhas": [
+  {
+   "etapa": "planilhas",
+   "id": "gs-modelo-principal",
+   "titulo": "Restaurante novo / Teste (modelo) · principal",
+   "arq": "apps-script/modelo-principal.gs",
+   "desc": "Planilha PRINCIPAL: espelho do cardápio, clientes e vendas, arquivo de vendas antigas, log e auditoria, fotos e backups no Google Drive. Quem chama é só o Supabase, com uma chave guardada nas Propriedades do script.",
+   "quando": "Criar ou atualizar a planilha principal deste restaurante.",
+   "onde": "Google Planilhas / Apps Script (ver abaixo).",
+   "cuidado": "Abra a planilha do restaurante > Extensões > Apps Script > apague tudo e cole este código > Salvar. Para ATUALIZAR uma planilha que já funciona: Implantar > Gerenciar implantações > lápis (editar) > Versão \"Nova versão\" > Implantar (o endereço /exec continua o mesmo). Planilha NOVA: depois de colar, rode \"configurarIdPlanilha\" uma vez, cadastre as chaves nas Propriedades do script e use Implantar > Nova implantação > App da Web > Executar como \"Eu\" > Acesso \"Qualquer pessoa\"; copie o endereço /exec para o cofre do Supabase (sheets_main_url).",
+   "kb": 112
+  },
+  {
+   "etapa": "planilhas",
+   "id": "gs-modelo-contingencia",
+   "titulo": "Restaurante novo / Teste (modelo) · contingencia",
+   "arq": "apps-script/modelo-contingencia.gs",
+   "desc": "Planilha de CONTINGÊNCIA (outra conta Google): fila de pedidos e cópia do cardápio, usada se o Supabase cair. Propositalmente \"burra\": a principal valida tudo ao reconciliar.",
+   "quando": "Criar ou atualizar a planilha contingencia deste restaurante.",
+   "onde": "Google Planilhas / Apps Script (ver abaixo).",
+   "cuidado": "Abra a planilha do restaurante > Extensões > Apps Script > apague tudo e cole este código > Salvar. Para ATUALIZAR uma planilha que já funciona: Implantar > Gerenciar implantações > lápis (editar) > Versão \"Nova versão\" > Implantar (o endereço /exec continua o mesmo). Planilha NOVA: depois de colar, rode \"configurarIdPlanilha\" uma vez, cadastre as chaves nas Propriedades do script e use Implantar > Nova implantação > App da Web > Executar como \"Eu\" > Acesso \"Qualquer pessoa\"; copie o endereço /exec para o cofre do Supabase (sheets_main_url).",
+   "kb": 45
+  },
+  {
+   "etapa": "planilhas",
+   "id": "segredos2",
+   "titulo": "Cofre de chaves · parte 2 (planilhas) e criar a chave",
+   "arq": null,
+   "especial": "segredos2",
+   "desc": "Guarda no cofre o endereço /exec da planilha principal, CRIA a chave que liga o Supabase à planilha e mostra o valor dela no resultado.",
+   "quando": "Depois de implantar o Apps Script da planilha principal.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Troque COLE_AQUI_url_exec pelo endereço que termina em /exec. Rode UMA vez. No resultado, copie o valor da última linha e cadastre no Apps Script: Configurações do projeto > Propriedades do script > Adicionar propriedade: nome SB_CHAVE_SERVIDOR, valor = a chave copiada. Depois reimplante (Implantar > Gerenciar implantações > lápis > Nova versão). Não mostre a chave a ninguém."
+  }
+ ],
+ "drive": [
+  {
+   "etapa": "drive",
+   "id": "google",
+   "titulo": "Guardar as credenciais do Google no cofre",
+   "arq": null,
+   "especial": "google",
+   "desc": "Guarda o ID do cliente e a chave secreta do Google Cloud no cofre, que é de onde o Drive os lê (nunca ficam no site).",
+   "quando": "Depois de criar o cliente OAuth no Google Cloud (etapa Login com Google).",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Cole o ID e a chave como TEXTO, copiados pelo ícone de copiar do Google, nunca digitados nem lidos de foto: l, I e 1 se confundem. A chave só aparece inteira uma vez."
+  }
+ ],
+ "leitura": [
+  {
+   "etapa": "leitura",
+   "id": "leit133",
+   "titulo": "Consulta do assistente do painel (só leitura)",
+   "arq": "banco-restaurante/133-consulta-revenda.sql",
+   "desc": "Deixa o assistente do Painel de Revenda ler os dados deste restaurante (vendas, produtos, estoque, caixa, avaliações) em pedaços pequenos. Não grava nada e não entrega telefone nem endereço de cliente.",
+   "quando": "Uma vez por restaurante (restaurantes criados depois de 02/11/2026 já vêm com ela; rodar de novo não faz mal).",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Sozinha ela não abre nada: só responde a quem tiver a chave de leitura, que o painel gera no próximo código.",
+   "kb": 10
   }
  ],
  "atualizacao": [
@@ -441,7 +536,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 3
   },
   {
@@ -452,7 +547,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 5
   },
   {
@@ -463,7 +558,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 4
   },
   {
@@ -474,7 +569,7 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 11
   },
   {
@@ -485,7 +580,7 @@ window.CODIGOS = {
    "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 4
   },
   {
@@ -493,77 +588,22 @@ window.CODIGOS = {
    "id": "upd140",
    "titulo": "Atualização 140 · ajustes pelo painel",
    "arq": "banco-restaurante/140-ajustes-pelo-painel.sql",
-   "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante e a senha de um usuário (aba Ajustes do restaurante).",
+   "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante, a comanda e a senha de um usuário (aba Ajustes do restaurante). O nome do restaurante passa a ser um só.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 5
-  },
-  {
-   "etapa": "atualizacao",
-   "id": "upd135",
-   "titulo": "Atualização 135 · iFood: falso alarme de queda",
-   "arq": "banco-restaurante/135-ifood-lacuna-modo-economia.sql",
-   "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
-   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 3
-  },
-  {
-   "etapa": "atualizacao",
-   "id": "upd136",
-   "titulo": "Atualização 136 · avisos da equipe e dos clientes separados",
-   "arq": "banco-restaurante/136-avisos-equipe-cliente-separados.sql",
-   "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
-   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 5
-  },
-  {
-   "etapa": "atualizacao",
-   "id": "upd137",
-   "titulo": "Atualização 137 · comanda editável",
-   "arq": "banco-restaurante/137-comanda-config.sql",
-   "desc": "Cria a tela Administrador → Sistema → Comanda.",
-   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 4
-  },
-  {
-   "etapa": "atualizacao",
-   "id": "upd138",
-   "titulo": "Atualização 138 · ponto: pedidos de correção e atestados",
-   "arq": "banco-restaurante/138-ponto-pedidos.sql",
-   "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
-   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
+   "cuidado": "Rode na ordem 135 a 141.",
    "kb": 11
   },
   {
    "etapa": "atualizacao",
-   "id": "upd139",
-   "titulo": "Atualização 139 · economia no plano grátis",
-   "arq": "banco-restaurante/139-economia-sistema-e-fila.sql",
-   "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
+   "id": "upd141",
+   "titulo": "Atualização 141 · aviso quando o Google Drive desconecta",
+   "arq": "banco-restaurante/141-aviso-drive-caiu.sql",
+   "desc": "O Administrador recebe um aviso no celular (no máximo 1 por dia) quando o Google recusa o acesso ao Drive, antes de o backup falhar.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 4
-  },
-  {
-   "etapa": "atualizacao",
-   "id": "upd140",
-   "titulo": "Atualização 140 · ajustes pelo painel",
-   "arq": "banco-restaurante/140-ajustes-pelo-painel.sql",
-   "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante e a senha de um usuário (aba Ajustes do restaurante).",
-   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 140.",
-   "kb": 5
+   "cuidado": "Rode na ordem 135 a 141.",
+   "kb": 2
   }
  ]
 };

@@ -112,12 +112,29 @@ function finMes(m){
   return { cob, rec, desp, recebido, aReceber, despPagas, despAbertas, despTotal:despPagas + despAbertas, lucro:recebido - despPagas };
 }
 const waLink = (tel, txt) => { let d = String(tel || '').replace(/\D/g, ''); if(!d) return ''; if(d.length <= 11) d = '55' + d; return 'https://wa.me/' + d + (txt ? '?text=' + encodeURIComponent(txt) : ''); };
+/* Pix copia e cola (BR Code estático do Banco Central) com o valor da cobrança já preenchido */
+function pixChave(k){ k = String(k || '').trim(); if(!k) return '';
+  if(k.includes('@')) return k.toLowerCase(); if(/^\+/.test(k)) return '+' + k.replace(/\D/g, '');
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k)) return k.toLowerCase();
+  const d = k.replace(/\D/g, ''); if(/^[\d\s().\/-]+$/.test(k)){ if(/[()]/.test(k) || (d.length === 13 && d.startsWith('55'))) return '+' + (d.length <= 11 ? '55' + d : d); return d; }
+  return k; }
+const pixTxt = (t, n) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9 ]/g, '').trim().toUpperCase().slice(0, n);
+function pixCopiaCola(valor, txid){
+  const a = S.aj || {}, chave = pixChave(a.pix); if(!chave) return '';
+  const f = (id, v) => id + String(v.length).padStart(2, '0') + v;
+  const cidade = pixTxt(a.pix_cidade || String((S.termos || {}).foro || '').split('/')[0], 15) || 'BRASIL', nome = pixTxt(a.pix_nome, 25) || 'RECEBEDOR';
+  let p = f('00', '01') + f('26', f('00', 'br.gov.bcb.pix') + f('01', chave)) + f('52', '0000') + f('53', '986') + (Number(valor) > 0 ? f('54', Number(valor).toFixed(2)) : '') + f('58', 'BR') + f('59', nome) + f('60', cidade) + f('62', f('05', (String(txid || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 25)) || '***')) + '6304';
+  let crc = 0xFFFF; for(let i = 0; i < p.length; i++){ crc ^= p.charCodeAt(i) << 8; for(let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+  return p + crc.toString(16).toUpperCase().padStart(4, '0');
+}
+const pixDe = c => pixCopiaCola(c.valor, 'C' + String(c.id || '').replace(/-/g, '').slice(0, 20));
+window.rvPixCopiar = async id => { const c = S.cob.find(x => x.id === id); const t = c && pixDe(c); if(!t) return erro('Cadastre a sua chave Pix em Mais → Meus dados e Pix.'); if(await copiarTxt(t)) aviso('Pix copia e cola copiado (' + BRL(c.valor) + ').', 'ok'); };
 function msgCobranca(c){
   const r = S.lista.find(x => x.id === c.restaurante_id) || {}, a = S.aj;
   const mod = a.msg_cobranca || 'Olá{contato}! Tudo bem? Passando para lembrar da {tipo} do sistema do {restaurante}: {valor}, com vencimento em {vencimento}.{pix}\nQualquer dúvida, estou à disposição. Obrigado!';
   return mod.replace(/\{contato\}/g, r.contato_nome ? ' ' + r.contato_nome.split(' ')[0] : '').replace(/\{restaurante\}/g, r.nome || '').replace(/\{valor\}/g, BRL(c.valor)).replace(/\{vencimento\}/g, dataBr(c.vencimento))
     .replace(/\{tipo\}/g, c.tipo === 'implantacao' ? 'taxa de implantação' : c.tipo === 'avulsa' ? (c.descricao || 'cobrança') : 'mensalidade de ' + mesNome(mesDe(c.competencia)))
-    .replace(/\{pix\}/g, a.pix ? '\nPix: ' + a.pix + (a.pix_nome ? ' (' + a.pix_nome + ')' : '') : '');
+    .replace(/\{pix\}/g, a.pix ? '\nPix: ' + a.pix + (a.pix_nome ? ' (' + a.pix_nome + ')' : '') + '\n\nPix copia e cola (já com o valor):\n' + pixDe(c) : '');
 }
 
 /* ---------- telas ---------- */
@@ -350,11 +367,36 @@ function sub(t, link){ const r = S.rest, so = (r.site_url || '').replace(/\/+$/,
     .replace(/\{github_url\}/g, r.github_url || (link ? 'https://github.com' : '(endereço do repositório)')).replace(/\{gh_usuario\}/g, gh || (link ? 'new' : 'seu-usuario')).replace(/\{dominio_site\}/g, host || '(domínio do site)'); }
 function ghUsuario(r){ const a = (r.github_url || '').replace(/^https?:\/\/(www\.)?github\.com\//, '').split('/')[0]; if(a && !/^https?:/.test(a)) return a; const h = (r.site_url || '').replace(/^https?:\/\//, '').split('/')[0]; return /\.github\.io$/.test(h) ? h.replace(/\.github\.io$/, '') : ''; }
 const moduloDesligado = e => e.modulo && S.rest.modulos && S.rest.modulos[e.modulo] === false;
+/* "Pronto para entregar?": confere sozinho o que costuma faltar antes de entregar o sistema ao dono */
+function prontoChecks(r){
+  const sd = saudeDe(r.slug), h = sd.h, itens = (h && h.itens) || [], cobs = S.cob.filter(c => c.restaurante_id === r.id).concat((S.cobR || []).filter(c => c.restaurante_id === r.id)), t = S.termos || {};
+  const ruins = itens.filter(i => i.nivel === 'problema' && !/^Plano grátis:/i.test(i.titulo || ''));
+  return [
+    [!!(r.contato_nome && r.contato_telefone), 'Nome e WhatsApp do dono', 'aba Cadastro'],
+    [!!r.site_url, 'Endereço do site', 'etapa Colocar o site no ar'],
+    [!!refDe(r) && !!r.supabase_chave, 'Banco ligado ao site (endereço e chave)', 'etapa Criar o banco de dados'],
+    [!!(h && sd.min != null && sd.min <= 45), 'O sistema manda o sinal de saúde', h ? 'último sinal ' + haTempo(sd.min) : 'ainda não mandou: confira o banco e as tarefas agendadas'],
+    [!!h && !ruins.length, 'Saúde sem problema grave', ruins.length ? ruins.slice(0, 2).map(i => i.titulo).join(', ') : (h ? '' : 'sem sinal ainda')],
+    [!!(r.marca && (r.marca.nome || r.marca.cor || r.marca.logo)), 'Marca (nome, cor, logo)', 'aba Marca'],
+    [!!(t.fornecedor_nome && t.fornecedor_doc && t.foro), 'Seus dados nos termos de uso', 'Mais → Meus dados e Pix'],
+    [!!S.aceite, 'Dono aceitou os termos', 'ele aceita no primeiro acesso ao sistema'],
+    [!!(r.valor_mensal && r.dia_vencimento), 'Mensalidade e vencimento', 'aba Cadastro'],
+    [cobs.length > 0, 'Primeira cobrança gerada', 'aba Cobrança'],
+    [temSb(r), 'Conector do Supabase (para ajustes e atualizações)', 'etapa Ligar o GitHub e o Supabase']
+  ];
+}
+function prontoHtml(r){
+  if(r.situacao === 'ativo') return '';
+  const L = prontoChecks(r), ok = L.filter(x => x[0]).length;
+  return '<details class="card pronto"' + (ok === L.length || nEtapas(r) >= ETAPAS.length - 2 ? ' open' : '') + '><summary><b>📦 Pronto para entregar?</b> <span class="selo' + (ok === L.length ? ' ativo' : '') + '">' + ok + ' de ' + L.length + '</span></summary>'
+   + L.map(x => '<div class="pronto-i">' + (x[0] ? '✅' : '⬜') + ' <span><b>' + esc(x[1]) + '</b>' + (!x[0] && x[2] ? '<br><small class="mudo">' + esc(x[2]) + '</small>' : '') + '</span></div>').join('')
+   + (ok === L.length ? '<p><button class="principal" onclick="rvAtivar()">🎉 Tudo certo: mudar para Ativo</button></p>' : '<small class="mudo">Confere sozinho. O que estiver ⬜ ainda falta.</small>') + '</details>';
+}
 function abaPasso(){
   const r = S.rest, prox = proxEtapa(r), atual = ETAPAS.find(x => x.id === S.passoVer) || prox;
   const fases = FASES.map((x, k) => { const n = x[1].filter(id => etapaFeita(r, id)).length, ok = n === x[1].length, alvo = x[1].find(id => !etapaFeita(r, id)) || x[1][0], on = atual && x[1].includes(atual.id);
     return '<button class="fase ' + (on ? 'on' : '') + (ok ? ' ok' : '') + '" onclick="rvVerPasso(\'' + alvo + '\')"><b>' + (ok ? '✓' : k + 1) + '</b><span>' + x[0] + '</span><small>' + n + '/' + x[1].length + '</small></button>'; }).join('');
-  if(!atual){ C('<div class="fases">' + fases + '</div><div class="card vazio grande-ok">🎉<h2>Implantação completa!</h2><p class="mudo">Acompanhe a saúde dele na aba Saúde e as cobranças na aba Cobrança.</p></div>' + listaEtapas()); return; }
+  if(!atual){ C('<div class="fases">' + fases + '</div><div class="card vazio grande-ok">🎉<h2>Implantação completa!</h2><p class="mudo">Acompanhe a saúde dele na aba Saúde e as cobranças na aba Cobrança.</p></div>' + prontoHtml(r) + listaEtapas()); return; }
   const i = ETAPAS.indexOf(atual), f = etapaFeita(r, atual.id), N = atual.partes.length, todas = !!S.tudoAberto[atual.id];
   let k = S.parte[atual.id]; if(k == null || k >= N) k = 0;
   const parteHtml = (p, j) => '<div class="parte"><div class="parte-n">' + (j + 1) + '</div><div class="parte-t"><p>' + esc(sub(p.t)) + '</p>'
@@ -375,7 +417,7 @@ function abaPasso(){
    + (!todas && k < N - 1 ? '<button class="principal grande" onclick="rvParte(\'' + atual.id + '\',' + (k + 1) + ')">Próxima parte →</button>'
       : f ? '<span class="dir"><button class="mini" onclick="rvEtapa(\'' + atual.id + '\',false)">Desmarcar</button>' + (i < ETAPAS.length - 1 ? ' <button class="principal" onclick="rvVerPasso(\'' + ETAPAS[i + 1].id + '\')">Próxima etapa →</button>' : '') + '</span>'
       : '<span class="dir">' + (atual.opcional || moduloDesligado(atual) || atual.id === 'drive' || atual.id === 'ia' ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',true,true)">Pular</button> ' : '') + '<button class="principal grande" onclick="rvEtapa(\'' + atual.id + '\',true)">✅ Fiz esta etapa</button></span>')
-   + '</div></div></div><aside class="passo-lado">' + listaEtapas(atual.id) + '</aside></div>');
+   + '</div></div></div><aside class="passo-lado">' + prontoHtml(r) + listaEtapas(atual.id) + '</aside></div>');
   (todas ? atual.partes.map((p, j) => [p, j]) : [[atual.partes[k], k]]).forEach(([p, j]) => { if(p.extra) desenharExtra(atual, p.extra, $('ex_' + atual.id + '_' + j)); });
 }
 function listaEtapas(atualId){
@@ -520,8 +562,9 @@ function workflowTexto(r){
 }
 function workflowHtml(){
   const r = S.rest; if(!refDe(r) || !r.site_url) return '<div class="res erro">Antes, preencha o endereço do Supabase e o endereço do site (etapas anteriores).</div>';
-  return '<p class="pequeno"><b>1) Nome do arquivo</b> (cole no campo do nome):</p><div class="copiar" id="wfNome">.github/workflows/publicar-funcoes.yml</div><button class="mini" onclick="rvCopiar(\'wfNome\')">📋 Copiar nome</button>'
-   + '<p class="pequeno"><b>2) Conteúdo</b> (cole no campo grande):</p><div class="copiar" id="wfTxt">' + esc(workflowTexto(r)) + '</div><button class="principal" onclick="rvCopiar(\'wfTxt\')">📋 Copiar conteúdo</button> <button class="mini" onclick="rvBaixarWf()">⬇️ Baixar</button>';
+  const direto = temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> o Supabase deste restaurante está ligado, então o painel publica as funções sozinho.<br><button class="principal" style="margin-top:8px" onclick="rvConPublicarFuncoes(\'' + r.id + '\',\'wf_' + r.id + '\')">⬆️ Publicar as funções agora</button><div id="con_wf_' + r.id + '"></div></div><details class="como"><summary>Jeito manual (GitHub Actions)</summary>' : '';
+  return direto + '<p class="pequeno"><b>1) Nome do arquivo</b> (cole no campo do nome):</p><div class="copiar" id="wfNome">.github/workflows/publicar-funcoes.yml</div><button class="mini" onclick="rvCopiar(\'wfNome\')">📋 Copiar nome</button>'
+   + '<p class="pequeno"><b>2) Conteúdo</b> (cole no campo grande):</p><div class="copiar" id="wfTxt">' + esc(workflowTexto(r)) + '</div><button class="principal" onclick="rvCopiar(\'wfTxt\')">📋 Copiar conteúdo</button> <button class="mini" onclick="rvBaixarWf()">⬇️ Baixar</button>' + (direto ? '</details>' : '');
 }
 window.rvBaixarWf = () => baixar('publicar-funcoes.yml', workflowTexto(S.rest), 'text/yaml');
 window.rvPrivacidade = async () => {
@@ -750,7 +793,7 @@ function linhaCob(c, comNome){
   const tit = c.tipo === 'implantacao' ? 'Taxa de implantação' : c.tipo === 'avulsa' ? (c.descricao || 'Cobrança avulsa') : 'Mensalidade ' + mesCurto(mesDe(c.competencia)) + '/' + String(c.competencia).slice(2, 4);
   return '<div class="cob ' + (c.pago_em ? 'paga' : at ? 'atrasada' : '') + '"><div class="cob-i"><b>' + (comNome ? esc(r.nome || '—') + ' · ' : '') + esc(tit) + '</b><small>' + (c.pago_em ? '✅ Pago em ' + dataBr(c.pago_em) + (c.forma ? ' · ' + esc(c.forma) : '') : (at ? '⚠️ Atrasada · venceu ' : 'Vence ') + dataBr(c.vencimento)) + '</small></div><b class="cob-v">' + BRL(c.pago_em ? pagoValor(c) : c.valor) + '</b>'
    + '<div class="cob-a">' + (c.pago_em ? '<button class="mini" onclick="rvPago(\'' + c.id + '\',false)">Desfazer</button>'
-      : '<button class="mini principal" onclick="rvReceber(\'' + c.id + '\')">💵 Recebi</button>' + (r.contato_telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLink(r.contato_telefone, msgCobranca(c))) + '">💬 Cobrar</a>' : '') + '<button class="mini" onclick="rvCobApagar(\'' + c.id + '\')" title="Apagar">🗑️</button>') + '</div></div>';
+      : '<button class="mini principal" onclick="rvReceber(\'' + c.id + '\')">💵 Recebi</button>' + (r.contato_telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLink(r.contato_telefone, msgCobranca(c))) + '">💬 Cobrar</a>' : '') + (S.aj.pix ? '<button class="mini" onclick="rvPixCopiar(\'' + c.id + '\')" title="Copiar o Pix copia e cola com o valor">📋 Pix</button>' : '') + '<button class="mini" onclick="rvCobApagar(\'' + c.id + '\')" title="Apagar">🗑️</button>') + '</div></div>';
 }
 function abaCobranca(){
   const r = S.rest, nAtr = atrasadas(r.id).length, total = S.cobR.filter(c => c.pago_em).reduce((s, c) => s + pagoValor(c), 0);
@@ -958,7 +1001,7 @@ function vAjustes(){
    + '<label for="tNome">Seu nome ou razão social</label><input id="tNome" value="' + esc(t.fornecedor_nome || '') + '" maxlength="120"><label for="tDoc">Seu CPF ou CNPJ</label><input id="tDoc" value="' + esc(t.fornecedor_doc || '') + '" maxlength="30">'
    + '<label for="tForo">Cidade/UF do foro (ex.: Jaboticabal/SP)</label><input id="tForo" value="' + esc(t.foro || '') + '" maxlength="80"><label for="tCont">Seu contato (e-mail ou WhatsApp)</label><input id="tCont" value="' + esc(t.contato || '') + '" maxlength="120">'
    + '<p><button class="principal" onclick="rvSalvarTermos()">💾 Salvar</button> <button class="mini" onclick="rvVerTermos()">Ver o texto dos termos</button></p><small class="mudo">Versão dos termos: ' + esc(t.versao || '—') + '. Não substitui a revisão de um advogado.</small></div>'
-   + '<div class="card"><h2>💳 Recebimento e cobrança</h2><div class="cols"><div><label for="aPix">Sua chave Pix</label><input id="aPix" value="' + esc(a.pix || '') + '"></div><div><label for="aPn">Nome que aparece no Pix</label><input id="aPn" value="' + esc(a.pix_nome || '') + '"></div></div>'
+   + '<div class="card"><h2>💳 Recebimento e cobrança</h2><div class="cols"><div><label for="aPix">Sua chave Pix</label><input id="aPix" value="' + esc(a.pix || '') + '"></div><div><label for="aPn">Nome que aparece no Pix</label><input id="aPn" value="' + esc(a.pix_nome || '') + '"></div></div><label for="aPc">Sua cidade (vai no Pix copia e cola)</label><input id="aPc" maxlength="40" value="' + esc(a.pix_cidade || '') + '" placeholder="Ex.: Jaboticabal"><small class="mudo">Com a chave cadastrada, cada cobrança ganha um Pix copia e cola com o valor certo (botão 📋 Pix e na mensagem do WhatsApp). Telefone como chave: escreva com DDD entre parênteses, ex.: (16) 99999-9999.</small>'
    + '<div class="cols"><div><label for="aWa">Seu WhatsApp (vai nas propostas)</label><input id="aWa" type="tel" value="' + esc(a.whatsapp || '') + '"></div><div><label for="aDv">Dia de vencimento padrão</label><input id="aDv" type="number" min="1" max="28" value="' + esc(a.dia_padrao || 10) + '"></div></div>'
    + '<label for="aMeta">Meta de recebimento por mês (R$)</label><input id="aMeta" inputmode="decimal" value="' + esc(a.meta || '') + '">'
    + '<label for="aMsg">Mensagem de cobrança (WhatsApp)</label><textarea id="aMsg" rows="5" placeholder="Deixe em branco para usar a mensagem padrão">' + esc(a.msg_cobranca || '') + '</textarea><small class="mudo">Pode usar: {contato} {restaurante} {tipo} {valor} {vencimento} {pix}</small>'
@@ -970,7 +1013,7 @@ window.rvSalvarTermos = async () => {
   const d = { fornecedor_nome:jv('tNome'), fornecedor_doc:jv('tDoc'), foro:jv('tForo'), contato:jv('tCont'), atualizado_em:new Date().toISOString() };
   try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); }catch(e){ erro(e.message); }
 };
-window.rvSalvarAj = () => salvarAjustes({ pix:jv('aPix'), pix_nome:jv('aPn'), whatsapp:jv('aWa'), dia_padrao:Math.min(28, Math.max(1, parseInt(jv('aDv'), 10) || 10)), meta:num(jv('aMeta')), msg_cobranca:jv('aMsg') });
+window.rvSalvarAj = () => salvarAjustes({ pix:jv('aPix'), pix_nome:jv('aPn'), pix_cidade:jv('aPc'), whatsapp:jv('aWa'), dia_padrao:Math.min(28, Math.max(1, parseInt(jv('aDv'), 10) || 10)), meta:num(jv('aMeta')), msg_cobranca:jv('aMsg') });
 window.rvPlano = i => {
   const p = (S.aj.planos || [])[i] || { modulos:{} }; MODULOS.forEach(m => { if(p.modulos[m.id] == null && i == null) p.modulos[m.id] = m.pad; });
   janela(i != null ? 'Editar plano' : 'Novo plano', '<label for="jN">Nome do plano</label><input id="jN" value="' + esc(p.nome || '') + '" placeholder="Ex.: Básico, Completo"><div class="cols"><div><label for="jV">Mensalidade (R$)</label><input id="jV" inputmode="decimal" value="' + (p.valor != null ? String(p.valor).replace('.', ',') : '') + '"></div><div><label for="jTx">Implantação (R$)</label><input id="jTx" inputmode="decimal" value="' + (p.implantacao != null ? String(p.implantacao).replace('.', ',') : '') + '"></div></div>'
@@ -1108,7 +1151,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive']];
 async function chamarConector(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1135,7 +1178,7 @@ function conectorHtml(r){
    + '<li>Seguro? O token nunca volta para o navegador (só os 4 últimos dígitos), e o conector só escreve no repositório e no projeto cadastrados neste restaurante. Tudo fica no Registro.</li></ol></details>'
    + conSel(r, kSb(r), '🗄️ Supabase', 'Token de acesso da conta Supabase do restaurante.', 'https://supabase.com/dashboard/account/tokens')
    + conSel(r, kGh(r), '🐙 GitHub', 'Token só deste repositório, com "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new')
-   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
+   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\')">⬆️ Publicar funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
 }
 const conMsg = (id, html) => { const b = $('con_' + id); if(b) b.innerHTML = html; };
 async function conRecarregar(r){ S.segs = await tenta(() => rpc('revenda_segredos_status'), S.segs); if(S.view === 'conectores') vConectores(); else if(S.view === 'rest' && S.aba === 'passo') abaPasso(); }
@@ -1155,8 +1198,9 @@ async function vConectores(){
    + '<li>No banco do <b>painel</b> (SQL Editor): rode o arquivo <code>015-conector.sql</code>.</li>'
    + '<li>No Supabase do <b>painel</b>: Edge Functions → Deploy a new function → nome <code>conector</code> → cole o arquivo <code>conector/index.ts</code> → desligue <b>Verify JWT</b> (igual à função assistente) → Deploy.</li>'
    + '<li>Pronto. Agora é só ligar cada restaurante abaixo. Os dois arquivos estão na pasta <i>1-PAINEL-DE-REVENDA</i> do Sistemas.zip.</li></ol></details></div>'
+   + (L.some(r => temSb(r)) ? '<div class="card"><div class="linha"><b>⬆️ Atualizar todos os restaurantes</b><button class="principal mini" onclick="rvConAtualizarTodos()">Atualizar todos</button></div><small class="mudo">Roda as atualizações do banco (' + updFaixa() + ') em todos que têm o Supabase ligado, um por vez.</small><div id="con_todos"></div></div>' : '')
    + L.map(r => '<div class="card"><button class="alerta n0" onclick="rvConAbrir(\'' + r.id + '\')"><span class="ic">' + (temGh(r) && temSb(r) ? '✅' : (temGh(r) || temSb(r) ? '🟡' : '⬜')) + '</span><span><b>' + esc(r.nome) + '</b><small>' + (temSb(r) ? 'Supabase ✓' : 'Supabase: falta') + ' · ' + (temGh(r) ? 'GitHub ✓' : 'GitHub: falta') + '</small></span><span class="seta">' + (aberto === r.id ? '⌃' : '›') + '</span></button>'
-      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (135–140)</button></div>' : '') + '</div>').join('')
+      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (' + UPDS[0][1].slice(0, 3) + '–' + UPDS[UPDS.length - 1][1].slice(0, 3) + ')</button></div>' : '') + '</div>').join('')
    + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
   try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
     if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
@@ -1186,9 +1230,35 @@ async function conRodar(r, lista, onde){
   }
   conMsg(onde, h); return true;
 }
+/* publica as 33 funções do servidor direto pelo conector (sem GitHub Actions), uma por vez, mostrando o andamento */
+async function conPublicarFuncoes(r, onde){
+  conMsg(onde, '<small class="mudo">Buscando a lista de funções…</small>');
+  try{ const L = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, site:true }); if(!L.ok) { conMsg(onde, conLinha(false, esc(L.erro))); return false; }
+    const fs = L.funcoes || [], ruins = []; let n = 0;
+    for(const f of fs){ conMsg(onde, '<small class="mudo">⏳ ' + (++n) + ' de ' + fs.length + ': ' + esc(f) + '…</small>' + (ruins.length ? conLinha(false, ruins.length + ' com erro até agora') : ''));
+      let a; try{ a = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, slug:f }); }catch(e){ a = { ok:false, erro:e.message }; }
+      if(!a.ok){ try{ a = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, slug:f }); }catch(e){ a = { ok:false, erro:e.message }; } if(!a.ok) ruins.push(f + ': ' + (a.erro || 'erro')); } }
+    conMsg(onde, ruins.length ? conLinha(false, (fs.length - ruins.length) + ' de ' + fs.length + ' publicadas. Toque de novo para tentar as que faltaram.') + '<small class="mudo">' + ruins.map(esc).join('<br>') + '</small>' : conLinha(true, 'As ' + fs.length + ' funções do servidor foram publicadas.'));
+    hist(r.id, 'Funções do servidor publicadas pelo conector', ruins.length ? (fs.length - ruins.length) + ' de ' + fs.length : 'todas (' + fs.length + ')');
+    return !ruins.length;
+  }catch(e){ conMsg(onde, conLinha(false, esc(e.message))); return false; }
+}
+window.rvConPublicarFuncoes = async (id, onde) => { const r = S.lista.find(x => x.id === id); if(!r) return; if(!r.site_url) return erro('Preencha antes o endereço do site.'); if(!confirm('Publicar (ou atualizar) as funções do servidor no Supabase de "' + r.nome + '"? Leva uns 2 minutos; deixe a tela aberta.')) return; const ok = await conPublicarFuncoes(r, onde || id); if(ok) aviso('Funções publicadas ✓', 'ok'); };
+/* ATUALIZAR TODOS: roda as atualizações do banco em todos os restaurantes com o Supabase ligado, um depois do outro */
+const updFaixa = () => UPDS[0][1].slice(0, 3) + ' a ' + UPDS[UPDS.length - 1][1].slice(0, 3);
+window.rvConAtualizarTodos = async () => {
+  const L = S.lista.filter(r => r.situacao !== 'encerrado' && temSb(r) && /^[a-z0-9]{20}$/.test(refDe(r))); if(!L.length) return erro('Nenhum restaurante com o Supabase ligado.');
+  const t = prompt('Vai rodar as atualizações ' + updFaixa() + ' no banco de ' + L.length + ' restaurante(s): ' + L.map(r => r.nome).join(', ') + '.\nElas podem rodar de novo sem erro.\n\nPara confirmar, digite TODOS:');
+  if(t === null) return; if(t.trim().toUpperCase() !== 'TODOS') return erro('Não confere. Nada foi feito.');
+  const box = $('con_todos'); let h = '';
+  for(const r of L){ if(box) box.innerHTML = h + '<small class="mudo">⏳ ' + esc(r.nome) + '…</small><div id="con_todos_' + r.id + '"></div>';
+    ctxCod(r, []); const ok = await conRodar(r, UPDS, 'todos_' + r.id); hist(r.id, 'Atualização do banco (todos)', ok ? 'ok' : 'parou com erro');
+    h += conLinha(ok, esc(r.nome) + (ok ? ': atualizado' : ': parou com erro (abra o restaurante abaixo e toque em Atualizar banco para ver)')); }
+  if(box) box.innerHTML = h; aviso('Terminou.', 'ok');
+};
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  const nome = prompt('Vai rodar as atualizações 135 a 140 no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  const nome = prompt('Vai rodar as atualizações ' + updFaixa() + ' no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
   ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
 };
@@ -1198,14 +1268,19 @@ function conectarEtapaHtml(){ const r = S.rest; return conectorHtml(r); }
 function bancoAutoItens(fase){
   const C = (window.CODIGOS || {}).banco || [], k = C.findIndex(i => i.id === 'segredos1');
   const parte = fase === 2 ? C.slice(k + 1) : C.slice(0, k < 0 ? C.length : k);
-  return parte.filter(i => i.arq && !i.especial).map(i => [i.id, i.titulo]);
+  return parte.filter(i => i.arq && !i.especial && !i.opcional).map(i => [i.id, i.titulo]);
 }
 function bancoAutoHtml(){
   const r = S.rest; if(!temSb(r)) return '<div class="res erro">Antes, ligue o Supabase na etapa "Ligar o GitHub e o Supabase". Sem isso, use o jeito manual abaixo.</div>';
   if(!/^[a-z0-9]{20}$/.test(refDe(r))) return '<div class="res erro">Preencha antes o endereço do banco (etapa "Criar o banco de dados").</div>';
   return '<p class="pequeno"><b>Fase 1</b>: o painel roda sozinho as ' + bancoAutoItens(1).length + ' partes da estrutura, em ordem.</p><button class="principal" onclick="rvBancoAuto(1)">⚡ Montar a estrutura sozinho</button><div id="con_banco1_' + r.id + '"></div>'
-   + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o código do "Cofre de chaves · parte 1" pede a chave secreta do Supabase, então faça-o à mão (jeito manual abaixo). Depois toque aqui para os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Rodar os dados iniciais</button><div id="con_banco2_' + r.id + '"></div>';
+   + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o código do "Cofre de chaves · parte 1" pede a chave secreta do Supabase, então faça-o à mão (jeito manual abaixo). Depois toque aqui para os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Rodar os dados iniciais</button><div id="con_banco2_' + r.id + '"></div>'
+   + '<p class="pequeno" style="margin-top:12px;"><b>Opcional</b>: um cardápio de exemplo (3 categorias, 9 produtos com preço, marcados "exemplo") para o dono ver como fica e testar um pedido. Só entra com o cardápio vazio.</p><button class="mini" onclick="rvBancoExemplo()">🍔 Pôr o cardápio de exemplo</button><div id="con_banco3_' + r.id + '"></div>';
 }
+window.rvBancoExemplo = async () => {
+  const r = S.rest; if(!confirm('Pôr o cardápio de exemplo em "' + r.nome + '"? Só entra se o cardápio estiver vazio.')) return;
+  ctxCod(r, []); const ok = await conRodar(r, [['exemplo', 'Cardápio de exemplo']], 'banco3_' + r.id); if(ok){ hist(r.id, 'Cardápio de exemplo colocado', ''); aviso('Pronto. Abra o site para ver.', 'ok'); }
+};
 window.rvBancoAuto = async fase => {
   const r = S.rest; if(!confirm('O painel vai rodar no banco de "' + r.nome + '" (projeto ' + refDe(r) + '). Só use em banco NOVO e vazio. Continuar?')) return;
   const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
@@ -1248,9 +1323,9 @@ async function abaAjustesRest(){
   if(!a || !a.ok){ C('<div class="card"><h2>⚙️ Ajustes do restaurante</h2>' + conLinha(false, esc((a && a.erro) || 'Não consegui ler.')) + '<button class="mini" onclick="rvAba(\'ajustes\')">↻ Tentar de novo</button></div>'); return; }
   const ia = {}; (a.ia || []).forEach(x => { ia[x.provedor] = x; }); const d = a.dados || {};
   C('<p class="mudo pequeno">Muda direto no sistema de ' + esc(r.nome) + ', na hora. Tudo continua podendo ser mudado lá dentro também (Administrador), e fica registrado na Auditoria dele.</p>'
-   + '<div class="cols-pc"><div class="card"><h2>🤖 Chaves das IAs do atendente</h2><p class="mudo pequeno">A ordem é a ordem em que o atendente tenta. Use as chaves do restaurante (cada uma tem cota própria).</p>'
+   + '<div class="cols-pc"><div><div class="card"><h2>🤖 Chaves das IAs do atendente</h2><p class="mudo pequeno">A ordem é a ordem em que o atendente tenta. Use as chaves do restaurante (cada uma tem cota própria).</p>'
    + IA_REST.map(x => { const v = ia[x[0]] || {}; return '<div class="ia-item"><div class="linha"><b>' + x[1] + '</b>' + (v.tem ? '<span class="selo ativo">✓ …' + esc(v.final || '') + '</span>' : '<span class="selo aviso">falta</span>') + '</div><small>' + esc(x[2]) + ' <a href="' + x[3] + '" target="_blank" rel="noopener">abrir ↗</a></small>'
-      + '<div class="linha ia-campo"><input type="password" id="aj_ia_' + x[0] + '" placeholder="' + (v.tem ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvAjIa(\'' + x[0] + '\')">Salvar</button>' + (v.tem ? '<button class="mini" onclick="rvAjIa(\'' + x[0] + '\',true)" title="Apagar">🗑️</button>' : '') + '</div></div>'; }).join('') + '<div id="aj_ia_res"></div></div>'
+      + '<div class="linha ia-campo"><input type="password" id="aj_ia_' + x[0] + '" placeholder="' + (v.tem ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvAjIa(\'' + x[0] + '\')">Salvar</button>' + (v.tem ? '<button class="mini" onclick="rvAjIa(\'' + x[0] + '\',true)" title="Apagar">🗑️</button>' : '') + '</div></div>'; }).join('') + '<div id="aj_ia_res"></div></div>' + comandaAjHtml(a.comanda || {}) + '</div>'
    + '<div><div class="card"><h2>🏪 Dados do restaurante</h2><p class="mudo pequeno">Aparecem no cardápio, nas impressões e para o atendente virtual.</p>'
    + DADOS_REST.map(x => '<label for="aj_d_' + x[0] + '">' + x[1] + '</label>' + (x[2] > 100 ? '<textarea id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" rows="2">' + esc(d[x[0]] || '') + '</textarea>' : '<input id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" value="' + esc(d[x[0]] || '') + '">')).join('')
    + '<p><button class="principal" onclick="rvAjDados()">💾 Salvar dados</button></p><div id="aj_d_res"></div></div>'
@@ -1261,6 +1336,24 @@ async function abaAjustesRest(){
       + a.integracoes.map(x => '<div class="linha mapa-l"><span>' + (x.ligado ? '🟢' : '⚪') + ' <b>' + esc({ ifood:'iFood', nfce:'Nota fiscal (NFC-e)', mercadopago:'Mercado Pago', infinitepay:'InfinitePay' }[x.provedor] || x.provedor) + '</b></span><small class="mudo">' + (x.ligado ? 'ligado' : 'desligado') + (x.modo ? ' · ' + esc(x.modo === 'producao' ? 'produção' : 'teste') : '') + '</small></div>').join('') + '</div>' : '')
    + '</div></div>');
 }
+/* comanda (impressão do pedido): mesma regra da tela Administrador → Sistema → Comanda do restaurante */
+const CM_SIM = [['mostrarLogo','Logo no topo'],['mostrarTelefone','Telefone do cliente'],['mostrarEntregador','Nome do entregador'],['mostrarHoraImpressa','Hora da impressão'],['mostrarWhatsapp','WhatsApp da loja'],['mostrarVersiculo','Versículo'],['mostrarQr','QR Code']];
+const CM_TXT = [['topo','Texto do topo',60],['whatsapp','WhatsApp da loja (com DDD)',20],['agradecimento','Agradecimento',120],['versiculo','Versículo',260],['qrTitulo','Título do QR Code',40],['qrTexto','Texto do QR Code',140]];
+function comandaAjHtml(c){
+  const sel = (id, ops, v) => '<select id="' + id + '">' + ops.map(o => '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>';
+  return '<div class="card"><h2>🧾 Comanda (impressão do pedido)</h2><p class="mudo pequeno">O que sai no papel. A logo em si é a da aba Marca. Vale para todos os aparelhos na próxima impressão.</p>'
+   + '<div class="cols"><div><label for="aj_c_tamanho">Tamanho da letra</label>' + sel('aj_c_tamanho', [['pequena','Pequena'],['normal','Normal'],['grande','Grande']], c.tamanho || 'normal') + '</div><div><label for="aj_c_logoTamanho">Tamanho da logo</label>' + sel('aj_c_logoTamanho', [['pequeno','Pequena'],['medio','Média'],['grande','Grande']], c.logoTamanho || 'medio') + '</div></div>'
+   + '<div class="chips-sim">' + CM_SIM.map(x => '<label class="chk"><input type="checkbox" id="aj_c_' + x[0] + '"' + (c[x[0]] === false ? '' : ' checked') + '> ' + x[1] + '</label>').join('') + '</div>'
+   + CM_TXT.map(x => '<label for="aj_c_' + x[0] + '">' + x[1] + '</label>' + (x[2] > 100 ? '<textarea id="aj_c_' + x[0] + '" maxlength="' + x[2] + '" rows="2">' + esc(c[x[0]] || '') + '</textarea>' : '<input id="aj_c_' + x[0] + '" maxlength="' + x[2] + '"' + (x[0] === 'whatsapp' ? ' inputmode="tel"' : '') + ' value="' + esc(c[x[0]] || '') + '">')).join('')
+   + '<p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvAjComanda()">💾 Salvar comanda</button><button class="mini" onclick="rvAjComanda(true)">↺ Voltar ao padrão</button></p><div id="aj_c_res"></div></div>';
+}
+window.rvAjComanda = async padrao => {
+  const r = S.rest; if(padrao && !confirm('Voltar a comanda de ' + r.nome + ' ao padrão original?')) return;
+  const c = { tamanho:jv('aj_c_tamanho'), logoTamanho:jv('aj_c_logoTamanho') }; CM_SIM.forEach(x => { c[x[0]] = !!($('aj_c_' + x[0]) || {}).checked; }); CM_TXT.forEach(x => { c[x[0]] = jv('aj_c_' + x[0]) || ''; });
+  const box = $('aj_c_res'); if(box) box.innerHTML = '<small class="mudo">Salvando…</small>';
+  try{ const a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, p:{ acao:'comanda_salvar', config:c, padrao:!!padrao } });
+    if(box) box.innerHTML = conLinha(a.ok, esc(a.ok ? (a.message || 'Salvo.') : a.erro)); if(a.ok){ hist(r.id, 'Comanda ajustada pelo painel', padrao ? 'padrão' : ''); if(padrao) abaAjustesRest(); } }catch(e){ if(box) box.innerHTML = conLinha(false, esc(e.message)); }
+};
 window.rvAjIa = async (prov, apagar) => {
   const r = S.rest, inp = $('aj_ia_' + prov), v = apagar ? '' : jv('aj_ia_' + prov);
   if(!apagar && !v) return erro('Cole a chave no campo.');

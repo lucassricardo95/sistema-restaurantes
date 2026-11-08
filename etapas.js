@@ -111,7 +111,7 @@ window.ETAPAS = [
    ],
    pedido:'Aplique o banco completo do sistema no restaurante "{nome}" (código {slug}, projeto Supabase {ref}): estrutura, ajustes em ordem, cofre de chaves e conferência de segurança. Não use nenhum dado do Texas Burger.' },
 
- { id:'funcoes', titulo:'Publicar as funções do servidor', curto:'O GitHub publica para você (pelo celular)', quem:'voce', tempo:'10 min', teste:'funcoes',
+ { id:'funcoes', titulo:'Publicar as funções do servidor', curto:'O painel publica sozinho (ou o GitHub)', quem:'voce', tempo:'10 min', teste:'funcoes',
    porque:'São os "robôs" do servidor: avisos no celular, backup, iFood, pagamentos e IAs. O próprio GitHub do restaurante publica as 33 funções: você só toca em um botão.',
    precisa:['O repositório do GitHub (etapa 3)','O login do Supabase do restaurante'],
    partes:[
