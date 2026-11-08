@@ -85,7 +85,7 @@ window.ETAPAS = [
     { t:'Entre no GitHub (ou crie a conta em github.com/signup). Toque no "+" lá em cima → "New repository".', link:'https://github.com/new' },
     { t:'Repository name: {slug}. Em "Choose visibility" deixe "Public". Role a tela e em "Add README" ligue a chave (de "Off" para "On"): é obrigatório, sem isso o repositório nasce vazio e o site não funciona. Toque em "Create repository".', copiar:'{slug}' },
     { t:'Copie o endereço da página do repositório que abriu (ex.: https://github.com/usuario/{slug}) e cole abaixo. Salve.', extra:'campos:github_url' },
-    { t:'No repositório: "Settings" → "Pages". Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
+    { t:'No repositório: no celular toque em "More" (menu à direita de "Actions") → "Settings" → "Pages". No computador, "Settings" já aparece na barra de cima. Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
     { t:'Espere 1 minuto e atualize a página Pages: aparece "Your site is live at https://usuario.github.io/{slug}/". Copie esse endereço (com a barra no fim) e cole abaixo. Toque em "Salvar e testar".', link:'{github_url}/settings/pages', extra:'campos:github_url,site_url' },
     { t:'Só se for usar o Claude para gravar arquivos: GitHub → sua foto → Settings → Applications → "Claude" → Configure → libere o repositório {slug}. Fazendo sozinho, pule.', link:'https://github.com/settings/installations' }
    ] },
@@ -115,7 +115,7 @@ window.ETAPAS = [
    precisa:['O repositório do GitHub (etapa 3)','O login do Supabase do restaurante'],
    partes:[
     { t:'Crie uma chave de acesso do Supabase: abra o link → "Generate new token" → nome: publicar-{slug} → validade: a maior que tiver → "Generate token". COPIE a chave (começa com sbp_). Ela só aparece uma vez.', link:'https://supabase.com/dashboard/account/tokens', copiar:'publicar-{slug}' },
-    { t:'No GitHub: repositório {slug} → "Settings" → "Secrets and variables" → "Actions" → "New repository secret". Em "Name" cole o nome abaixo. Em "Secret" cole a chave sbp_. Toque em "Add secret".', copiar:'SUPABASE_ACCESS_TOKEN', link:'{github_url}/settings/secrets/actions/new' },
+    { t:'No GitHub: repositório {slug} → "More" (no celular) → "Settings" → "Secrets and variables" → "Actions" → "New repository secret". Em "Name" cole o nome abaixo. Em "Secret" cole a chave sbp_. Toque em "Add secret".', copiar:'SUPABASE_ACCESS_TOKEN', link:'{github_url}/settings/secrets/actions/new' },
     { t:'No repositório: "Add file" → "Create new file". No campo do nome cole o caminho abaixo (as barras criam as pastas sozinhas). No campo grande cole o conteúdo. Toque em "Commit changes" (duas vezes).', extra:'workflow', link:'{github_url}/new/main' },
     { t:'Abra a aba "Actions" do repositório. Se aparecer um botão verde "I understand my workflows, go ahead and enable them", toque nele. Depois toque em "Publicar funções do servidor" → "Run workflow" → "Run workflow" (verde).', link:'{github_url}/actions' },
     { t:'Espere 3 a 5 minutos até aparecer o ✓ verde. Se aparecer ✗ vermelho, toque nele → "publicar" → copie o erro e mande ao Claude. Depois toque em Testar: tem que aparecer "Funções do servidor respondendo". Quando o sistema ganhar funções novas, é só repetir a parte 4.', extra:'teste' }
