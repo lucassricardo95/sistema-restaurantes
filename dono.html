@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0a0d">
+<title>Meu restaurante</title>
+<script src="config.js"></script>
+<style>
+:root{--bg:#0b0a0d;--card:#151318;--linha:#2c2732;--txt:#f4f0f5;--mudo:#a59cab;--erro:#ff6b6b;--aviso:#f0b429;--ok:#3ccf7a;--cor:#e23d44}
+@media (prefers-color-scheme:light){:root{--bg:#f6f3f7;--card:#fff;--linha:#e2dce6;--txt:#1d1a20;--mudo:#6b6370}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:8px 0 2px}
+.mudo{color:var(--mudo);font-size:14px}
+.card{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:16px;margin-top:14px}
+.big{font-size:30px;font-weight:700;margin:4px 0}
+.sel{display:inline-block;padding:4px 12px;border-radius:99px;font-weight:600;font-size:14px}
+.sel.ok{background:#3ccf7a22;color:var(--ok)}.sel.mau{background:#ff6b6b22;color:var(--erro)}
+.l{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--linha)}
+.l:first-of-type{border-top:0}
+.at{color:var(--erro)}.pg{color:var(--ok)}
+a.b{display:inline-block;margin-top:10px;padding:10px 16px;border-radius:12px;background:var(--cor);color:#fff;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<main id="m"><p class="mudo">Carregando…</p></main>
+<script>
+(function(){
+  var m = document.getElementById('m');
+  var t = (location.search.match(/[?&]t=([0-9a-f]{32})/) || [])[1];
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function brl(v){ return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+  function dt(d){ return d ? d.split('-').reverse().join('/') : ''; }
+  if(!t){ m.innerHTML = '<h1>Link incompleto</h1><p class="mudo">Peça o link completo ao seu fornecedor do sistema.</p>'; return; }
+  fetch(window.REVENDA_URL + '/functions/v1/painel-dono', { method:'POST', headers:{ 'Content-Type':'application/json', apikey:window.REVENDA_CHAVE }, body:JSON.stringify({ token:t }) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j.ok){ m.innerHTML = '<h1>Não foi possível abrir</h1><p class="mudo">' + esc(j.erro || 'Tente de novo em instantes.') + '</p>'; return; }
+      var h = '<h1>' + esc(j.nome) + '</h1><span class="sel ' + (j.sistema.ok ? 'ok' : 'mau') + '">' + (j.sistema.ok ? '✅ Sistema funcionando' : '⚠️ Estamos cuidando de um problema') + '</span>';
+      if(j.sistema.verificado_em) h += '<p class="mudo">Conferido em ' + new Date(j.sistema.verificado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) + '</p>';
+      if(j.vendas) h += '<div class="card"><div class="mudo">Vendas confirmadas neste mês</div><div class="big">' + brl(j.vendas.total) + '</div><div class="mudo">' + j.vendas.pedidos + ' pedido(s)</div></div>';
+      if(j.cobrancas && j.cobrancas.length){
+        h += '<div class="card"><b>Mensalidade e cobranças</b>';
+        j.cobrancas.forEach(function(c){ var nome = c.tipo === 'implantacao' ? 'Implantação' : c.tipo === 'avulsa' ? (c.descricao || 'Cobrança') : 'Mensalidade';
+          h += '<div class="l"><span>' + esc(nome) + '<br><span class="mudo">vence ' + dt(c.vencimento) + '</span></span><span class="' + (c.pago ? 'pg' : c.atrasada ? 'at' : '') + '">' + brl(c.valor) + '<br><span class="mudo">' + (c.pago ? 'pago' : c.atrasada ? 'atrasada' : 'em aberto') + '</span></span></div>'; });
+        if(j.pix && j.cobrancas.some(function(c){ return !c.pago; })) h += '<p class="mudo">Pix: ' + esc(j.pix.chave) + (j.pix.nome ? ' (' + esc(j.pix.nome) + ')' : '') + '</p>';
+        h += '</div>';
+      }
+      if(j.site) h += '<a class="b" href="' + esc(j.site) + '">Abrir meu sistema</a> ';
+      if(j.contato) h += '<a class="b" href="https://wa.me/55' + String(j.contato).replace(/\D/g, '').replace(/^55/, '') + '">Falar com o suporte</a>';
+      m.innerHTML = h;
+    })
+    .catch(function(){ m.innerHTML = '<h1>Sem conexão</h1><p class="mudo">Confira a internet e abra de novo.</p>'; });
+})();
+</script>
+</body>
+</html>

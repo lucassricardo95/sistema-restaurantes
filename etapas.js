@@ -248,7 +248,7 @@ window.ETAPAS = [
    porque:'Garante que o cliente não vai encontrar nada quebrado.',
    precisa:['Um celular (de preferência Android)'],
    checklist:['Abrir o site no celular: nome, cores e logo certos (nada de outro restaurante)','Cadastrar um produto com foto e ver no cardápio','Fazer um pedido pelo cardápio e ver na tela da cozinha','Imprimir uma comanda e conferir a logo de impressão','Entrar com o Google no cardápio','Instalar o app pelo navegador e conferir ícone e nome','Ativar os avisos e receber um aviso de pedido no celular','Perguntar algo ao atendente virtual no cardápio','Abrir e fechar o caixa','Gerar um backup em Backup e espaço','Abrir a Ajuda e ver as imagens','Entrar com o seu login de Desenvolvedor','Perguntar ao assistente do painel quanto este restaurante vendeu','Apagar os dados de teste (produto de teste, pedido, caixa)'],
-   partes:[ { t:'Faça cada teste e marque. Só dá para concluir quando todos estiverem marcados.', extra:'checklist' } ] },
+   partes:[ { t:'Primeiro o painel confere sozinho o lado técnico (banco, funções, site, motor, GitHub e atualizações). Só lê, não muda nada.', extra:'testetudo' }, { t:'Agora faça cada teste no celular e marque. Só dá para concluir quando todos estiverem marcados.', extra:'checklist' } ] },
 
  { id:'entrega', titulo:'Entregar ao cliente', curto:'Equipe, mensagem, termos e cobrança', quem:'voce', tempo:'20 min',
    porque:'O restaurante começa a usar e você começa a receber.',

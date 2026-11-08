@@ -326,7 +326,7 @@ window.rvAbrir = async (id, aba) => {
   S.rest = normalizar(JSON.parse(JSON.stringify(r))); S.view = 'rest'; S.aba = aba || (nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'); S.passoVer = null; S.res = {};
   await carregarRest(); desenhar();
 };
-async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; }catch(e){ erro(e.message); } }
+async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; S.dono_link = (await tenta(() => rest('dono_links?restaurante_id=eq.' + S.rest.id + '&select=*'), []))[0] || null; }catch(e){ erro(e.message); } }
 const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
 function vRest(){
   const r = S.rest, n = nEtapas(r), sd = saudeDe(r.slug), sb = refDe(r);
@@ -465,6 +465,7 @@ function desenharExtra(et, tipo, box){
     boasvindas: () => boasHtml(),
     listacontas: () => listaContasHtml(),
     campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
+    testetudo: () => '<button class="principal" onclick="rvTesteTudo()">🧪 Testar tudo com um clique</button><div id="res_tudo"></div>',
     teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
     codigos: () => codigosHtml(et.id),
     conectar: () => conectarEtapaHtml() + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><div class="cols" style="margin-top:8px"><label>Login do dono<input id="tdLogin" autocomplete="off" placeholder="ex.: maria" maxlength="30"></label><label>Senha do dono<input id="tdSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label><label>O seu login de suporte<input id="tdDLogin" autocomplete="off" value="Lucas" maxlength="30"></label><label>A sua senha de suporte<input id="tdDSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label></div><small class="mudo">As senhas só passam direto para o banco do restaurante: o painel não guarda nenhuma.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
@@ -645,6 +646,27 @@ const TESTES = {
     await tempo(u, { mode:'no-cors' }); return ['ok', 'O endereço ' + esc(u) + ' está no ar.']; }
 };
 const NOME_T = { supabase:'Banco', banco:'Tabelas', funcoes:'Funções', site:'Site' };
+/* TESTE COMPLETO EM UM CLIQUE: confere banco, funções, site, motor, GitHub e atualizações e dá o veredito. Só lê; não muda nada. */
+window.rvTesteTudo = async () => {
+  const r = S.rest, box = 'res_tudo'; if(!r) return; lerForm();
+  const pinta = h => { const b = $(box); if(b) b.innerHTML = h; };
+  pinta('<div class="res"><small class="mudo">⏳ Testando… (uns 20 segundos)</small></div>');
+  const L = []; const add = (ok, t) => L.push([ok, t]);
+  for(const k of ['supabase', 'banco', 'funcoes', 'site']){
+    try{ const x = await TESTES[k](r); add(x[0] === 'ok', '<b>' + NOME_T[k] + ':</b> ' + x[1]); }catch(e){ add(false, '<b>' + NOME_T[k] + ':</b> não consegui chegar (' + esc(e.message) + ').'); }
+  }
+  if(temSb(r)){
+    try{ const f = await updsFeitas_(r), falta = UPDS.filter(u => !f.has(u[0])); add(!falta.length, '<b>Atualizações do banco:</b> ' + (falta.length ? 'faltam ' + falta.length + '. Abra Conectores e toque em Atualizar banco.' : 'todas aplicadas.')); }catch(e){ add(false, '<b>Atualizações do banco:</b> ' + esc(e.message)); }
+    try{ const a = await chamarConector({ acao:'sb_conferir', restaurante_id:r.id }); if(a.ok && !a.referencia){ const n = a.faltamTabelas.length + a.faltamColunas.length + a.faltamFuncoes.length + (a.edgeFaltam || []).length; add(!n, '<b>Igual ao modelo:</b> ' + (n ? 'faltam ' + n + ' item(ns) no banco/funções. Rode a conferência em Conectores.' : 'tabelas, colunas e funções iguais.')); } }catch(e){ /* a linha de cima já mostra o problema */ }
+  } else add(false, '<b>Conector do Supabase:</b> ainda não ligado. Ligue na etapa "Ligar o GitHub e o Supabase".');
+  if(temGh(r)){
+    try{ const g = await chamarConector({ acao:'gh_conferir', restaurante_id:r.id }); const faltam = g.ok ? g.arquivos.filter(x => !x.existe).length : 1; add(g.ok && !faltam && g.motorOk, '<b>Site no GitHub:</b> ' + (!g.ok ? esc(g.erro || 'não consegui conferir') : faltam ? 'faltam arquivos.' : !g.motorOk ? 'o motor não respondeu.' : 'arquivos e motor em ordem.')); }catch(e){ add(false, '<b>Site no GitHub:</b> ' + esc(e.message)); }
+  } else add(false, '<b>Conector do GitHub:</b> ainda não ligado.');
+  const ruins = L.filter(x => !x[0]).length;
+  pinta(L.map(x => '<div class="res ' + (x[0] ? 'ok' : 'erro') + '">' + (x[0] ? '✅ ' : '❌ ') + x[1] + '</div>').join('')
+    + '<div class="res ' + (ruins ? 'erro' : 'ok') + '"><b>' + (ruins ? '❌ ' + ruins + ' ponto(s) para resolver antes de entregar.' : '✅ Tudo em ordem pelo lado técnico. Agora faça o teste no celular (a lista abaixo).') + '</b></div>');
+  hist(r.id, 'Teste completo automático', ruins ? ruins + ' ponto(s) a resolver' : 'tudo em ordem');
+};
 window.rvTeste = async id => {
   lerForm(); S.res[id] = ['aviso', 'Testando…']; mostrarRes('res_' + id, [id]);
   try{ S.res[id] = await TESTES[id](S.rest); }catch(e){ S.res[id] = ['erro', e.name === 'AbortError' ? 'Demorou demais para responder.' : 'Não foi possível chegar lá (' + esc(e.message) + ').']; }
@@ -951,6 +973,23 @@ function linhaCob(c, comNome){
    + '<div class="cob-a">' + (c.pago_em ? '<button class="mini" onclick="rvPago(\'' + c.id + '\',false)">Desfazer</button>'
       : '<button class="mini principal" onclick="rvReceber(\'' + c.id + '\')">💵 Recebi</button>' + (r.contato_telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLink(r.contato_telefone, msgCobranca(c))) + '">💬 Cobrar</a>' : '') + (S.aj.pix ? '<button class="mini" onclick="rvPixCopiar(\'' + c.id + '\')" title="Copiar o Pix copia e cola com o valor">📋 Pix</button>' : '') + '<button class="mini" onclick="rvCobApagar(\'' + c.id + '\')" title="Apagar">🗑️</button>') + '</div></div>';
 }
+/* LINK DO DONO: página só de leitura (vendas do mês, sistema no ar, mensalidade) para o dono do restaurante, sem login. Você gera e cancela. */
+const donoUrl = l => new URL('dono.html?t=' + l.token, location.href).href;
+function donoLinkHtml(){
+  const l = S.dono_link; if(!S.rest || ['encerrado'].includes(S.rest.situacao)) return '';
+  const corpo = !l || !l.ativo
+    ? '<p class="mudo pequeno">O dono vê, no celular dele e sem senha: se o sistema está no ar, as vendas do mês e a mensalidade. Só leitura, ele não muda nada.</p><button class="mini principal" onclick="rvDonoGerar()">🔗 Gerar link do dono</button>'
+    : '<p class="mudo pequeno">Link ativo' + (l.ultimo_acesso ? ' · último acesso ' + esc(new Date(l.ultimo_acesso).toLocaleDateString('pt-BR')) : ' · ainda não foi aberto') + '.</p>'
+      + '<div class="linha" style="justify-content:flex-start;flex-wrap:wrap;gap:6px"><button class="mini principal" onclick="rvDonoCopiar()">📋 Copiar link</button>'
+      + (S.rest.contato_telefone ? '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(waLinkDono()) + '">💬 Mandar pelo WhatsApp</a>' : '')
+      + '<a class="btn mini" target="_blank" rel="noopener" href="' + esc(donoUrl(l)) + '">👁️ Ver como o dono vê</a><button class="mini" onclick="rvDonoCancelar()">🚫 Cancelar link</button></div>';
+  return '<div class="card"><h2>🔗 Página do dono</h2>' + corpo + '</div>';
+}
+function waLinkDono(){ const r = S.rest, tel = String(r.contato_telefone || '').replace(/\D/g, '').replace(/^55/, ''); return 'https://wa.me/55' + tel + '?text=' + encodeURIComponent('Olá' + (r.contato_nome ? ' ' + r.contato_nome.split(' ')[0] : '') + '! Esse é o link para você acompanhar o seu sistema (vendas do mês, mensalidade e se está tudo no ar). Só leitura, pode abrir quando quiser:\n' + donoUrl(S.dono_link)); }
+window.rvDonoGerar = async () => { try{ const l = S.dono_link; if(l) await rest('dono_links?restaurante_id=eq.' + S.rest.id, 'PATCH', { token:Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join(''), ativo:true });
+  else await rest('dono_links', 'POST', { restaurante_id:S.rest.id }); hist(S.rest.id, 'Link do dono gerado', ''); await carregarRest(); desenhar(); aviso('Link gerado.', 'ok'); }catch(e){ erro(e.message); } };
+window.rvDonoCopiar = async () => { if(S.dono_link && await copiarTxt(donoUrl(S.dono_link))) aviso('Link copiado.', 'ok'); else erro('Não consegui copiar.'); };
+window.rvDonoCancelar = async () => { if(!confirm('Cancelar o link? Quem tiver o link antigo deixa de ver a página.')) return; try{ await rest('dono_links?restaurante_id=eq.' + S.rest.id, 'PATCH', { ativo:false }); hist(S.rest.id, 'Link do dono cancelado', ''); await carregarRest(); desenhar(); aviso('Link cancelado.', 'ok'); }catch(e){ erro(e.message); } };
 function abaCobranca(){
   const r = S.rest, nAtr = atrasadas(r.id).length, total = S.cobR.filter(c => c.pago_em).reduce((s, c) => s + pagoValor(c), 0);
   const pm = (S.prom || []).filter(x => x.restaurante_id === r.id), ROTP = { pendente:'Aguardando você', aprovada:'Aprovada', recusada:'Recusada', encerrada:'Encerrada' };
@@ -958,6 +997,7 @@ function abaCobranca(){
    + '<div class="card"><div class="linha"><h2>💰 Cobranças</h2><span><button class="mini principal" onclick="rvCobRest(\'mensalidade\')">＋ Mensalidade do mês</button> <button class="mini" onclick="rvNovaCob(\'' + r.id + '\')">＋ Outra</button></span></div>'
    + (r.valor_mensal ? '<p class="mudo pequeno">' + BRL(r.valor_mensal) + ' por mês, vence todo dia ' + (r.dia_vencimento || 10) + '.</p>' : '<p class="txt-erro pequeno">Defina a mensalidade na aba Cadastro.</p>')
    + (S.cobR.length ? S.cobR.map(c => linhaCob(c, false)).join('') : '<p class="mudo">Nenhuma cobrança ainda.</p>') + '</div>'
+   + donoLinkHtml()
    + (pm.length ? '<div class="card' + (pm.some(x => x.status === 'pendente') ? ' destaque-aviso' : '') + '"><h2>🤝 Promessas de pagamento</h2><p class="mudo pequeno">Só valem se você aprovar. Aprovada, o acesso volta sozinho em até 4 minutos; passada a data, o bloqueio volta sozinho.</p>'
       + pm.slice(0, 8).map(x => '<div class="cob"><div class="cob-i"><b>Pagar em ' + dataBr(x.data_prometida) + '</b><small>Pedido em ' + esc(new Date(x.criada_em).toLocaleDateString('pt-BR')) + (x.contato ? ' · ' + esc(x.contato) : '') + (x.status === 'aprovada' ? ' · liberado até ' + dataBr(x.liberado_ate) : '') + '</small></div><span class="selo">' + ROTP[x.status] + '</span>'
         + (x.status === 'pendente' ? '<div class="cob-a"><button class="mini principal" onclick="rvPromessa(\'' + x.id + '\',true)">Aprovar</button><button class="mini" onclick="rvPromessa(\'' + x.id + '\',false)">Recusar</button></div>' : '') + '</div>').join('') + '</div>' : '')
@@ -1573,11 +1613,12 @@ window.rvConAtualizarTodos = async () => {
   const L = S.lista.filter(r => r.situacao !== 'encerrado' && temSb(r) && /^[a-z0-9]{20}$/.test(refDe(r))); if(!L.length) return erro('Nenhum restaurante com o Supabase ligado.');
   const t = prompt('Vai aplicar só as atualizações que ainda faltam (de ' + updFaixa() + ') no banco de ' + L.length + ' restaurante(s): ' + L.map(r => r.nome).join(', ') + '.\nO que já foi aplicado é pulado.\n\nPara confirmar, digite TODOS:');
   if(t === null) return; if(t.trim().toUpperCase() !== 'TODOS') return erro('Não confere. Nada foi feito.');
-  const box = $('con_todos'); let h = '';
+  const box = $('con_todos'); let h = '', ruins = 0;
   for(const r of L){ if(box) box.innerHTML = h + '<small class="mudo">⏳ ' + esc(r.nome) + '…</small><div id="con_todos_' + r.id + '"></div>';
     ctxCod(r, []); const ok = await conRodar(r, UPDS, 'todos_' + r.id); hist(r.id, 'Atualização do banco (todos)', ok ? 'ok' : 'parou com erro');
-    h += conLinha(ok, esc(r.nome) + (ok ? ': atualizado' : ': parou com erro (abra o restaurante abaixo e toque em Atualizar banco para ver)')); }
-  if(box) box.innerHTML = h; aviso('Terminou.', 'ok'); vigiaReconferir();
+    h += conLinha(ok, esc(r.nome) + (ok ? ': atualizado' : ': parou com erro (abra o restaurante abaixo e toque em Atualizar banco para ver)')); if(!ok) ruins++; }
+  h += '<div class="res ' + (ruins ? 'erro' : 'ok') + '"><b>' + (ruins ? '❌ ' + ruins + ' de ' + L.length + ' pararam com erro.' : '✅ Os ' + L.length + ' restaurante(s) estão em dia.') + '</b><br><small class="mudo">Cada atualização roda inteira ou não roda: se uma linha der erro, nada daquela atualização fica pela metade. O vigia reconfere agora.</small></div>';
+  if(box) box.innerHTML = h; aviso(ruins ? 'Terminou com erro.' : 'Terminou.', ruins ? 'erro' : 'ok'); vigiaReconferir();
 };
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
