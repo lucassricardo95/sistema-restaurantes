@@ -1104,7 +1104,7 @@ async function vUsuarios(){
   T('<h1>Usuários do painel</h1><div class="card"><small class="mudo">Carregando…</small></div>');
   let a; try{ a = await chamarConector({ acao:'usr_listar' }); if(!a.ok) throw new Error(a.erro || 'Não consegui carregar.'); }catch(e){ return T('<h1>Usuários do painel</h1><div class="card">' + conLinha(false, esc(e.message)) + '</div>'); }
   const dt = x => x ? new Date(x).toLocaleDateString('pt-BR') : '—';
-  T('<h1>Usuários do painel</h1><div class="card"><h2>🙋 Meus dados</h2><p class="mudo pequeno">Troque o seu e-mail e/ou a sua senha. Vai pedir a senha atual.</p><p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvUsrEu()">✏️ Editar meu acesso</button></p><div id="usr_eu_res"></div></div>'
+  T('<h1>Usuários do painel</h1><div class="card"><h2>🙋 Meus dados</h2><p class="mudo pequeno">Troque o seu e-mail e/ou a sua senha. Vai pedir a senha atual.</p><p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvUsrEu()">✏️ Editar meu acesso</button></p><div id="usr_eu_res"></div></div>' + avErroCard_()
    + '<div class="card"><h2>👥 Quem entra no painel</h2><p class="mudo pequeno">' + (a.souDono ? 'Você é o dono: só você cria, troca a senha e remove os outros. Cada um entra com o próprio e-mail e vê tudo.' : 'Só o dono cria e remove usuários.') + '</p>'
    + a.usuarios.map(u => '<div class="linha mapa-l"><span><b>' + esc(u.email) + '</b> <small class="mudo">' + (u.dono ? 'dono' : 'usuário') + (u.eu ? ' · você' : '') + ' · último acesso ' + dt(u.ultimo) + '</small></span>'
       + (a.souDono && !u.eu ? '<span><button class="mini" onclick="rvUsrSenha(\'' + u.id + '\')">🔑 Senha</button> <button class="mini" onclick="rvUsrRemover(\'' + u.id + '\')">🗑️ Remover</button></span>' : '') + '</div>').join('')
@@ -1404,6 +1404,39 @@ window.rvImplantarTudo = async () => {
     try{ await salvar('Etapas já feitas pelo painel foram marcadas.'); }catch(e){}
     setTimeout(() => { try{ rvConConferir(r.id); }catch(e){} }, 2500); }
   conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> As chaves dos avisos também ficaram prontas e as etapas Conectar, Banco, Funções, Logins e Avisos já foram marcadas como feitas. Falta confirmar o site no ar. Falta só o que depende das suas contas: Entrar com o Google, Drive e chaves das IAs (próximas etapas). A conferência abaixo roda sozinha. Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou no passo que deu erro. Resolva e toque de novo: os passos já feitos podem rodar outra vez sem estragar (menos em banco que já tem dados).</div>'));
+};
+/* ---------- AVISOS DE ERRO NO CELULAR (SQL 018 do painel + função avisar-painel): um botão por aparelho ---------- */
+function avErroCard_(){
+  setTimeout(avErroEstado_, 50);
+  return '<div class="card"><h2>🔔 Avisos de erro neste aparelho</h2><p class="mudo pequeno">Quando um restaurante tiver um erro novo no sistema, este aparelho recebe um aviso, mesmo com o painel fechado. Restaurante em implantação não avisa.</p><div id="av_erro"><small class="mudo">Verificando…</small></div></div>';
+}
+const avB64_ = b => { const p = '='.repeat((4 - b.length % 4) % 4), r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+const avEnc_ = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function avFn_(corpo){ if(S.sess && Date.now() > S.sess.exp) await renovar(); const r = await fetch(URL_ + '/functions/v1/avisar-painel', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) }); return r.json().catch(() => ({ ok:false, erro:'Sem resposta (erro ' + r.status + ').' })); }
+async function avErroEstado_(){
+  const box = $('av_erro'); if(!box) return;
+  if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { box.innerHTML = '<div class="res aviso">Este navegador não recebe avisos. No iPhone, instale o painel na tela inicial (Compartilhar → Adicionar à Tela de Início) e abra por lá.</div>'; return; }
+  let sub = null; try{ const reg = await navigator.serviceWorker.ready; sub = await reg.pushManager.getSubscription(); }catch(e){}
+  if(Notification.permission === 'denied') { box.innerHTML = '<div class="res erro">As notificações estão bloqueadas para este site. Libere nas configurações do navegador e volte aqui.</div>'; return; }
+  box.innerHTML = sub ? '<div class="res ok">✅ Ligado neste aparelho.</div><div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvAvErroTeste()">Mandar um aviso de teste</button><button class="mini" onclick="rvAvErroDesligar()">Desligar</button></div><div id="av_erro_res"></div>'
+    : '<button class="principal" onclick="rvAvErroLigar()">🔔 Ligar neste aparelho</button><div id="av_erro_res"></div>';
+}
+window.rvAvErroLigar = async () => {
+  const res = $('av_erro_res'); const msg = t => { if(res) res.innerHTML = t; };
+  try{
+    msg('<small class="mudo">Pedindo permissão…</small>'); const perm = await Notification.requestPermission(); if(perm !== 'granted') return msg(conLinha(false, 'Sem permissão. Toque em Permitir quando o navegador perguntar.'));
+    const k = await avFn_({ acao:'chave' }); if(!k.ok) return msg(conLinha(false, esc(k.erro || 'Não consegui a chave.')));
+    const reg = await navigator.serviceWorker.ready; let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:avB64_(k.chave) });
+    const j = sub.toJSON(), eu = (await chamarConector({ acao:'usr_listar' })).usuarios.find(u => u.eu);
+    await rest('push_painel?on_conflict=endpoint', 'POST', { user_id:eu.id, endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth, falhas:0 }, { Prefer:'resolution=merge-duplicates' });
+    const t = await avFn_({ acao:'teste' }); await avErroEstado_(); const r2 = $('av_erro_res'); if(r2) r2.innerHTML = conLinha(!!t.ok, t.ok ? 'Pronto! Mandei um aviso de teste: ele deve aparecer agora.' : esc(t.erro || 'Ligado, mas o teste não chegou.'));
+  }catch(e){ msg(conLinha(false, esc(e.message))); }
+};
+window.rvAvErroTeste = async () => { const r = $('av_erro_res'); if(r) r.innerHTML = '<small class="mudo">Enviando…</small>'; const t = await avFn_({ acao:'teste' }); if(r) r.innerHTML = conLinha(!!t.ok, t.ok ? 'Aviso enviado.' : esc(t.erro || 'Não chegou.')); };
+window.rvAvErroDesligar = async () => {
+  try{ const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if(sub){ await rest('push_painel?endpoint=eq.' + encodeURIComponent(sub.endpoint), 'DELETE'); await sub.unsubscribe(); } }catch(e){ erro(e.message); }
+  avErroEstado_();
 };
 window.rvConSincronizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
