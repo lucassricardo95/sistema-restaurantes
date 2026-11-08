@@ -855,7 +855,7 @@ function vSaude(){
       return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
        + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo' + (sd.geral === 'impl' ? '' : ' erro') + '">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
        + (ruins.length ? ruins.slice(0, 3).map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') : '')
-       + (pior ? barraUso(pior) : '') + (er.length ? '<details><summary class="pequeno"><b>Ver os erros</b></summary>' + errosHtml(er, false) + '</details>' : '')
+       + (pior ? (pior.pct >= 70 ? barraUso(pior) : '<small class="mudo">✅ Plano grátis folgado · maior uso: ' + esc(String(pior.tit).replace(/^Plano grátis:\s*/i, '')) + ' ' + String(pior.pct).replace('.', ',') + '%</small>') : '') + (er.length ? '<details><summary class="pequeno"><b>Ver os erros</b></summary>' + errosHtml(er, false) + '</details>' : '')
        + (temSb(r) ? '<div class="av-mini" id="avr_' + r.id + '"><small class="mudo">📡 medindo ao vivo…</small></div>' : '')
        + '<details><summary class="pequeno"><b>Ver tudo</b></summary>' + saudeHtml(r, true) + '</details><p style="margin:8px 0 0"><button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'saude\')">Abrir restaurante ›</button></p></div>'; }).join('')
    + (S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)).length ? '<div class="card"><h2>Erros de sites sem cadastro</h2>' + errosHtml(S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)), true) + '</div>' : '')
@@ -1104,16 +1104,26 @@ async function vUsuarios(){
   T('<h1>Usuários do painel</h1><div class="card"><small class="mudo">Carregando…</small></div>');
   let a; try{ a = await chamarConector({ acao:'usr_listar' }); if(!a.ok) throw new Error(a.erro || 'Não consegui carregar.'); }catch(e){ return T('<h1>Usuários do painel</h1><div class="card">' + conLinha(false, esc(e.message)) + '</div>'); }
   const dt = x => x ? new Date(x).toLocaleDateString('pt-BR') : '—';
-  T('<h1>Usuários do painel</h1><div class="card"><h2>🙋 Meus dados</h2><p class="mudo pequeno">Troque o seu e-mail e/ou a sua senha. Vai pedir a senha atual.</p><p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvUsrEu()">✏️ Editar meu acesso</button></p><div id="usr_eu_res"></div></div>' + avErroCard_()
+  T('<h1>Usuários do painel</h1><div class="card"><h2>🙋 Meus dados</h2><p class="mudo pequeno">Seu nome e telefone (aparecem na lista de usuários) ou o seu e-mail e a sua senha de acesso.</p><p class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvUsrPerfil()">✏️ Meu nome e telefone</button> <button class="mini" onclick="rvUsrEu()">🔑 E-mail e senha</button></p><div id="usr_eu_res"></div></div>' + avErroCard_()
    + '<div class="card"><h2>👥 Quem entra no painel</h2><p class="mudo pequeno">' + (a.souDono ? 'Você é o dono: só você cria, troca a senha e remove os outros. Cada um entra com o próprio e-mail e vê tudo.' : 'Só o dono cria e remove usuários.') + '</p>'
-   + a.usuarios.map(u => '<div class="linha mapa-l"><span><b>' + esc(u.email) + '</b> <small class="mudo">' + (u.dono ? 'dono' : 'usuário') + (u.eu ? ' · você' : '') + ' · último acesso ' + dt(u.ultimo) + '</small></span>'
+   + a.usuarios.map(u => '<div class="linha mapa-l"><span><b>' + esc(u.nome || u.email) + '</b> <small class="mudo">' + (u.dono ? 'dono' : 'usuário') + (u.funcao ? ' · ' + esc(u.funcao) : '') + (u.eu ? ' · você' : '') + '</small><br><small class="mudo">' + (u.nome ? esc(u.email) + ' · ' : '') + (u.telefone ? '📞 ' + esc(foneBonito_(u.telefone)) + ' · ' : '<i>sem telefone</i> · ') + 'último acesso ' + dt(u.ultimo) + '</small></span>'
+      + ((a.souDono || u.eu) ? '<span><button class="mini" onclick="rvUsrPerfil(\'' + u.id + '\')">✏️ Dados</button> </span>' : '')
       + (a.souDono && !u.eu ? '<span><button class="mini" onclick="rvUsrSenha(\'' + u.id + '\')">🔑 Senha</button> <button class="mini" onclick="rvUsrRemover(\'' + u.id + '\')">🗑️ Remover</button></span>' : '') + '</div>').join('')
    + (a.souDono ? '<p class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvUsrCriar()">➕ Novo usuário</button></p>' : '') + '<div id="usr_res"></div></div>');
 }
 const usrMsg = (id, h) => { const b = $(id); if(b) b.innerHTML = h; };
+const foneBonito_ = t => { const d = String(t).replace(/\D/g, ''); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : t; };
+window.rvUsrPerfil = async id => {
+  let a; try{ a = await chamarConector({ acao:'usr_listar' }); }catch(e){ return erro(e.message); }
+  const u = a.usuarios.find(x => id ? x.id === id : x.eu); if(!u) return;
+  const nome = prompt('Nome de ' + (u.eu ? 'você' : u.email) + ':', u.nome || ''); if(nome === null) return;
+  const telefone = prompt('Telefone / WhatsApp com DDD (só números):', u.telefone || ''); if(telefone === null) return;
+  const funcao = prompt('Função (ex.: dono, suporte, vendas) — pode deixar em branco:', u.funcao || ''); if(funcao === null) return;
+  try{ const r = await chamarConector({ acao:'usr_perfil', id:u.id, nome, telefone, funcao }); if(!r.ok) throw new Error(r.erro || 'Não salvou.'); aviso('Dados salvos.', 'ok'); vUsuarios(); }catch(e){ erro(e.message); }
+};
 window.rvUsrCriar = async () => {
-  const email = prompt('E-mail do novo usuário:'); if(!email) return; const senha = prompt('Senha para ele (mínimo 8, com letras e números):'); if(!senha) return;
-  try{ const a = await chamarConector({ acao:'usr_criar', email, senha }); if(!a.ok) throw new Error(a.erro || 'Não criou.'); aviso(a.message || 'Criado.', 'ok'); vUsuarios(); }catch(e){ usrMsg('usr_res', conLinha(false, esc(e.message))); }
+  const email = prompt('E-mail do novo usuário:'); if(!email) return; const nome = prompt('Nome dele:') || '', telefone = prompt('Telefone / WhatsApp com DDD (pode deixar em branco):') || ''; const senha = prompt('Senha para ele (mínimo 8, com letras e números):'); if(!senha) return;
+  try{ const a = await chamarConector({ acao:'usr_criar', email, nome, telefone, senha }); if(!a.ok) throw new Error(a.erro || 'Não criou.'); aviso(a.message || 'Criado.', 'ok'); vUsuarios(); }catch(e){ usrMsg('usr_res', conLinha(false, esc(e.message))); }
 };
 window.rvUsrSenha = async id => {
   const senha = prompt('Nova senha para esse usuário (mínimo 8, com letras e números):'); if(!senha) return;
@@ -1611,7 +1621,7 @@ async function abaAjustesRest(){
   C('<p class="mudo pequeno">Muda direto no sistema de ' + esc(r.nome) + ', na hora. Tudo continua podendo ser mudado lá dentro também (Administrador), e fica registrado na Auditoria dele.</p>'
    + '<div class="cols-pc"><div><div class="card"><h2>🤖 Chaves das IAs do atendente</h2><p class="mudo pequeno">A ordem é a ordem em que o atendente tenta. Use as chaves do restaurante (cada uma tem cota própria).</p>'
    + IA_REST.map(x => { const v = ia[x[0]] || {}; return '<div class="ia-item"><div class="linha"><b>' + x[1] + '</b>' + (v.tem ? '<span class="selo ativo">✓ …' + esc(v.final || '') + '</span>' : '<span class="selo aviso">falta</span>') + '</div><small>' + esc(x[2]) + ' <a href="' + x[3] + '" target="_blank" rel="noopener">abrir ↗</a></small>'
-      + '<div class="linha ia-campo"><input type="password" id="aj_ia_' + x[0] + '" placeholder="' + (v.tem ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvAjIa(\'' + x[0] + '\')">Salvar</button>' + (v.tem ? '<button class="mini" onclick="rvAjIa(\'' + x[0] + '\',true)" title="Apagar">🗑️</button>' : '') + '</div></div>'; }).join('') + '<div id="aj_ia_res"></div></div>' + comandaAjHtml(a.comanda || {}) + '</div>'
+      + '<div class="linha ia-campo"><input type="password" id="aj_ia_' + x[0] + '" placeholder="' + (v.tem ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvAjIa(\'' + x[0] + '\')">Salvar</button>' + (v.tem && x[0] !== 'cloudflare_conta' ? '<button class="mini" onclick="rvAjIaTestar(\'' + x[0] + '\')">🧪 Testar</button>' : '') + (v.tem ? '<button class="mini" onclick="rvAjIa(\'' + x[0] + '\',true)" title="Apagar">🗑️</button>' : '') + '</div><div id="aj_ia_t_' + x[0] + '"></div></div>'; }).join('') + '<p class="linha" style="justify-content:flex-start"><button class="mini principal" onclick="rvAjIaTestar(\'todas\')">🧪 Testar todas as chaves</button></p><small class="mudo">O teste só pergunta ao provedor se a chave vale (não gasta a cota). A chave não sai do servidor.</small><div id="aj_ia_res"></div></div>' + comandaAjHtml(a.comanda || {}) + '</div>'
    + '<div><div class="card"><h2>🏪 Dados do restaurante</h2><p class="mudo pequeno">Aparecem no cardápio, nas impressões e para o atendente virtual.</p>'
    + DADOS_REST.map(x => '<label for="aj_d_' + x[0] + '">' + x[1] + '</label>' + (x[2] > 100 ? '<textarea id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" rows="2">' + esc(d[x[0]] || '') + '</textarea>' : '<input id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" value="' + esc(d[x[0]] || '') + '">')).join('')
    + '<p><button class="principal" onclick="rvAjDados()">💾 Salvar dados</button></p><div id="aj_d_res"></div></div>'
@@ -1660,6 +1670,19 @@ window.rvAjComanda = async padrao => {
   const box = $('aj_c_res'); if(box) box.innerHTML = '<small class="mudo">Salvando…</small>';
   try{ const a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, p:{ acao:'comanda_salvar', config:c, padrao:!!padrao } });
     if(box) box.innerHTML = conLinha(a.ok, esc(a.ok ? (a.message || 'Salvo.') : a.erro)); if(a.ok){ hist(r.id, 'Comanda ajustada pelo painel', padrao ? 'padrão' : ''); if(padrao) abaAjustesRest(); } }catch(e){ if(box) box.innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvAjIaTestar = async prov => {
+  const r = S.rest, nomes = {}; IA_REST.forEach(x => { nomes[x[0]] = x[1]; });
+  const alvo = prov === 'todas' ? $('aj_ia_res') : $('aj_ia_t_' + prov); if(alvo) alvo.innerHTML = '<small class="mudo">⏳ Testando… pode levar uns segundos</small>';
+  try{ const a = await chamarConector({ acao:'sb_ia_testar', restaurante_id:r.id, provedor:prov }); if(!a.ok) throw new Error(a.erro || 'Não consegui testar.');
+    const linha = y => (y.funcionando === true ? conLinha(true, '<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: funcionando' + (y.ms ? ' (' + (Math.round(y.ms / 100) / 10).toString().replace('.', ',') + ' s)' : '') + (y.motivo ? '. ' + esc(y.motivo) : ''))
+      : y.funcionando === null ? amarela('<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: ' + esc(y.motivo))
+      : (y.tem ? conLinha(false, '<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: ' + esc(y.motivo)) : '<div class="res"><small class="mudo">➖ <b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: sem chave</small></div>'));
+    if(prov === 'todas'){ const R = a.resultados || [], ok = R.filter(y => y.funcionando === true).length, ruim = R.filter(y => y.funcionando === false && y.tem).length;
+      alvo.innerHTML = (R.some(y => y.tem) ? '' : '<div class="res erro">Nenhuma chave cadastrada neste restaurante.</div>') + R.map(linha).join('') + '<small class="mudo">' + ok + ' funcionando' + (ruim ? ' · ' + ruim + ' com problema' : '') + '. O mínimo para o atendente é Groq + Gemini.</small>';
+    } else alvo.innerHTML = (a.resultados || []).map(linha).join('');
+    hist(r.id, 'Chaves de IA testadas pelo painel', prov);
+  }catch(e){ if(alvo) alvo.innerHTML = conLinha(false, esc(e.message)); }
 };
 window.rvAjIa = async (prov, apagar) => {
   const r = S.rest, inp = $('aj_ia_' + prov), v = apagar ? '' : jv('aj_ia_' + prov);
