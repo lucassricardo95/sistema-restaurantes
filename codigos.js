@@ -118,7 +118,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -130,7 +130,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
@@ -142,7 +142,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
@@ -154,7 +154,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 63
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -166,7 +166,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 66
   },
   {
    "etapa": "banco",
@@ -178,7 +178,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
@@ -226,7 +226,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -238,7 +238,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -250,7 +250,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 59
   },
   {
    "etapa": "banco",
@@ -262,7 +262,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -358,7 +358,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 37
+   "kb": 41
   },
   {
    "etapa": "banco",
@@ -536,7 +536,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 3
   },
   {
@@ -547,7 +547,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 5
   },
   {
@@ -558,7 +558,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 4
   },
   {
@@ -569,7 +569,7 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 11
   },
   {
@@ -580,7 +580,7 @@ window.CODIGOS = {
    "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 4
   },
   {
@@ -591,7 +591,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante, a comanda e a senha de um usuário (aba Ajustes do restaurante). O nome do restaurante passa a ser um só.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 11
   },
   {
@@ -602,7 +602,7 @@ window.CODIGOS = {
    "desc": "O Administrador recebe um aviso no celular (no máximo 1 por dia) quando o Google recusa o acesso ao Drive, antes de o backup falhar.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 2
   },
   {
@@ -613,7 +613,7 @@ window.CODIGOS = {
    "desc": "Suprimento (reforço de troco), limite de sobra/falta com motivo e aviso no celular, Leitura X, passar o caixa entre operadores, fundo sugerido e resumo por operador.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 25
   },
   {
@@ -624,7 +624,7 @@ window.CODIGOS = {
    "desc": "O aviso amarelo do iFood só acende quando há algo a fazer agora; item sem ligação aparece escrito, sem cor.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 1
   },
   {
@@ -635,7 +635,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel criar, trocar a senha e desativar os seus logins de Desenvolvedor neste restaurante (aba Ajustes do restaurante).",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 4
   },
   {
@@ -646,7 +646,7 @@ window.CODIGOS = {
    "desc": "Ping a cada 2 dias (evita o Supabase pausar), instaladores do Administrador e do Desenvolvedor. Só cria o que falta.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 4
   },
   {
@@ -657,8 +657,19 @@ window.CODIGOS = {
    "desc": "Prepara o iFood para o aplicativo compartilhado (tipo Distribuído): guarda da autorização do dono e botão Autorizar o iFood. Quem usa o aplicativo próprio não muda nada.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 146.",
+   "cuidado": "Rode na ordem 135 a 147.",
    "kb": 8
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd147",
+   "titulo": "Atualização 147 · desempenho (regras duplicadas)",
+   "arq": "banco-restaurante/147-politicas-sem-duplicidade.sql",
+   "desc": "Tira os avisos de desempenho \"Multiple Permissive Policies\" do Supabase. Ninguém perde nem ganha acesso: só junta regras de leitura repetidas.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 147.",
+   "kb": 4
   }
  ]
 };
