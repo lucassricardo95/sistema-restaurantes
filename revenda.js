@@ -404,6 +404,9 @@ function desenharExtra(et, tipo, box){
     campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
     teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
     codigos: () => codigosHtml(et.id),
+    conectar: () => conectarEtapaHtml(),
+    bancoauto: () => bancoAutoHtml(),
+    publicarauto: () => publicarAutoHtml(),
     push: () => pushHtml(),
     marca: () => marcaHtml(),
     logos: () => logosHtml(),
@@ -1094,36 +1097,61 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
   try{ const x = await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou'); S.segs = await rpc('revenda_segredos_status'); aviso('Guardado no cofre ✓', 'ok'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
-/* ---------- CONECTORES: painel → GitHub e Supabase de cada restaurante (função "conector", SQL 015) ---------- */
+/* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
 const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável']];
 async function chamarConector(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
   try{ const r = await fetch(URL_ + '/functions/v1/conector', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
-    if(r.status === 404) throw new Error('A função "conector" ainda não foi publicada no servidor do painel (veja o passo a passo na tela).');
+    if(r.status === 404) throw new Error('A função "conector" ainda não foi publicada no servidor do painel (veja "Preparar o painel" em Mais → Conectores).');
     const j = await r.json().catch(() => null); if(!j) throw new Error('O conector não respondeu (erro ' + r.status + ').'); return j;
   }catch(e){ throw new Error(e.name === 'AbortError' ? 'O conector demorou demais.' : e.message); } finally { clearTimeout(t); }
 }
-async function vConectores(){
-  const g = S.segs || {}, ok = k => g[k] ? '<span class="selo ativo">✓ …' + esc(g[k].fim) + '</span>' : '<span class="selo aviso">falta</span>';
-  const campo = (k, rot, dica, link) => '<div class="ia-item"><div class="linha"><b>' + rot + '</b>' + ok(k) + '</div><small>' + dica + ' <a href="' + link + '" target="_blank" rel="noopener">abrir ↗</a></small>'
-    + '<div class="linha ia-campo"><input type="password" id="k_' + k + '" placeholder="' + (g[k] ? 'colar para trocar' : 'colar o token aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvSalvarIA(\'' + k + '\',\'conectores\')">Salvar</button>' + (g[k] ? '<button class="mini" onclick="rvApagarIA(\'' + k + '\',\'conectores\')">🗑️</button>' : '') + '</div></div>';
-  const L = S.lista.filter(r => r.situacao !== 'encerrado');
-  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>🔌 Conectores</h1>'
-   + '<div class="card"><p>Ligue o painel ao <b>GitHub</b> e ao <b>Supabase</b> de cada restaurante. Com isso você testa as ligações e aplica as atualizações do banco sem sair do painel.</p>'
-   + '<p class="mudo pequeno">Os tokens ficam no cofre do banco do painel; este site nunca mostra o token inteiro. Cole só aqui, nunca em conversa. Tudo que o conector faz fica no registro abaixo.</p></div>'
-   + '<div class="card"><h2>🔑 Tokens</h2>'
-   + campo('conector_supabase', 'Supabase (token de acesso)', 'Supabase → Account → Access Tokens → Generate new token. Vale para todos os projetos da sua conta.', 'https://supabase.com/dashboard/account/tokens')
-   + campo('conector_github', 'GitHub (token de acesso)', 'GitHub → Settings → Developer settings → Fine-grained tokens. Escolha só os repositórios dos restaurantes e dê "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new') + '</div>'
-   + '<div class="card"><h2>🍽️ Restaurantes</h2><p class="mudo pequeno">O endereço do GitHub e do Supabase vem do cadastro de cada restaurante (aba Cadastro).</p>'
-   + L.map(r => '<div class="hist"><div class="linha"><b>' + esc(r.nome) + '</b><small class="mudo">' + (r.github_url ? 'GitHub ✓' : 'sem GitHub') + ' · ' + (refDe(r) ? 'Supabase ✓' : 'sem Supabase') + '</small></div>'
-      + '<div class="linha"><button class="mini" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button><button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')">⬆️ Atualizar banco</button></div><div id="con_' + r.id + '"></div></div>').join('') + '</div>'
-   + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
-  try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
-    if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda. Se esta lista falhar, rode o arquivo 015 no banco do painel.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
+const kGh = r => 'conector_github_' + r.id, kSb = r => 'conector_supabase_' + r.id;
+const temGh = r => !!(S.segs && S.segs[kGh(r)]), temSb = r => !!(S.segs && S.segs[kSb(r)]);
+const conLinha = (ok, t) => '<div class="res ' + (ok ? 'ok' : 'erro') + '">' + (ok ? '✅ ' : '❌ ') + t + '</div>';
+function conSel(r, k, rot, dica, link){
+  const g = S.segs || {}, on = !!g[k];
+  return '<div class="ia-item"><div class="linha"><b>' + rot + '</b>' + (on ? '<span class="selo ativo">✓ …' + esc(g[k].fim) + '</span>' : '<span class="selo aviso">falta</span>') + '</div><small>' + dica + ' <a href="' + link + '" target="_blank" rel="noopener">abrir ↗</a></small>'
+   + '<div class="linha ia-campo"><input type="password" id="k_' + k + '" placeholder="' + (on ? 'colar para trocar' : 'colar o token aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvConSalvar(\'' + r.id + '\',\'' + k + '\')">Salvar</button>' + (on ? '<button class="mini" onclick="rvConApagar(\'' + r.id + '\',\'' + k + '\')">🗑️</button>' : '') + '</div></div>';
+}
+/* o bloco completo de um restaurante: instruções, os 2 tokens, teste. Usado na etapa "Conectores" e na tela Mais → Conectores */
+function conectorHtml(r){
+  return '<details class="como"><summary>📖 Como ligar (passo a passo)</summary><ol class="pequeno">'
+   + '<li><b>Supabase:</b> abra o link do token (botão abaixo), entre com a conta do <b>restaurante</b>, toque em <b>Generate new token</b>, nome <code>painel-' + esc(r.slug || 'restaurante') + '</code>, e copie o token (começa com <code>sbp_</code>; só aparece uma vez). Cole no primeiro campo e toque em Salvar.</li>'
+   + '<li><b>GitHub:</b> abra o link, entre com a conta do restaurante. Nome <code>painel-' + esc(r.slug || 'restaurante') + '</code>, validade a maior possível. Em <i>Repository access</i> marque <b>Only select repositories</b> e escolha o repositório deste restaurante (crie o repositório antes, etapa "Criar o endereço do site"). Em <i>Permissions → Repository permissions</i> deixe <b>Contents: Read and write</b>. Toque em Generate token, copie e cole no segundo campo.</li>'
+   + '<li>Toque em <b>Testar ligações</b>. Tem que aparecer ✅ nos dois.</li>'
+   + '<li>Cada restaurante tem o <b>seu</b> par de tokens, guardados separados no cofre do painel: ligar um não mexe nos outros. Para desligar, toque na lixeira.</li>'
+   + '<li>Seguro? O token nunca volta para o navegador (só os 4 últimos dígitos), e o conector só escreve no repositório e no projeto cadastrados neste restaurante. Tudo fica no Registro.</li></ol></details>'
+   + conSel(r, kSb(r), '🗄️ Supabase', 'Token de acesso da conta Supabase do restaurante.', 'https://supabase.com/dashboard/account/tokens')
+   + conSel(r, kGh(r), '🐙 GitHub', 'Token só deste repositório, com "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new')
+   + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button>' + (refDe(r) ? '<button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button>' : '') + '</div><div id="con_' + r.id + '"></div>';
 }
 const conMsg = (id, html) => { const b = $('con_' + id); if(b) b.innerHTML = html; };
-const conLinha = (ok, t) => '<div class="res ' + (ok ? 'ok' : 'erro') + '">' + (ok ? '✅ ' : '❌ ') + t + '</div>';
+async function conRecarregar(r){ S.segs = await tenta(() => rpc('revenda_segredos_status'), S.segs); if(S.view === 'conectores') vConectores(); else if(S.view === 'rest' && S.aba === 'passo') abaPasso(); }
+window.rvConSalvar = async (id, k) => {
+  const v = jv('k_' + k); if(!v) return erro('Cole o token no campo.');
+  if(/_supabase_/.test(k) && !/^sbp_[A-Za-z0-9]{20,}$/.test(v)) return erro('O token do Supabase começa com sbp_ e não tem espaços. Copie de novo.');
+  if(/_github_/.test(k) && !/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)) return erro('O token do GitHub começa com github_pat_ (ou ghp_). Copie de novo.');
+  try{ const x = await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'Não salvou. Rode o arquivo 015 no banco do painel.'); aviso('Guardado no cofre ✓', 'ok'); hist(id, 'Conector: token guardado', /_github_/.test(k) ? 'GitHub' : 'Supabase'); await conRecarregar(S.lista.find(r => r.id === id)); }catch(e){ erro(e.message); }
+};
+window.rvConApagar = async (id, k) => { if(!confirm('Desligar este conector? O token sai do cofre.')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); await conRecarregar(S.lista.find(r => r.id === id)); }catch(e){ erro(e.message); } };
+async function vConectores(){
+  const L = S.lista.filter(r => r.situacao !== 'encerrado'); const aberto = S.conAberto || '';
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>🔌 Conectores</h1>'
+   + '<div class="card"><p>Ligue o painel ao <b>GitHub</b> e ao <b>Supabase</b> de cada restaurante. Com isso o painel <b>testa as ligações, monta o banco, atualiza o banco e publica o site</b> sozinho, sem você copiar e colar.</p>'
+   + '<p class="mudo pequeno">Cada restaurante tem os seus próprios tokens: ligar um não tira o outro. Num restaurante novo, essa é a primeira coisa do passo a passo (etapa "Ligar o GitHub e o Supabase").</p></div>'
+   + '<div class="card"><details class="como"' + (S.conPrep ? ' open' : '') + '><summary>🛠️ Preparar o painel (uma vez só)</summary><ol class="pequeno">'
+   + '<li>No banco do <b>painel</b> (SQL Editor): rode o arquivo <code>015-conector.sql</code>.</li>'
+   + '<li>No Supabase do <b>painel</b>: Edge Functions → Deploy a new function → nome <code>conector</code> → cole o arquivo <code>conector/index.ts</code> → desligue <b>Verify JWT</b> (igual à função assistente) → Deploy.</li>'
+   + '<li>Pronto. Agora é só ligar cada restaurante abaixo. Os dois arquivos estão na pasta <i>1-PAINEL-DE-REVENDA</i> do Sistemas.zip.</li></ol></details></div>'
+   + L.map(r => '<div class="card"><button class="alerta n0" onclick="rvConAbrir(\'' + r.id + '\')"><span class="ic">' + (temGh(r) && temSb(r) ? '✅' : (temGh(r) || temSb(r) ? '🟡' : '⬜')) + '</span><span><b>' + esc(r.nome) + '</b><small>' + (temSb(r) ? 'Supabase ✓' : 'Supabase: falta') + ' · ' + (temGh(r) ? 'GitHub ✓' : 'GitHub: falta') + '</small></span><span class="seta">' + (aberto === r.id ? '⌃' : '›') + '</span></button>'
+      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (135–137)</button></div>' : '') + '</div>').join('')
+   + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
+  try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
+    if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
+}
+window.rvConAbrir = id => { S.conAberto = S.conAberto === id ? '' : id; vConectores(); };
 window.rvConTestar = async id => {
   conMsg(id, '<small class="mudo">Testando…</small>'); let h = '';
   try{ const a = await chamarConector({ acao:'sb_testar', restaurante_id:id }); h += conLinha(a.ok, a.ok ? 'Supabase: projeto "' + esc(a.nome || a.ref) + '" (' + esc(a.estado || '') + ')' : 'Supabase: ' + esc(a.erro)); }catch(e){ h += conLinha(false, 'Supabase: ' + esc(e.message)); }
@@ -1136,19 +1164,61 @@ window.rvConFuncoes = async id => {
     conMsg(id, a.ok ? '<div class="res ok">' + (a.funcoes.length ? a.funcoes.map(f => esc(f.slug) + ' (v' + esc(f.versao) + ')').join(' · ') : 'Nenhuma função publicada.') + '</div>' : conLinha(false, esc(a.erro || 'não consegui')));
   }catch(e){ conMsg(id, conLinha(false, esc(e.message))); }
 };
+/* roda uma lista de códigos [id, rótulo] em ordem no Supabase do restaurante; para no primeiro erro */
+async function conRodar(r, lista, onde){
+  if(typeof window.cdObter !== 'function') { erro('A tela de códigos ainda não carregou. Abra Restaurantes e volte.'); return false; }
+  let h = '';
+  for(const u of lista){
+    conMsg(onde, h + '<small class="mudo">⏳ ' + esc(u[1]) + '…</small>');
+    try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
+      h += conLinha(a.ok, esc(u[1]) + (a.ok ? '' : ': ' + esc(a.erro))); if(!a.ok){ conMsg(onde, h); return false; }
+    }catch(e){ h += conLinha(false, esc(u[1]) + ': ' + esc(e.message)); conMsg(onde, h); return false; }
+  }
+  conMsg(onde, h); return true;
+}
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  if(typeof window.cdObter !== 'function') return erro('A tela de códigos ainda não carregou. Abra Restaurantes e volte.');
   const nome = prompt('Vai rodar as atualizações 135, 136 e 137 no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
-  let h = '';
-  for(const u of UPDS){
-    conMsg(id, h + '<small class="mudo">Aplicando ' + esc(u[1]) + '…</small>');
-    try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:id, sql, rotulo:u[1], confirmar:nome });
-      h += conLinha(a.ok, esc(u[1]) + (a.ok ? '' : ': ' + esc(a.erro))); if(!a.ok) break;
-    }catch(e){ h += conLinha(false, esc(u[1]) + ': ' + esc(e.message)); break; }
-  }
-  conMsg(id, h); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
+  ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
+};
+/* ETAPA "Ligar o GitHub e o Supabase" */
+function conectarEtapaHtml(){ const r = S.rest; return conectorHtml(r); }
+/* ETAPA "Montar as tabelas": o painel aplica sozinho todos os códigos que não pedem nada seu */
+function bancoAutoItens(fase){
+  const C = (window.CODIGOS || {}).banco || [], k = C.findIndex(i => i.id === 'segredos1');
+  const parte = fase === 2 ? C.slice(k + 1) : C.slice(0, k < 0 ? C.length : k);
+  return parte.filter(i => i.arq && !i.especial).map(i => [i.id, i.titulo]);
+}
+function bancoAutoHtml(){
+  const r = S.rest; if(!temSb(r)) return '<div class="res erro">Antes, ligue o Supabase na etapa "Ligar o GitHub e o Supabase". Sem isso, use o jeito manual abaixo.</div>';
+  if(!/^[a-z0-9]{20}$/.test(refDe(r))) return '<div class="res erro">Preencha antes o endereço do banco (etapa "Criar o banco de dados").</div>';
+  return '<p class="pequeno"><b>Fase 1</b>: o painel roda sozinho as ' + bancoAutoItens(1).length + ' partes da estrutura, em ordem.</p><button class="principal" onclick="rvBancoAuto(1)">⚡ Montar a estrutura sozinho</button><div id="con_banco1_' + r.id + '"></div>'
+   + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o código do "Cofre de chaves · parte 1" pede a chave secreta do Supabase, então faça-o à mão (jeito manual abaixo). Depois toque aqui para os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Rodar os dados iniciais</button><div id="con_banco2_' + r.id + '"></div>';
+}
+window.rvBancoAuto = async fase => {
+  const r = S.rest; if(!confirm('O painel vai rodar no banco de "' + r.nome + '" (projeto ' + refDe(r) + '). Só use em banco NOVO e vazio. Continuar?')) return;
+  const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  ctxCod(r, []); const lista = bancoAutoItens(fase);
+  const ok = await conRodar(r, lista, 'banco' + fase + '_' + r.id); hist(r.id, 'Banco montado pelo conector (fase ' + fase + ')', ok ? 'completo (' + lista.length + ' partes)' : 'parou com erro');
+  if(ok) aviso(fase === 1 ? 'Estrutura pronta ✓ Agora faça o código do cofre de chaves à mão.' : 'Dados iniciais prontos ✓ Toque em Testar.', 'ok');
+};
+/* ETAPA "Colocar o site no ar": o painel grava os 4 arquivos no GitHub do restaurante */
+function publicarAutoHtml(){
+  const r = S.rest; if(!temGh(r)) return '<div class="res erro">Antes, ligue o GitHub na etapa "Ligar o GitHub e o Supabase". Sem isso, use o jeito manual abaixo.</div>';
+  return '<p class="pequeno">O painel grava no repositório os 4 arquivos do site, já prontos para este restaurante.</p><button class="principal" onclick="rvPublicarAuto()">⚡ Publicar o site sozinho</button><div id="con_pub_' + r.id + '"></div>';
+}
+window.rvPublicarAuto = async () => {
+  const r = S.rest, caixa = 'pub_' + r.id;
+  try{
+    conMsg(caixa, '<small class="mudo">⏳ Preparando os arquivos…</small>');
+    const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
+    for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n + ' (erro ' + x.status + ')'); arqs.push({ caminho:n, conteudo:await x.text() }); }
+    conMsg(caixa, '<small class="mudo">⏳ Gravando no GitHub…</small>');
+    const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' });
+    conMsg(caixa, (a.arquivos || []).map(f => conLinha(f.ok, esc(f.caminho) + (f.ok ? '' : ': ' + esc(f.erro)))).join('') + (a.ok ? '<div class="res ok">Pronto! Espere 1 a 2 minutos e toque em "Conferir o site".</div>' : conLinha(false, esc(a.erro || 'Alguns arquivos falharam.'))));
+    hist(r.id, 'Site publicado pelo conector', arqs.map(x => x.caminho).join(', '));
+  }catch(e){ conMsg(caixa, conLinha(false, esc(e.message))); }
 };
 async function chamarAssistente(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');

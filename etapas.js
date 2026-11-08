@@ -64,7 +64,7 @@ window.ETAPAS = [
    precisa:['Nome do restaurante','WhatsApp do dono','Valor da mensalidade'],
    partes:[
     { t:'Confira os dados do restaurante abaixo e toque em Salvar. O código ({slug}) vai no endereço do site e no nome dos projetos.', extra:'cadastro' },
-    { t:'Crie (ou separe) as contas abaixo. Anote cada e-mail e senha: na etapa "Guardar as contas e senhas" tudo vai para dentro do sistema do restaurante.', extra:'contas' }
+    { t:'Crie (ou separe) as contas abaixo. Anote cada e-mail e senha (a etapa "Ligar o GitHub e o Supabase" usa as contas do Supabase e do GitHub): na etapa "Guardar as contas e senhas" tudo vai para dentro do sistema do restaurante.', extra:'contas' }
    ] },
 
  { id:'supabase', titulo:'Criar o banco de dados', curto:'Projeto no Supabase', quem:'voce', tempo:'5 min', teste:'supabase', campos:['supabase_url','supabase_chave'],
@@ -91,11 +91,20 @@ window.ETAPAS = [
     { t:'Só se for usar o Claude para gravar arquivos: GitHub → sua foto → Settings → Applications → "Claude" → Configure → libere o repositório {slug}. Fazendo sozinho, pule.', link:'https://github.com/settings/installations' }
    ] },
 
+ { id:'conectar', titulo:'Ligar o GitHub e o Supabase', curto:'Os conectores: o painel faz o resto sozinho', opcional:true, quem:'voce', tempo:'5 min',
+   porque:'Com os dois tokens do restaurante guardados no cofre do painel, ele monta o banco e publica o site sozinho nas próximas etapas. Cada restaurante tem os seus tokens: ligar um não tira o outro. Se preferir, pule: todas as etapas seguintes continuam tendo o jeito manual.',
+   precisa:['As contas do restaurante (etapa 1)','O projeto do Supabase e o repositório do GitHub já criados (etapas 2 e 3)','A função "conector" publicada no painel (Mais → Conectores → Preparar o painel, uma vez só)'],
+   partes:[
+    { t:'Siga o passo a passo abaixo: crie o token do Supabase e o do GitHub deste restaurante, cole cada um no seu campo e toque em Salvar. Depois toque em "Testar ligações": tem que aparecer ✅ nos dois.', extra:'conectar' },
+    { t:'Pronto. Nas etapas "Montar as tabelas do banco" e "Colocar o site no ar" vai aparecer o botão ⚡ para o painel fazer sozinho. As partes que dependem de uma senha ou conta sua (logins, Google, avisos) continuam com você.' }
+   ] },
+
  { id:'banco', titulo:'Montar as tabelas do banco', curto:'Copiar e colar os códigos', quem:'voce', tempo:'25 min', teste:'banco',
    porque:'O banco vem vazio. Estes códigos criam todas as tabelas, regras de segurança e funções do sistema.',
    precisa:['O banco criado (etapa 2)','A chave secreta do Supabase (a parte 2 mostra onde)','Paciência: são várias partes, uma de cada vez'],
    partes:[
-    { t:'Abra o SQL Editor do Supabase do restaurante (ícone de terminal no menu da esquerda) e toque em "New query". Deixe essa aba aberta: você vai voltar nela várias vezes.', link:SB + '/sql/new' },
+    { t:'Com o Supabase ligado (etapa anterior), o painel monta tudo sozinho. Sem isso, pule esta parte e faça as seguintes à mão.', extra:'bancoauto' },
+    { t:'Jeito manual: abra o SQL Editor do Supabase do restaurante (ícone de terminal no menu da esquerda) e toque em "New query". Deixe essa aba aberta: você vai voltar nela várias vezes.', link:SB + '/sql/new' },
     { t:'Um dos códigos (o "Cofre de chaves · parte 1") precisa da chave SECRETA do Supabase: "Project Settings" → "API Keys" → "Secret keys" → toque no olho ou em copiar (começa com sb_secret_; se não houver, toque em "New secret key"). Você cola ela no campo que aparece junto daquele código. Ela não fica guardada no painel.', link:SB + '/settings/api-keys' },
     { t:'Agora é sempre igual: toque em "Copiar código", vá ao SQL Editor, apague o que estiver lá, cole, toque em "Run" e espere "Success". Volte aqui e toque em "Já colei e rodei". Se aparecer "already exists", aquela parte já estava feita: só siga.', extra:'codigos' },
     { t:'Terminou todos? Toque em Testar. Tem que aparecer "Banco do sistema instalado".', extra:'teste' }
@@ -149,7 +158,8 @@ window.ETAPAS = [
    porque:'O site do restaurante é só uma "porta" com 4 arquivos pequenos. O sistema em si vem do motor e se atualiza sozinho.',
    precisa:['Banco, endereço do site e marca feitos'],
    partes:[
-    { t:'Baixe os 4 arquivos abaixo (um toque em cada). Eles já saem prontos para este restaurante. "Onde colocar" diz o lugar de cada um no GitHub.', extra:'publicar' },
+    { t:'Com o GitHub ligado, o painel grava os 4 arquivos sozinho. Sem isso, pule esta parte e use o jeito manual.', extra:'publicarauto' },
+    { t:'Jeito manual: baixe os 4 arquivos abaixo (um toque em cada). Eles já saem prontos para este restaurante. "Onde colocar" diz o lugar de cada um no GitHub.', extra:'publicar' },
     { t:'No GitHub: repositório {slug} → "Add file" → "Upload files" → escolha os 4 arquivos de uma vez → "Commit changes". Eles ficam na RAIZ (a primeira página do repositório, sem pasta). Se já existirem, o GitHub troca pelos novos.', link:'{github_url}/upload/main' },
     { t:'Espere 1 a 2 minutos e toque em "Conferir o site": o painel abre cada arquivo no ar e diz se está certo. Depois abra o site: tem que aparecer o cardápio com o nome e as cores do restaurante.', extra:'conferir', link:'{site_url}' },
     { t:'Para o futuro: cores, logos e módulos mudam pelo painel, na hora. Se mudar endereço do Supabase, planilhas ou avisos, baixe de novo só o config-restaurante.js e suba por cima.' }
@@ -269,4 +279,4 @@ window.ETAPAS = [
     { t:'Gere a taxa de implantação e a primeira mensalidade e mude a situação para "Ativo". Pronto! 🎉', extra:'cobranca' }
    ] }
 ];
-window.FASES = [['Banco',['cadastro','supabase','repositorio','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura','app']],['Entrega',['contas','teste','entrega']]];
+window.FASES = [['Banco',['cadastro','supabase','repositorio','conectar','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura','app']],['Entrega',['contas','teste','entrega']]];
