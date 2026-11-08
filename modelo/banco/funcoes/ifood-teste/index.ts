@@ -38,14 +38,17 @@ Deno.serve(async (req) => {
     if (!cred?.clientId || !cred?.clientSecret || !cred?.merchantId) { await falhou("Faltam o Client ID, o Client Secret ou o código da loja."); return json({ ok: true }); }
     const extra = cred?.config?.modoHomologacao ? { "x-request-homologation": "true" } : {};
     let r;
-    try { r = await pedir("POST", "/authentication/v1.0/oauth/token", null, new URLSearchParams({ grantType: "client_credentials", clientId: cred.clientId, clientSecret: cred.clientSecret }), extra); }
+    const compartilhado = cred.modo === "compartilhado";   // aplicativo compartilhado (Distribuído): testa com o refresh token autorizado
+    if (compartilhado && !cred.refresh) { await falhou("O iFood ainda não foi autorizado neste restaurante. Toque em \"Autorizar o iFood\" e conclua."); return json({ ok: true }); }
+    try { r = await pedir("POST", "/authentication/v1.0/oauth/token", null, new URLSearchParams(compartilhado ? { grantType: "refresh_token", clientId: cred.clientId, clientSecret: cred.clientSecret, refreshToken: cred.refresh } : { grantType: "client_credentials", clientId: cred.clientId, clientSecret: cred.clientSecret }), extra); }
     catch { await falhou("Não consegui falar com o iFood agora. Tente de novo em instantes.", null); return json({ ok: true }); }
     const acesso = r.json?.accessToken || r.json?.access_token;
     if (r.status < 200 || r.status >= 300 || !acesso) {
-      await falhou(r.status === 401 || r.status === 400 || r.status === 403 ? "O iFood recusou o Client ID / Client Secret. Confira se copiou certo, sem espaço, do aplicativo Centralizado." : "O iFood não deu o acesso (erro " + r.status + "). Tente de novo.", r.status >= 500 ? null : false);
+      await falhou(r.status === 401 || r.status === 400 || r.status === 403 ? "O iFood recusou o Client ID / Client Secret. Confira se copiou certo, sem espaço, do aplicativo (Centralizado, ou Distribuído se este restaurante usa o aplicativo compartilhado)." : "O iFood não deu o acesso (erro " + r.status + "). Tente de novo.", r.status >= 500 ? null : false);
       return json({ ok: true });
     }
-    await rpc("ifood_token_gravar", { p_token: acesso, p_seg: Number(r.json?.expiresIn || r.json?.expires_in || 3600) - 120 });
+    if (compartilhado) await rpc("ifood_refresh_gravar", { p_token: acesso, p_seg: Number(r.json?.expiresIn || r.json?.expires_in || 3600) - 120, p_refresh: r.json?.refreshToken || r.json?.refresh_token || "" });
+    else await rpc("ifood_token_gravar", { p_token: acesso, p_seg: Number(r.json?.expiresIn || r.json?.expires_in || 3600) - 120 });
     // a loja: só reprova se o iFood disser que ela não existe (404); outros avisos não bloqueiam (o aplicativo de teste pode não ter esse módulo)
     try {
       const l = await pedir("GET", `/merchant/v1.0/merchants/${encodeURIComponent(cred.merchantId)}/status`, acesso, undefined, extra);

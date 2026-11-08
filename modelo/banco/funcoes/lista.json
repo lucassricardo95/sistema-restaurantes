@@ -50,6 +50,9 @@
    "drive.ts",
    "index.ts"
   ],
+  "ifood-autorizar": [
+   "index.ts"
+  ],
   "ifood-rastreio": [
    "index.ts"
   ],

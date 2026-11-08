@@ -90,12 +90,17 @@ async function pegarToken(cred: any, forcar = false): Promise<string> {
     const t: any = await rpc("ifood_token_ler"); if (t && t.token) { tokenGuardado = { token: t.token, ate: Date.now() + 90000 }; return t.token; }
   }
   if (!cred.clientId || !cred.clientSecret) throw new HttpErro(401, "faltam Client ID / Client Secret");
+  // aplicativo COMPARTILHADO (Distribuído): o acesso é renovado com o refresh token que o restaurante autorizou; no modo próprio (padrão) nada muda
+  const compartilhado = cred.modo === "compartilhado";
+  if (compartilhado && !cred.refresh) throw new HttpErro(401, "o iFood ainda não foi autorizado: toque em Autorizar o iFood");
   const r: any = await http("POST", "/authentication/v1.0/oauth/token", null,
-    new URLSearchParams({ grantType: "client_credentials", clientId: cred.clientId, clientSecret: cred.clientSecret }));
+    new URLSearchParams(compartilhado ? { grantType: "refresh_token", clientId: cred.clientId, clientSecret: cred.clientSecret, refreshToken: cred.refresh }
+      : { grantType: "client_credentials", clientId: cred.clientId, clientSecret: cred.clientSecret }));
   const token = r?.accessToken || r?.access_token;
   if (!token) throw new HttpErro(401, "resposta sem token");
   tokenGuardado = { token, ate: Date.now() + 90000 };
-  await rpc("ifood_token_gravar", { p_token: token, p_seg: Math.max(60, Number(r?.expiresIn || r?.expires_in || 3600) - 30) });   // doc: renovar só ao expirar; 30 s é só margem de relógio (e o 401 renova sozinho)
+  if (compartilhado) await rpc("ifood_refresh_gravar", { p_token: token, p_seg: Math.max(60, Number(r?.expiresIn || r?.expires_in || 3600) - 30), p_refresh: r?.refreshToken || r?.refresh_token || "" });
+  else await rpc("ifood_token_gravar", { p_token: token, p_seg: Math.max(60, Number(r?.expiresIn || r?.expires_in || 3600) - 30) });   // doc: renovar só ao expirar; 30 s é só margem de relógio (e o 401 renova sozinho)
   return token;
 }
 
