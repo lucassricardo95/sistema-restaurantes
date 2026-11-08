@@ -112,6 +112,7 @@ async function arquivarFaixa(svc: any, dias: number, minDias: number, orcamento:
     try { caminhos = await loteVendasStorage(svc, l); res.arquivos += caminhos.length; res.destino = "storage"; ok = true; }
     catch (e) { res.avisoStorage = (e as Error).message; }
     if (!ok) {
+      if (!SHEETS_MAIN || !CHAVE_SERVIDOR) { res.erro = "O Storage não recebeu o arquivo (" + (res.avisoStorage || "erro") + ") e este restaurante não tem planilha de reserva. Nada saiu do banco."; break; }
       const j = await planilha({ tipo: "vendas", vendas: l.vendas, itens: l.itens, pagamentos: l.pagamentos });
       if (!j?.ok || j.recebidas !== l.ids.length) { res.erro = "Storage e planilha não confirmaram: " + (res.avisoStorage || "") + " / " + (j?.message || "contagem diferente"); break; }
       res.destino = "planilha";
@@ -128,6 +129,7 @@ async function arquivarFaixa(svc: any, dias: number, minDias: number, orcamento:
     try { caminhos = await loteCaixaStorage(svc, l); res.arquivos += caminhos.length; res.destino = "storage"; ok = true; }
     catch (e) { res.avisoStorage = (e as Error).message; }
     if (!ok) {
+      if (!SHEETS_MAIN || !CHAVE_SERVIDOR) { res.erro = "O Storage não recebeu o arquivo (" + (res.avisoStorage || "erro") + ") e este restaurante não tem planilha de reserva. Nada saiu do banco."; break; }
       const j = await planilha({ tipo: "caixa", caixas: l.caixas, sangrias: l.sangrias });
       if (!j?.ok || j.recebidas !== l.ids.length) { res.erro = "Storage e planilha não confirmaram: " + (res.avisoStorage || "") + " / " + (j?.message || "contagem diferente"); break; }
       res.destino = "planilha";
@@ -167,8 +169,11 @@ async function processarAnonimizacoes(svc: any) {
     if (itens.length) {
       let ok = false;
       try {
-        const j = await planilha({ action: "sbAnonimizarArquivo", lista: itens, telefone: itens[0].telefone, clienteId: itens[0].clienteId }, 120000);
-        if (!j?.ok) throw new Error("planilha: " + (j?.message || "não confirmou"));
+        // sem planilha ligada neste restaurante, só o Storage guarda o arquivo: limpa só ele (antes falhava 5 vezes e avisava o Admin à toa)
+        if (SHEETS_MAIN && CHAVE_SERVIDOR) {
+          const j = await planilha({ action: "sbAnonimizarArquivo", lista: itens, telefone: itens[0].telefone, clienteId: itens[0].clienteId }, 120000);
+          if (!j?.ok) throw new Error("planilha: " + (j?.message || "não confirmou"));
+        }
         await anonimizarStorage(svc, itens);
         ok = true;
       } catch (e) { out.erro = (e as Error).message; }
@@ -257,6 +262,9 @@ serve(async (req) => {
     const tamanho = async () => { try { const { data } = await svc.rpc("api_espaco_tamanho_servico"); return Number(data) || null; } catch { return null; } };
 
     // ---- AUTOTESTE MENSAL e CÓPIA MENSAL DO RESUMO ----
+    // planilha ainda não ligada neste restaurante: o agendamento mensal pula em silêncio (não é falha; só o botão manual do Admin avisa)
+    if ((corpo.autoteste === true || corpo.resumoMensal === true) && a.servico && (!SHEETS_MAIN || !CHAVE_SERVIDOR))
+      return json({ ok: true, pulado: true, message: "Planilha ainda não configurada: autoteste e cópia do resumo foram pulados." });
     if (corpo.autoteste === true || corpo.resumoMensal === true) {
       const out: any = {};
       if (corpo.autoteste === true) { out.autoteste = await autoteste(svc); await registrar(svc, { gatilho: "autoteste", origem: "teste", destino: "storage → planilha", erro: out.autoteste.erro, ms: Date.now() - t0 }); }
