@@ -778,6 +778,8 @@ window.rvVigiaLigar = async (slug, on) => {
   try{ await rest('vigia_estado?on_conflict=slug', 'POST', { slug, ligado:on }, { Prefer:'resolution=merge-duplicates,return=representation' }); (S.vigia = S.vigia || {})[slug] = Object.assign(S.vigia[slug] || { slug, problemas:[] }, { ligado:on }); aviso(on ? 'Vigia ligado em ' + r.nome + '.' : 'Vigia desligado em ' + r.nome + '.', 'ok'); }catch(e){ erro('Não salvou: ' + e.message); }
   desenhar();
 };
+/* depois de atualizar o banco, o vigia reconfere sozinho (sem esperar as 6 horas) */
+async function vigiaReconferir(){ try{ if(S.sess && Date.now() > S.sess.exp && !await renovar()) return; await fetch(URL_ + '/functions/v1/vigia', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:'{"acao":"rodar"}' }); await carregarSaude(); desenhar(); }catch(e){} }
 window.rvVigiaRodar = async () => {
   aviso('O vigia está conferindo…', 'ok');
   try{
@@ -1575,13 +1577,14 @@ window.rvConAtualizarTodos = async () => {
   for(const r of L){ if(box) box.innerHTML = h + '<small class="mudo">⏳ ' + esc(r.nome) + '…</small><div id="con_todos_' + r.id + '"></div>';
     ctxCod(r, []); const ok = await conRodar(r, UPDS, 'todos_' + r.id); hist(r.id, 'Atualização do banco (todos)', ok ? 'ok' : 'parou com erro');
     h += conLinha(ok, esc(r.nome) + (ok ? ': atualizado' : ': parou com erro (abra o restaurante abaixo e toque em Atualizar banco para ver)')); }
-  if(box) box.innerHTML = h; aviso('Terminou.', 'ok');
+  if(box) box.innerHTML = h; aviso('Terminou.', 'ok'); vigiaReconferir();
 };
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
   const nome = prompt('Vai aplicar só as atualizações que ainda faltam (de ' + updFaixa() + ') no banco de "' + r.nome + '". O que já foi aplicado é pulado.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
-  ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
+  ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', ')); vigiaReconferir();
+  vigiaReconferir();
 };
 /* ETAPA "Ligar o GitHub e o Supabase" */
 function conectarEtapaHtml(){ const r = S.rest; return conectorHtml(r); }
