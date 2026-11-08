@@ -1490,8 +1490,9 @@ window.rvImplantarTudo = async () => {
   if(!loginOk(aLogin) || !loginOk(dLogin)) return erro('Os logins têm de 3 a 30 letras, números, ponto, traço ou _ (sem espaço).');
   if(aLogin.toLowerCase() === dLogin.toLowerCase()) return erro('O login do dono e o seu de suporte precisam ser diferentes.');
   if(!senhaOk(aSenha) || !senhaOk(dSenha)) return erro('As senhas precisam de 8 caracteres ou mais, com letras e números.');
-  if(!confirm('O painel vai montar o banco VAZIO de "' + r.nome + '", publicar as funções, criar os dois logins e gravar o site no GitHub. Leva uns 6 a 10 minutos: deixe esta tela aberta. Só use em restaurante NOVO. Continuar?')) return;
+  if(!confirm('O painel vai montar o banco VAZIO de "' + r.nome + '", publicar as funções, criar os dois logins e gravar o site no GitHub. Leva uns 6 a 10 minutos: deixe esta tela aberta e não troque de aplicativo (o celular pausa o painel e a internet cai). Só use em restaurante NOVO. Continuar?')) return;
   const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  let _tela = null; try{ if(navigator.wakeLock) _tela = await navigator.wakeLock.request('screen'); }catch(e){}   // a tela não apaga enquanto o painel trabalha
   const caixa = 'tudo_' + r.id; let h = '', ok = true; const tela = t => conMsg(caixa, h + (t ? '<small class="mudo">⏳ ' + esc(t) + '</small>' : ''));
   const passo = async (rotulo, fn) => { if(!ok) return; tela(rotulo + '…'); let x; try{ x = await fn(); }catch(e){ x = { ok:false, erro:e.message }; } h += conLinha(x.ok, esc(rotulo) + (x.ok ? ' ✓' : ': ' + esc(x.erro || 'erro'))); if(!x.ok) ok = false; return x; };
   const q = v => String(v).replace(/'/g, "''");
@@ -1503,7 +1504,7 @@ window.rvImplantarTudo = async () => {
       const c = await chamarConector({ acao:'sb_cofre1', restaurante_id:r.id, confirmar:r.nome }); if(!c.ok) return { ok:false, erro:'Cofre: ' + (c.erro || 'erro') };
       if(c.chave_publica && !r.supabase_chave){ r.supabase_chave = c.chave_publica; await salvar('Chave pública preenchida.'); }
       ctxCod(r, []); return conRodarSilencioso(r, bancoAutoItens(2), (n, t, rot) => tela('2/7 Dados iniciais: parte ' + n + ' de ' + t)); });
-    await passo('3/7 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f'); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
+    await passo('3/7 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f', true); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
     await passo('4/7 Logins (dono e Desenvolvedor)', async () => {
       const sql = "select public.instalar_admin_inicial('" + q(aLogin) + "', '" + q(aSenha) + "', 'Administrador');\nselect public.instalar_desenvolvedor('" + q(dLogin) + "', '" + q(dSenha) + "');";
       const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:'Logins iniciais', confirmar:r.nome }); return { ok:!!a.ok, erro:a.erro }; });
@@ -1511,6 +1512,7 @@ window.rvImplantarTudo = async () => {
     await passo('6/7 Site no GitHub', async () => { const a = await gravarSite_(r); return { ok:!!a.ok, erro:a.erro || 'algum arquivo falhou' }; });
     await passo('7/7 Avisos no celular (chaves)', async () => r.push_chave_publica ? { ok:true } : gerarChavesAviso_(r));   // se já tem, não gera outra (os celulares já ligados parariam de receber)
   }catch(e){ h += conLinha(false, esc(e.message)); ok = false; }
+  try{ if(_tela) _tela.release(); }catch(e){}
   hist(r.id, 'Implantação automática', ok ? 'completa' : 'parou com erro');
   if(ok){
     const agora = new Date().toISOString(); ['conectar', 'banco', 'funcoes', 'admin', 'push'].forEach(id => { const e = S.rest.etapas[id]; if(!e || !e.feita) S.rest.etapas[id] = Object.assign(e || {}, { feita:true, pulada:false, em:agora }); });
@@ -1614,15 +1616,20 @@ async function conRodar(r, lista, onde){
   conMsg(onde, h); return true;
 }
 /* publica as 33 funções do servidor direto pelo conector (sem GitHub Actions), uma por vez, mostrando o andamento */
-async function conPublicarFuncoes(r, onde){
+async function conPublicarFuncoes(r, onde, soFaltam){
   conMsg(onde, '<small class="mudo">Buscando a lista de funções…</small>');
   try{ const L = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, site:true }); if(!L.ok) { conMsg(onde, conLinha(false, esc(L.erro))); return false; }
-    const fs = L.funcoes || [], ruins = []; let n = 0;
-    for(const f of fs){ conMsg(onde, '<small class="mudo">⏳ ' + (++n) + ' de ' + fs.length + ': ' + esc(f) + '…</small>' + (ruins.length ? conLinha(false, ruins.length + ' com erro até agora') : ''));
-      let a; try{ a = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, slug:f }); }catch(e){ a = { ok:false, erro:e.message }; }
-      if(!a.ok){ try{ a = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, slug:f }); }catch(e){ a = { ok:false, erro:e.message }; } if(!a.ok) ruins.push(f + ': ' + (a.erro || 'erro')); } }
-    conMsg(onde, ruins.length ? conLinha(false, (fs.length - ruins.length) + ' de ' + fs.length + ' publicadas. Toque de novo para tentar as que faltaram.') + '<small class="mudo">' + ruins.map(esc).join('<br>') + '</small>' : conLinha(true, 'As ' + fs.length + ' funções do servidor foram publicadas.'));
-    hist(r.id, 'Funções do servidor publicadas pelo conector', ruins.length ? (fs.length - ruins.length) + ' de ' + fs.length : 'todas (' + fs.length + ')');
+    let fs = L.funcoes || []; const ruins = []; let n = 0, jaTinha = 0;
+    if(soFaltam){ try{ const ex = await chamarConector({ acao:'sb_funcoes', restaurante_id:r.id }); if(ex.ok){ const tem = new Set((ex.funcoes || []).map(x => x.slug)); jaTinha = fs.filter(f => tem.has(f)).length; fs = fs.filter(f => !tem.has(f)); } }catch(e){ /* sem a lista: publica todas */ } }
+    const total = fs.length + jaTinha, esperar = ms => new Promise(ok => setTimeout(ok, ms));
+    for(const f of fs){ conMsg(onde, '<small class="mudo">⏳ ' + (++n + jaTinha) + ' de ' + total + ': ' + esc(f) + '…</small>' + (ruins.length ? conLinha(false, ruins.length + ' com erro até agora') : ''));
+      let a;
+      for(let t = 0; t < 4; t++){   // falha de internet (celular trocou de app, sinal caiu): espera e tenta de novo, até 4 vezes
+        try{ a = await chamarConector({ acao:'sb_funcoes_publicar', restaurante_id:r.id, slug:f }); }catch(e){ a = { ok:false, erro:e.message, rede:/failed to fetch|load failed|network|demorou|abort/i.test(e.message || '') }; }
+        if(a.ok || (!a.rede && t >= 1)) break; await esperar(a.rede ? 4000 : 1500); }
+      if(!a.ok) ruins.push(f + ': ' + (a.erro || 'erro')); }
+    conMsg(onde, ruins.length ? conLinha(false, (total - ruins.length) + ' de ' + total + ' publicadas. Toque de novo: só as que faltam serão tentadas.') + '<small class="mudo">' + ruins.map(esc).join('<br>') + '</small>' : conLinha(true, 'As ' + total + ' funções do servidor foram publicadas.'));
+    hist(r.id, 'Funções do servidor publicadas pelo conector', ruins.length ? (total - ruins.length) + ' de ' + total : 'todas (' + total + ')');
     return !ruins.length;
   }catch(e){ conMsg(onde, conLinha(false, esc(e.message))); return false; }
 }
