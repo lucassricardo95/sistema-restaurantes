@@ -1226,9 +1226,13 @@ window.rvUsrEu = async () => {
   try{ const a = await chamarConector({ acao:'usr_eu', atual, email, senha }); if(!a.ok) throw new Error(a.erro || 'Não mudou.'); aviso(a.message || 'Pronto.', 'ok'); if(a.sair) setTimeout(() => rvSair(), 1200); }catch(e){ usrMsg('usr_eu_res', conLinha(false, esc(e.message))); }
 };
 /* ---------- MAIS / AJUSTES / GUIA ---------- */
+const rvLinkPainel = () => location.origin + location.pathname.replace(/[^\/]*$/, '');
+async function rvCopiarLink(){ try{ await navigator.clipboard.writeText(rvLinkPainel()); aviso('Link copiado.'); }catch(e){ try{ const t = document.getElementById('rvLink'); const r = document.createRange(); r.selectNodeContents(t); const se = getSelection(); se.removeAllRanges(); se.addRange(r); aviso('Segure sobre o link selecionado e escolha Copiar.'); }catch(e2){ aviso('Não consegui copiar. Selecione o link e copie.'); } } }
+async function rvCompartilhar(){ const u = rvLinkPainel(); try{ if(navigator.share){ await navigator.share({ title:'Painel de Revenda', text:'Painel de Revenda', url:u }); return; } }catch(e){ if(e && e.name === 'AbortError') return; } rvCopiarLink(); }
 function vMais(){
   const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['conectores','🔌','Conectores','Ligar o painel ao GitHub e ao Supabase de cada restaurante'],['usuarios','👤','Usuários do painel','Seus dados de acesso e quem mais pode entrar'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
   T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
+   + '<div class="card"><h2>🔗 Link do painel</h2><p class="mudo pequeno">Este é o endereço do painel. Para entrar é preciso ter login, então só quem você cadastrar consegue usar.</p><p><code id="rvLink" style="word-break:break-all;">' + esc(rvLinkPainel()) + '</code></p><p><button class="principal" onclick="rvCompartilhar()">📤 Compartilhar</button> <button class="mini" onclick="rvCopiarLink()">Copiar link</button></p></div>'
    + '<div class="card"><small class="mudo">Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
 }
 function vAjustes(){
