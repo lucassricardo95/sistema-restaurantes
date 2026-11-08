@@ -641,7 +641,7 @@ const TESTES = {
   async funcoes(r){ if(!r.supabase_url) return ['erro', 'Preencha primeiro o endereço do banco.'];
     const x = await tempo(r.supabase_url + '/functions/v1/ping', { method:'POST', headers:{ apikey:r.supabase_chave, Authorization:'Bearer ' + r.supabase_chave, 'Content-Type':'application/json' }, body:'{}' });
     return x.status === 404 ? ['erro', 'As funções do servidor ainda não foram publicadas.'] : (x.ok ? ['ok', 'Funções do servidor respondendo.'] : ['aviso', 'A função "ping" respondeu com erro ' + x.status + '.']); },
-  async site(r){ const u = r.site_url || (r.dominio ? 'https://' + r.dominio + '/' : ''); if(!u) return ['erro', 'Preencha o endereço do site.'];
+  async site(r){ const u = r.site_url || (r.dominio ? 'https://' + r.dominio + '/' : ''); if(!u) return r.github_url ? ['aviso', 'Endereço do GitHub salvo ✓. O endereço do site você preenche mais adiante (parte 5), depois de ligar o Pages.'] : ['erro', 'Preencha o endereço do site.'];
     try{ const x = await tempo(u + 'config-restaurante.js?t=' + Date.now(), { cache:'no-store' }); if(x.status === 404) return ['erro', 'O endereço existe, mas os 4 arquivos ainda não estão lá (ou o GitHub Pages ainda está publicando: espere 2 minutos).']; if(x.ok){ const t = await x.text(); return t.includes(r.slug) ? ['ok', 'Site no ar com os arquivos deste restaurante.'] : ['aviso', 'O site está no ar, mas o config-restaurante.js é de outro restaurante. Baixe de novo e suba.']; } }catch(e){}
     await tempo(u, { mode:'no-cors' }); return ['ok', 'O endereço ' + esc(u) + ' está no ar.']; }
 };
