@@ -441,7 +441,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 3
   },
   {
@@ -452,7 +452,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 5
   },
   {
@@ -463,7 +463,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 4
   },
   {
@@ -474,8 +474,30 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 11
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd139",
+   "titulo": "Atualização 139 · economia no plano grátis",
+   "arq": "banco-restaurante/139-economia-sistema-e-fila.sql",
+   "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 140.",
+   "kb": 4
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd140",
+   "titulo": "Atualização 140 · ajustes pelo painel",
+   "arq": "banco-restaurante/140-ajustes-pelo-painel.sql",
+   "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante e a senha de um usuário (aba Ajustes do restaurante).",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 140.",
+   "kb": 5
   },
   {
    "etapa": "atualizacao",
@@ -485,7 +507,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 3
   },
   {
@@ -496,7 +518,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 5
   },
   {
@@ -507,7 +529,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 4
   },
   {
@@ -518,8 +540,30 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135, 136, 137, 138.",
+   "cuidado": "Rode na ordem 135 a 140.",
    "kb": 11
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd139",
+   "titulo": "Atualização 139 · economia no plano grátis",
+   "arq": "banco-restaurante/139-economia-sistema-e-fila.sql",
+   "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 140.",
+   "kb": 4
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd140",
+   "titulo": "Atualização 140 · ajustes pelo painel",
+   "arq": "banco-restaurante/140-ajustes-pelo-painel.sql",
+   "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante e a senha de um usuário (aba Ajustes do restaurante).",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 140.",
+   "kb": 5
   }
  ]
 };

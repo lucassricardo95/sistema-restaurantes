@@ -296,7 +296,7 @@ window.rvAbrir = async (id, aba) => {
   await carregarRest(); desenhar();
 };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; }catch(e){ erro(e.message); } }
-const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
+const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
 function vRest(){
   const r = S.rest, n = nEtapas(r), sd = saudeDe(r.slug), sb = refDe(r);
   T('<div class="topo"><button class="mini" onclick="rvIr(\'restaurantes\')">← Restaurantes</button><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao] || r.situacao) + '</span></div>'
@@ -304,7 +304,7 @@ function vRest(){
    + '<div class="atalhos">' + (r.site_url ? '<a class="btn mini" href="' + esc(r.site_url) + '" target="_blank" rel="noopener">🌐 Site</a>' : '') + (r.contato_telefone ? '<a class="btn mini" href="' + esc(waLink(r.contato_telefone)) + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '')
      + (sb ? '<a class="btn mini" href="https://supabase.com/dashboard/project/' + esc(sb) + '" target="_blank" rel="noopener">🗄️ Supabase</a>' : '') + (r.github_url ? '<a class="btn mini" href="' + esc(r.github_url) + '" target="_blank" rel="noopener">🐙 GitHub</a>' : '') + '</div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>');
-  ({ passo:abaPasso, saude:abaSaude, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
+  ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
 }
 window.rvAba = a => { S.aba = a; vRest(); };
 const C = h => { $('corpo').innerHTML = h; };
@@ -1104,7 +1104,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel']];
 async function chamarConector(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1152,7 +1152,7 @@ async function vConectores(){
    + '<li>No Supabase do <b>painel</b>: Edge Functions → Deploy a new function → nome <code>conector</code> → cole o arquivo <code>conector/index.ts</code> → desligue <b>Verify JWT</b> (igual à função assistente) → Deploy.</li>'
    + '<li>Pronto. Agora é só ligar cada restaurante abaixo. Os dois arquivos estão na pasta <i>1-PAINEL-DE-REVENDA</i> do Sistemas.zip.</li></ol></details></div>'
    + L.map(r => '<div class="card"><button class="alerta n0" onclick="rvConAbrir(\'' + r.id + '\')"><span class="ic">' + (temGh(r) && temSb(r) ? '✅' : (temGh(r) || temSb(r) ? '🟡' : '⬜')) + '</span><span><b>' + esc(r.nome) + '</b><small>' + (temSb(r) ? 'Supabase ✓' : 'Supabase: falta') + ' · ' + (temGh(r) ? 'GitHub ✓' : 'GitHub: falta') + '</small></span><span class="seta">' + (aberto === r.id ? '⌃' : '›') + '</span></button>'
-      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (135–138)</button></div>' : '') + '</div>').join('')
+      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (135–140)</button></div>' : '') + '</div>').join('')
    + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
   try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
     if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
@@ -1184,7 +1184,7 @@ async function conRodar(r, lista, onde){
 }
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  const nome = prompt('Vai rodar as atualizações 135, 136, 137 e 138 no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  const nome = prompt('Vai rodar as atualizações 135 a 140 no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
   ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
 };
@@ -1225,6 +1225,62 @@ window.rvPublicarAuto = async () => {
     conMsg(caixa, (a.arquivos || []).map(f => conLinha(f.ok, esc(f.caminho) + (f.ok ? '' : ': ' + esc(f.erro)))).join('') + (a.ok ? '<div class="res ok">Pronto! Espere 1 a 2 minutos e toque em "Conferir o site".</div>' : conLinha(false, esc(a.erro || 'Alguns arquivos falharam.'))));
     hist(r.id, 'Site publicado pelo conector', arqs.map(x => x.caminho).join(', '));
   }catch(e){ conMsg(caixa, conLinha(false, esc(e.message))); }
+};
+
+/* ---------- AJUSTES DO RESTAURANTE PELO PAINEL (pelo conector do Supabase; SQL 140 no restaurante) ----------
+   Tudo aqui continua podendo ser mudado dentro do sistema do restaurante (Administrador). */
+const IA_REST = [['groq','Groq','1º a responder (começa com gsk_).','https://console.groq.com/keys'],['groq_2','Groq 2','Reserva do Groq: outra conta.','https://console.groq.com/keys'],
+  ['cloudflare_conta','Cloudflare · Account ID','32 letras e números (barra de endereço do dash.cloudflare.com).','https://dash.cloudflare.com/'],['cloudflare','Cloudflare · Token','API Tokens → modelo "Workers AI".','https://dash.cloudflare.com/profile/api-tokens'],
+  ['gemini','Gemini','Também faz a pesquisa na internet (AIza… ou AQ.…).','https://aistudio.google.com/apikey'],['nvidia','NVIDIA','Reserva mais lenta (nvapi-…).','https://build.nvidia.com/settings/api-keys'],['gemini_2','Gemini 2','Último recurso: chave de outro projeto do Google.','https://aistudio.google.com/apikey']];
+const DADOS_REST = [['nome','Nome que aparece no cardápio e nas impressões',60],['endereco','Endereço',200],['telefone','WhatsApp / telefone da loja',30],['horario','Horário de funcionamento',300],['redes','Redes sociais (Instagram, etc.)',300]];
+async function abaAjustesRest(){
+  const r = S.rest;
+  if(!temSb(r)){ C('<div class="card"><h2>⚙️ Ajustes do restaurante</h2><p>Daqui você muda as <b>chaves das IAs</b>, os <b>dados do restaurante</b> (nome, endereço, WhatsApp, horário, redes) e a <b>senha de um usuário</b> (quando o dono esquece), sem entrar no sistema dele.</p>'
+    + '<div class="res aviso">Para isso, ligue antes o conector do Supabase deste restaurante.</div><button class="principal" onclick="rvIr(\'conectores\')">🔌 Ligar o conector</button>'
+    + '<p class="mudo pequeno">Tudo isso também pode ser mudado dentro do sistema do restaurante, em Administrador.</p></div>'); return; }
+  C('<div class="card"><small class="mudo">Carregando os ajustes de ' + esc(r.nome) + '…</small></div>');
+  let a; try{ a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, p:{ acao:'ler' } }); }catch(e){ a = { ok:false, erro:e.message }; }
+  if(S.view !== 'rest' || S.aba !== 'ajustes' || S.rest.id !== r.id) return;
+  if(!a || !a.ok){ C('<div class="card"><h2>⚙️ Ajustes do restaurante</h2>' + conLinha(false, esc((a && a.erro) || 'Não consegui ler.')) + '<button class="mini" onclick="rvAba(\'ajustes\')">↻ Tentar de novo</button></div>'); return; }
+  const ia = {}; (a.ia || []).forEach(x => { ia[x.provedor] = x; }); const d = a.dados || {};
+  C('<p class="mudo pequeno">Muda direto no sistema de ' + esc(r.nome) + ', na hora. Tudo continua podendo ser mudado lá dentro também (Administrador), e fica registrado na Auditoria dele.</p>'
+   + '<div class="cols-pc"><div class="card"><h2>🤖 Chaves das IAs do atendente</h2><p class="mudo pequeno">A ordem é a ordem em que o atendente tenta. Use as chaves do restaurante (cada uma tem cota própria).</p>'
+   + IA_REST.map(x => { const v = ia[x[0]] || {}; return '<div class="ia-item"><div class="linha"><b>' + x[1] + '</b>' + (v.tem ? '<span class="selo ativo">✓ …' + esc(v.final || '') + '</span>' : '<span class="selo aviso">falta</span>') + '</div><small>' + esc(x[2]) + ' <a href="' + x[3] + '" target="_blank" rel="noopener">abrir ↗</a></small>'
+      + '<div class="linha ia-campo"><input type="password" id="aj_ia_' + x[0] + '" placeholder="' + (v.tem ? 'colar para trocar' : 'colar a chave aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvAjIa(\'' + x[0] + '\')">Salvar</button>' + (v.tem ? '<button class="mini" onclick="rvAjIa(\'' + x[0] + '\',true)" title="Apagar">🗑️</button>' : '') + '</div></div>'; }).join('') + '<div id="aj_ia_res"></div></div>'
+   + '<div><div class="card"><h2>🏪 Dados do restaurante</h2><p class="mudo pequeno">Aparecem no cardápio, nas impressões e para o atendente virtual.</p>'
+   + DADOS_REST.map(x => '<label for="aj_d_' + x[0] + '">' + x[1] + '</label>' + (x[2] > 100 ? '<textarea id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" rows="2">' + esc(d[x[0]] || '') + '</textarea>' : '<input id="aj_d_' + x[0] + '" maxlength="' + x[2] + '" value="' + esc(d[x[0]] || '') + '">')).join('')
+   + '<p><button class="principal" onclick="rvAjDados()">💾 Salvar dados</button></p><div id="aj_d_res"></div></div>'
+   + '<div class="card"><h2>👥 Usuários do sistema</h2><p class="mudo pequeno">Para quando alguém esquece a senha. Peça a ele uma senha nova (mínimo 8, com letras e números) ou crie uma e passe para ele.</p>'
+   + ((a.usuarios || []).length ? (a.usuarios || []).map(u => '<div class="linha mapa-l"><span>' + (u.ativo ? '' : '⏸️ ') + '<b>' + esc(u.login) + '</b> <small class="mudo">' + esc(u.nivel) + (u.ativo ? '' : ' · desativado') + '</small></span><button class="mini" onclick="rvAjSenha(\'' + esc(u.login).replace(/'/g, '&#39;') + '\')">🔑 Trocar senha</button></div>').join('') : '<small class="mudo">Nenhum usuário ainda (etapa "Criar os logins").</small>')
+   + '<div id="aj_s_res"></div></div>'
+   + ((a.integracoes || []).length ? '<div class="card"><h2>🔗 Integrações</h2><p class="mudo pequeno">Só para ver. Ligar ou desligar é dentro do sistema dele (Administrador → Sistema → Integrações), porque cada uma tem o seu passo a passo.</p>'
+      + a.integracoes.map(x => '<div class="linha mapa-l"><span>' + (x.ligado ? '🟢' : '⚪') + ' <b>' + esc({ ifood:'iFood', nfce:'Nota fiscal (NFC-e)', mercadopago:'Mercado Pago', infinitepay:'InfinitePay' }[x.provedor] || x.provedor) + '</b></span><small class="mudo">' + (x.ligado ? 'ligado' : 'desligado') + (x.modo ? ' · ' + esc(x.modo === 'producao' ? 'produção' : 'teste') : '') + '</small></div>').join('') + '</div>' : '')
+   + '</div></div>');
+}
+window.rvAjIa = async (prov, apagar) => {
+  const r = S.rest, inp = $('aj_ia_' + prov), v = apagar ? '' : jv('aj_ia_' + prov);
+  if(!apagar && !v) return erro('Cole a chave no campo.');
+  if(apagar && !confirm('Apagar esta chave no sistema de ' + r.nome + '?')) return;
+  if(prov === 'cloudflare_conta' && v && !/^[0-9a-f]{32}$/.test(v)) return erro('O Account ID tem 32 letras (a-f) e números.');
+  const box = $('aj_ia_res'); if(box) box.innerHTML = '<small class="mudo">Salvando…</small>';
+  try{ const a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, p:{ acao:'ia_salvar', provedor:prov, chave:v } });
+    if(!a.ok) throw new Error(a.erro || 'Não salvou.'); if(inp) inp.value = ''; aviso((a.message || 'Salvo.') + ' ✓', 'ok'); hist(r.id, 'Chave de IA ' + (apagar ? 'apagada' : 'trocada') + ' pelo painel', prov); abaAjustesRest();
+  }catch(e){ if(box) box.innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvAjDados = async () => {
+  const r = S.rest, p = { acao:'dados_salvar' }; DADOS_REST.forEach(x => { p[x[0]] = (($('aj_d_' + x[0]) || {}).value || '').trim(); });
+  const box = $('aj_d_res'); if(box) box.innerHTML = '<small class="mudo">Salvando…</small>';
+  try{ const a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, p }); if(!a.ok) throw new Error(a.erro || 'Não salvou.');
+    if(box) box.innerHTML = conLinha(true, esc(a.message || 'Salvo.')); hist(r.id, 'Dados do restaurante mudados pelo painel', '');
+  }catch(e){ if(box) box.innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvAjSenha = async login => {
+  const r = S.rest, nova = prompt('Nova senha para "' + login + '" em ' + r.nome + ' (mínimo 8, com letras e números):'); if(!nova) return;
+  const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  const box = $('aj_s_res'); if(box) box.innerHTML = '<small class="mudo">Trocando…</small>';
+  try{ const a = await chamarConector({ acao:'sb_ajustes', restaurante_id:r.id, confirmar:nome, p:{ acao:'senha', login, novaSenha:nova } }); if(!a.ok) throw new Error(a.erro || 'Não trocou.');
+    if(box) box.innerHTML = conLinha(true, esc(a.message || 'Senha trocada.') + ' Passe a nova senha para ' + esc(login) + ' por um canal seguro.'); hist(r.id, 'Senha trocada pelo painel', login);
+  }catch(e){ if(box) box.innerHTML = conLinha(false, esc(e.message)); }
 };
 async function chamarAssistente(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');

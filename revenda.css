@@ -226,3 +226,5 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
   .b-assist{right:28px;bottom:28px}
 }
 @media(min-width:1500px){ .passo-grid{grid-template-columns:minmax(0,1fr) 360px} }
+/* aba Ajustes do restaurante: duas colunas no PC */
+@media(min-width:1024px){ .cols-pc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start} .cols-pc>.card,.cols-pc>div>.card:first-child{margin-top:0} }
