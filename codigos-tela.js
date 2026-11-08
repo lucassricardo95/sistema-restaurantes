@@ -93,4 +93,5 @@ window.cdEtapa = (etapa, ctx) => {
   return '<div style="margin:10px 0"><b>Códigos desta etapa, na ordem</b><p class="mudo" style="margin:4px 0 6px">Toque em Copiar, abra o editor indicado, cole e rode. Marque "Já apliquei" ao terminar cada um.</p>' + L.map((i, n) => linha(i, etapa, n + 1)).join('') + '</div>';
 };
 window.cdCtx = ctx => { window.CD_CTX = ctx; };
+window.cdObter = async id => { const i = achar(id); if(!i) throw new Error('Código não encontrado: ' + id); return texto(i); };
 })();

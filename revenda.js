@@ -150,8 +150,8 @@ const NAV = [['inicio','🏠','Início'],['restaurantes','🍽️','Restaurantes
 function desenhar(){
   clearInterval(timerAuto);
   const v = S.view, alertaSaude = S.erros.length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
-  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente }[v] || vInicio;
-  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais' }[v] || v;
+  const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente, conectores:vConectores }[v] || vInicio;
+  const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais', conectores:'mais' }[v] || v;
   $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a">' + (v === 'rest' || v === 'novo' ? '<button class="mini" onclick="rvChat()" title="Assistente">✨</button> ' : '') + '<button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
     + '<main id="tela"></main>'
     + '<nav class="nav">' + NAV.map(n => '<button class="' + (navOn === n[0] ? 'on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('') + '</nav>' + (v === 'rest' || v === 'novo' ? '' : '<button id="bAssist" class="b-assist" onclick="rvChat()" title="Assistente" aria-label="Abrir o assistente">✨</button>');
@@ -934,7 +934,7 @@ window.rvPropFechar = id => { const p = S.prop.find(x => x.id === id); rvNovo(p)
 
 /* ---------- MAIS / AJUSTES / GUIA ---------- */
 function vMais(){
-  const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
+  const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['conectores','🔌','Conectores','Ligar o painel ao GitHub e ao Supabase de cada restaurante'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
   T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
    + '<div class="card"><small class="mudo">Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
 }
@@ -1090,9 +1090,66 @@ async function vAssistente(){
    + '<div class="card"><h2>📒 Últimas respostas</h2><div id="iaLog"><small class="mudo">Carregando…</small></div></div>');
   try{ const L = await rest('assistente_log?select=*&order=em.desc&limit=15') || []; const b = $('iaLog'); if(b) b.innerHTML = L.length ? L.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(l.provedor || '—') + (l.modelo ? ' · ' + esc(l.modelo) : '') + ' · ' + Math.round((l.ms || 0) / 100) / 10 + ' s · ' + (l.ferramentas || 0) + ' consulta(s)</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ respondeu' : '✗ ' + esc(l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Ainda não foi usado.</small>'; }catch(e){}
 }
-window.rvSalvarIA = async k => { const v = jv('k_' + k); if(!v) return erro('Cole a chave no campo.'); if(k === 'ia_cloudflare_conta' && !/^[0-9a-f]{32}$/.test(v)) return erro('O Account ID tem 32 letras (a-f) e números.');
-  try{ const x = await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou'); S.segs = await rpc('revenda_segredos_status'); aviso('Chave guardada no cofre ✓', 'ok'); vAssistente(); }catch(e){ erro(e.message); } };
-window.rvApagarIA = async k => { if(!confirm('Apagar esta chave do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); vAssistente(); }catch(e){ erro(e.message); } };
+window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return erro('Cole a chave no campo.'); if(k === 'ia_cloudflare_conta' && !/^[0-9a-f]{32}$/.test(v)) return erro('O Account ID tem 32 letras (a-f) e números.');
+  try{ const x = await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou'); S.segs = await rpc('revenda_segredos_status'); aviso('Guardado no cofre ✓', 'ok'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
+window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
+
+/* ---------- CONECTORES: painel → GitHub e Supabase de cada restaurante (função "conector", SQL 015) ---------- */
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável']];
+async function chamarConector(corpo){
+  if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
+  try{ const r = await fetch(URL_ + '/functions/v1/conector', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
+    if(r.status === 404) throw new Error('A função "conector" ainda não foi publicada no servidor do painel (veja o passo a passo na tela).');
+    const j = await r.json().catch(() => null); if(!j) throw new Error('O conector não respondeu (erro ' + r.status + ').'); return j;
+  }catch(e){ throw new Error(e.name === 'AbortError' ? 'O conector demorou demais.' : e.message); } finally { clearTimeout(t); }
+}
+async function vConectores(){
+  const g = S.segs || {}, ok = k => g[k] ? '<span class="selo ativo">✓ …' + esc(g[k].fim) + '</span>' : '<span class="selo aviso">falta</span>';
+  const campo = (k, rot, dica, link) => '<div class="ia-item"><div class="linha"><b>' + rot + '</b>' + ok(k) + '</div><small>' + dica + ' <a href="' + link + '" target="_blank" rel="noopener">abrir ↗</a></small>'
+    + '<div class="linha ia-campo"><input type="password" id="k_' + k + '" placeholder="' + (g[k] ? 'colar para trocar' : 'colar o token aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvSalvarIA(\'' + k + '\',\'conectores\')">Salvar</button>' + (g[k] ? '<button class="mini" onclick="rvApagarIA(\'' + k + '\',\'conectores\')">🗑️</button>' : '') + '</div></div>';
+  const L = S.lista.filter(r => r.situacao !== 'encerrado');
+  T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>🔌 Conectores</h1>'
+   + '<div class="card"><p>Ligue o painel ao <b>GitHub</b> e ao <b>Supabase</b> de cada restaurante. Com isso você testa as ligações e aplica as atualizações do banco sem sair do painel.</p>'
+   + '<p class="mudo pequeno">Os tokens ficam no cofre do banco do painel; este site nunca mostra o token inteiro. Cole só aqui, nunca em conversa. Tudo que o conector faz fica no registro abaixo.</p></div>'
+   + '<div class="card"><h2>🔑 Tokens</h2>'
+   + campo('conector_supabase', 'Supabase (token de acesso)', 'Supabase → Account → Access Tokens → Generate new token. Vale para todos os projetos da sua conta.', 'https://supabase.com/dashboard/account/tokens')
+   + campo('conector_github', 'GitHub (token de acesso)', 'GitHub → Settings → Developer settings → Fine-grained tokens. Escolha só os repositórios dos restaurantes e dê "Contents: Read and write".', 'https://github.com/settings/personal-access-tokens/new') + '</div>'
+   + '<div class="card"><h2>🍽️ Restaurantes</h2><p class="mudo pequeno">O endereço do GitHub e do Supabase vem do cadastro de cada restaurante (aba Cadastro).</p>'
+   + L.map(r => '<div class="hist"><div class="linha"><b>' + esc(r.nome) + '</b><small class="mudo">' + (r.github_url ? 'GitHub ✓' : 'sem GitHub') + ' · ' + (refDe(r) ? 'Supabase ✓' : 'sem Supabase') + '</small></div>'
+      + '<div class="linha"><button class="mini" onclick="rvConTestar(\'' + r.id + '\')">▶️ Testar ligações</button><button class="mini" onclick="rvConFuncoes(\'' + r.id + '\')">⚙️ Funções</button><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')">⬆️ Atualizar banco</button></div><div id="con_' + r.id + '"></div></div>').join('') + '</div>'
+   + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
+  try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
+    if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda. Se esta lista falhar, rode o arquivo 015 no banco do painel.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
+}
+const conMsg = (id, html) => { const b = $('con_' + id); if(b) b.innerHTML = html; };
+const conLinha = (ok, t) => '<div class="res ' + (ok ? 'ok' : 'erro') + '">' + (ok ? '✅ ' : '❌ ') + t + '</div>';
+window.rvConTestar = async id => {
+  conMsg(id, '<small class="mudo">Testando…</small>'); let h = '';
+  try{ const a = await chamarConector({ acao:'sb_testar', restaurante_id:id }); h += conLinha(a.ok, a.ok ? 'Supabase: projeto "' + esc(a.nome || a.ref) + '" (' + esc(a.estado || '') + ')' : 'Supabase: ' + esc(a.erro)); }catch(e){ h += conLinha(false, 'Supabase: ' + esc(e.message)); }
+  try{ const b = await chamarConector({ acao:'gh_testar', restaurante_id:id }); h += conLinha(b.ok, b.ok ? 'GitHub: ' + esc(b.repo) + ' (pode gravar)' : 'GitHub: ' + esc(b.erro)); }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
+  conMsg(id, h);
+};
+window.rvConFuncoes = async id => {
+  conMsg(id, '<small class="mudo">Consultando…</small>');
+  try{ const a = await chamarConector({ acao:'sb_funcoes', restaurante_id:id });
+    conMsg(id, a.ok ? '<div class="res ok">' + (a.funcoes.length ? a.funcoes.map(f => esc(f.slug) + ' (v' + esc(f.versao) + ')').join(' · ') : 'Nenhuma função publicada.') + '</div>' : conLinha(false, esc(a.erro || 'não consegui')));
+  }catch(e){ conMsg(id, conLinha(false, esc(e.message))); }
+};
+window.rvConAtualizar = async id => {
+  const r = S.lista.find(x => x.id === id); if(!r) return;
+  if(typeof window.cdObter !== 'function') return erro('A tela de códigos ainda não carregou. Abra Restaurantes e volte.');
+  const nome = prompt('Vai rodar as atualizações 135, 136 e 137 no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  let h = '';
+  for(const u of UPDS){
+    conMsg(id, h + '<small class="mudo">Aplicando ' + esc(u[1]) + '…</small>');
+    try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:id, sql, rotulo:u[1], confirmar:nome });
+      h += conLinha(a.ok, esc(u[1]) + (a.ok ? '' : ': ' + esc(a.erro))); if(!a.ok) break;
+    }catch(e){ h += conLinha(false, esc(u[1]) + ': ' + esc(e.message)); break; }
+  }
+  conMsg(id, h); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
+};
 async function chamarAssistente(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 130000);
