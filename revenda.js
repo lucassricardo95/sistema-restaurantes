@@ -438,9 +438,12 @@ window.rvParte = (id, k) => { S.parte[id] = k; abaPasso(); const e = document.qu
 window.rvTodas = id => { S.tudoAberto[id] = !S.tudoAberto[id]; abaPasso(); };
 window.rvCopiar = async id => { const el = $(id); if(!el) return; const t = el.dataset.txt != null ? el.dataset.txt : el.textContent; if(await copiarTxt(t)) aviso('Copiado! Agora é só colar.', 'ok'); else erro('Não deu para copiar. Toque e segure no texto para copiar manualmente.'); };
 async function copiarTxt(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ try{ const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; }catch(e2){ return false; } } }
+/* etapas sem as quais o restaurante não pode ser entregue (as planilhas de reserva são obrigatórias) */
+const FALTA_ENTREGA = ['banco','funcoes','publicar','entrada','drive','planilhas','teste'];
 window.rvItem = (id, k, v) => { const e = S.rest.etapas, x = e[id] = e[id] || {}; x.itens = (x.itens || []).filter(i => i !== k); if(v) x.itens.push(k); return salvar(v ? 'Anotado ✓' : 'Desmarcado.'); };
 window.rvEtapa = async (id, feita, pulada) => {
   const et = ETAPAS.find(x => x.id === id);
+  if(feita && id === 'entrega'){ const falta = FALTA_ENTREGA.filter(k => k !== 'entrega' && !((S.rest.etapas[k] || {}).feita && !(S.rest.etapas[k] || {}).pulada)).map(k => (ETAPAS.find(x => x.id === k) || {}).titulo || k); if(falta.length) return erro('Ainda não dá para entregar. Falta concluir: ' + falta.join(', ') + '.'); }
   if(feita && !pulada && et.checklist){ const ck = (S.rest.etapas[id] || {}).itens || []; if(ck.length < et.checklist.length) return erro('Marque todos os testes antes de concluir (' + ck.length + ' de ' + et.checklist.length + ').'); }
   const antes = JSON.parse(JSON.stringify(S.rest.etapas[id] || null));
   S.rest.etapas[id] = Object.assign(S.rest.etapas[id] || {}, { feita, pulada:!!pulada, em:new Date().toISOString() });
@@ -986,6 +989,7 @@ window.rvVerTermos = async () => {
 function htmlTermos(txt){ return String(txt).split('\n').map(l => /^## /.test(l) ? '<h3 style="margin:18px 0 6px">' + esc(l.slice(3)) + '</h3>' : (l.trim() ? '<p style="margin:0 0 8px">' + esc(l) + '</p>' : '')).join(''); }
 window.rvEntregar = async on => {
   const r = S.rest;
+  if(on){ const falta = FALTA_ENTREGA.filter(id => { const e = r.etapas[id]; return !(e && e.feita && !e.pulada); }).map(id => (ETAPAS.find(x => x.id === id) || {}).titulo || id); if(falta.length) return erro('Ainda não dá para entregar. Falta concluir: ' + falta.join(', ') + '.'); }
   if(!confirm(on ? 'Marcar "' + r.nome + '" como ENTREGUE?\n\nO Admin do restaurante vai precisar aceitar os termos para usar a área administrativa.' : 'Voltar "' + r.nome + '" para desenvolvimento?')) return;
   const d = { entregue_em: on ? new Date().toISOString() : null };
   try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', d); Object.assign(r, d); const x = S.lista.find(z => z.id === r.id); if(x) Object.assign(x, d); await hist(r.id, on ? 'Marcado como ENTREGUE (termos exigidos)' : 'Voltou para desenvolvimento', ''); aviso(on ? 'Entregue. O Admin verá os termos ao entrar.' : 'De volta ao desenvolvimento.', 'ok'); S.aba === 'passo' ? abaPasso() : abaContrato(); }catch(e){ erro(e.message); }
