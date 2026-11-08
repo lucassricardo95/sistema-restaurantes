@@ -344,6 +344,7 @@ function lerForm(){ document.querySelectorAll('#tela [data-k]').forEach(el => { 
 const COLS = ['nome','situacao','dominio','site_url','github_url','supabase_url','supabase_chave','api_url','contingencia_url','contingencia_chave','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','motor','inicio_em','observacoes'];
 async function salvar(msg){
   lerForm();
+  { const r = S.rest, m = /^https:\/\/([a-z0-9-]+)\.github\.io\/([^/]+)\/?$/i.exec(r.site_url || ''); if(m && !r.github_url) r.github_url = 'https://github.com/' + m[1] + '/' + m[2]; }   // site no GitHub Pages: o repositório sai do endereço
   const corpo = {}; COLS.forEach(c => { if(S.rest[c] !== undefined) corpo[c] = S.rest[c]; });
   if(corpo.dominio) corpo.dominio = String(corpo.dominio).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   ['site_url','github_url','supabase_url'].forEach(k => { if(corpo[k]){ let u = String(corpo[k]).trim(); if(!/^https?:\/\//.test(u)) u = 'https://' + u; if(k === 'site_url' && !u.endsWith('/')) u += '/'; if(k !== 'site_url') u = u.replace(/\/+$/, ''); corpo[k] = u; } });
