@@ -536,7 +536,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 3
   },
   {
@@ -547,7 +547,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 5
   },
   {
@@ -558,7 +558,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 4
   },
   {
@@ -569,7 +569,7 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 11
   },
   {
@@ -580,7 +580,7 @@ window.CODIGOS = {
    "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 4
   },
   {
@@ -591,7 +591,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante, a comanda e a senha de um usuário (aba Ajustes do restaurante). O nome do restaurante passa a ser um só.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 11
   },
   {
@@ -602,7 +602,7 @@ window.CODIGOS = {
    "desc": "O Administrador recebe um aviso no celular (no máximo 1 por dia) quando o Google recusa o acesso ao Drive, antes de o backup falhar.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 141.",
+   "cuidado": "Rode na ordem 135 a 142.",
    "kb": 2
   }
  ]
