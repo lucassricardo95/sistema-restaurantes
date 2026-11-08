@@ -759,7 +759,8 @@ function errosHtml(lista, comNome){
 const TRI_ROTULO = { cache_antigo:['🟢','Provavelmente já corrigido (aparelho com versão antiga)'], conexao:['📶','Falha de conexão do aparelho'], falha_real:['🔴','Falha real do sistema'], outro:['🟡','Erro a investigar'] };
 function triagemHtml(e){ const t = e.triagem; if(!t || !t.resumo) return '<small class="mudo">🔎 Ainda sem explicação do vigia (ele analisa os erros novos a cada 6 horas).</small>';
   const k = TRI_ROTULO[t.classe] || TRI_ROTULO.outro;
-  return '<div class="tri"><b>' + k[0] + ' ' + k[1] + '</b><br><small>' + esc(t.resumo) + (t.causa ? ' <span class="mudo">Causa provável: ' + esc(t.causa) + '</span>' : '') + (t.acao ? ' <b>O que fazer:</b> ' + esc(t.acao) : '') + '</small></div>'; }
+  return '<div class="tri"><b>' + k[0] + ' ' + k[1] + '</b><br><small>' + esc(t.resumo) + (t.causa ? ' <span class="mudo">Causa provável: ' + esc(t.causa) + '</span>' : '') + (t.acao ? ' <b>O que fazer:</b> ' + esc(t.acao) : '') + '</small>' + (t.solucao ? '<br><small>🛠️ <b>Solução proposta:</b> ' + esc(t.solucao) + '</small>' : '') + (t.pedido ? '<br><button class="mini" onclick="rvCopiarPedido(this)" data-t="' + esc(t.pedido) + '">📋 Copiar pedido pronto para o Claude</button>' : '') + '</div>'; }
+window.rvCopiarPedido = b => { const t = b.getAttribute('data-t') || ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => aviso('Copiado. Cole numa conversa com o Claude.', 'ok'), () => prompt('Copie o texto:', t)); };
 function vigiaCard(){
   const G = S.vigiaG || {}, V = S.vigia || {}, L = S.lista.filter(r => ['ativo','teste'].includes(r.situacao));
   const quando = G.executou_em ? haTempo(Math.round((Date.now() - new Date(G.executou_em).getTime()) / 60000)) : 'ainda não rodou';
@@ -768,7 +769,7 @@ function vigiaCard(){
    + '<small class="mudo">Confere sozinho, de 6 em 6 horas, só os restaurantes ativos: projeto no ar, atualizações do banco que faltam, tarefas que falharam, fila da planilha e tamanho do banco. Só lê, nunca muda nada. Avisa no celular quando algo muda. Última conferência: ' + quando + '.</small>'
    + '<div class="linha"><small class="mudo">Uso da IA hoje</small><small>' + usos + ' de 10 · só gasta com problema novo</small></div><div class="barra"><i style="width:' + Math.min(100, usos * 10) + '%"></i></div>'
    + L.map(r => { const v = V[r.slug] || {}, lig = v.ligado !== false && !(r.slug === 'texas-burger' && !V[r.slug]); const P = v.problemas || [];
-      return '<div class="linha vg-l"><div><b>' + esc(r.nome) + '</b><br><small class="mudo">' + (!lig ? 'Desligado: o vigia não se conecta ao banco dele.' : !v.verificado_em ? 'Ainda não conferido.' : P.length ? esc(v.resumo || P.map(p => p.texto).join(' ')) : '✅ Tudo em ordem.') + '</small></div>'
+      return '<div class="linha vg-l"><div><b>' + esc(r.nome) + '</b><br><small class="mudo">' + (!lig ? 'Desligado: o vigia não se conecta ao banco dele.' : !v.verificado_em ? 'Ainda não conferido.' : P.length ? esc(v.resumo || P.map(p => p.texto).join(' ')) + P.filter(p => p.solucao).map(p => '<br>🛠️ ' + esc(p.solucao)).join('') : '✅ Tudo em ordem.') + '</small></div>'
         + '<label class="mini-sw"><input type="checkbox" ' + (lig ? 'checked ' : '') + 'onchange="rvVigiaLigar(\'' + esc(r.slug) + '\', this.checked)"> ligado</label></div>'; }).join('')
    + '</div>';
 }
