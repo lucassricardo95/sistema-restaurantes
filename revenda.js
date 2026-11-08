@@ -1335,6 +1335,7 @@ window.rvConConferir = async id => {
           + (a.faltamTabelas.length ? '<br><small>Tabelas: ' + listaCurta(a.faltamTabelas) + '</small>' : '') + (a.faltamColunas.length ? '<br><small>Colunas: ' + listaCurta(a.faltamColunas) + '</small>' : '') + (a.faltamFuncoes.length ? '<br><small>Funções: ' + listaCurta(a.faltamFuncoes) + '</small>' : '') + (a.faltamCron.length ? '<br><small>Rotinas: ' + listaCurta(a.faltamCron) + '</small>' : '')); }
       if(a.diferentes && a.diferentes.length) h += amarela(a.diferentes.length + ' função(ões) do banco estão desatualizadas em relação ao modelo.' + ' Toque em "Sincronizar funções" para copiar as do modelo (a versão antiga fica guardada).' + '<br><small>' + a.diferentes.slice(0, 8).map(n => esc(n) + (a.detalhes && a.detalhes[n] ? ' — ' + esc(a.detalhes[n]) : '')).join('<br>') + (a.diferentes.length > 8 ? '<br>e mais ' + (a.diferentes.length - 8) : '') + '</small>');
       else if(a.personalizadas && a.personalizadas.length) h += conLinha(true, 'Funções do banco: todas iguais às do modelo.');
+      if(a.temMais && a.temMais.length) h += '<div class="res"><small class="mudo">ℹ️ ' + a.temMais.length + ' função(ões) deste banco têm algo A MAIS que o modelo. O "Sincronizar" não mexe nelas (para não apagar nada): ' + listaCurta(a.temMais, 8) + '. O desenvolvedor leva esse trecho para o modelo.</small></div>';
       if(a.personalizadas && a.personalizadas.length) h += '<div class="res"><small class="mudo">ℹ️ ' + a.personalizadas.length + ' função(ões) são diferentes DE PROPÓSITO neste restaurante (login, endereço do banco) e nunca são trocadas: ' + listaCurta(a.personalizadas, 6) + '.</small></div>';
       if(a.diferentes && a.diferentes.length) precisaSync = true;
       if(a.edgeFaltam && a.edgeFaltam.length){ precisaFuncoes = true; h += conLinha(false, 'Funções do servidor não publicadas: ' + listaCurta(a.edgeFaltam)); }
@@ -1400,7 +1401,7 @@ window.rvImplantarTudo = async () => {
 };
 window.rvConSincronizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  const nome = prompt('Vai copiar para o banco de "' + r.nome + '" as funções do modelo (Restaurante Teste) que estão diferentes. A versão antiga de cada uma fica guardada na tabela _funcoes_backup, e se der erro nada é mudado.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  const nome = prompt('Vai copiar para o banco de "' + r.nome + '" só as funções do modelo (Restaurante Teste) que estão ATRASADAS (as que têm algo a mais aqui e as personalizadas não são tocadas). A versão antiga de cada uma fica guardada na tabela _funcoes_backup, e se der erro nada é mudado.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
   conMsg(id, '<small class="mudo">⏳ Comparando e copiando as funções…</small>');
   try{ const a = await chamarConector({ acao:'sb_sincronizar', restaurante_id:id, confirmar:nome }); if(!a.ok) throw new Error(a.erro || 'Não foi possível.');
