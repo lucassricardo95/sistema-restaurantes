@@ -1349,7 +1349,7 @@ window.rvConConferir = async id => {
       if(faltam.length){ precisaSite = true; (window._confSite = window._confSite || {})[id] = faltam; }
       if(!g.motor) { h += conLinha(false, 'Não achei o endereço do motor em config-restaurante.js (arquivo lido: ' + (g.cfgTam >= 0 ? g.cfgTam + ' letras' : 'não lido') + (g.amostra ? ' · trecho: ' + esc(g.amostra) : '') + ').'); precisaSite = true; }
       else if(!g.motorOk){ h += conLinha(false, 'O motor (' + esc(g.motor) + ') não respondeu: confira o endereço.'); precisaSite = true; }
-      else h += conLinha(!g.ultima || g.versao === g.ultima, 'Motor em uso: ' + esc(g.versao) + (g.ultima && g.versao !== g.ultima ? ' (a última é ' + esc(g.ultima) + ')' : ' (a última)'));
+      else h += conLinha(!g.ultima || g.versao === g.ultima, 'Motor em uso: ' + esc(g.versao) + (!g.ultima ? '' : g.versao !== g.ultima ? ' (a última é ' + esc(g.ultima) + ')' : ' (a última)'));
     }
   }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
   (window._confEst = window._confEst || {})[id] = { banco:precisaBanco && temSb(r), funcoes:precisaFuncoes && temSb(r), site:precisaSite && temGh(r) && !!((window._confSite || {})[id] || []).length };

@@ -370,7 +370,7 @@ window.CODIGOS = {
    "quando": "Depois de TODAS as partes de estrutura.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Pode demorar alguns segundos. Se o editor reclamar de tamanho, cole em duas vezes (corte numa linha em branco entre duas funções).",
-   "kb": 100
+   "kb": 103
   },
   {
    "etapa": "banco",
@@ -405,7 +405,7 @@ window.CODIGOS = {
    "quando": "Depois do cofre de chaves.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "As tarefas agendadas só funcionam com o cofre preenchido.",
-   "kb": 10
+   "kb": 9
   },
   {
    "etapa": "banco",
