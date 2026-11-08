@@ -19,7 +19,7 @@ const SIT = { implantacao:'Em implantação', teste:'Em teste', ativo:'Ativo', s
 const CAT_DESP = ['Supabase / servidores','Domínio e site','Ferramentas e IA','Marketing','Impostos','Transporte','Equipamentos','Outros'];
 const ST_PROP = { novo:'Novo contato', conversando:'Conversando', proposta:'Proposta enviada', fechado:'Fechou ✅', perdido:'Perdido' };
 const FORMAS = ['Pix','Dinheiro','Transferência','Cartão','Boleto','Outro'];
-const SAUDE_COR = { ok:'#3ccf7a', atencao:'#f0b429', problema:'#ff5c5c', sem:'#7d7480' }, SAUDE_ROT = { ok:'Tudo certo', atencao:'Atenção', problema:'Com problema', sem:'Sem sinal' };
+const SAUDE_COR = { ok:'#3ccf7a', atencao:'#f0b429', problema:'#ff5c5c', sem:'#7d7480', impl:'#6ea8fe' }, SAUDE_ROT = { ok:'Tudo certo', atencao:'Atenção', problema:'Com problema', sem:'Sem sinal', impl:'Em montagem' };
 let S = novoEstado();
 function novoEstado(){ return { sess:null, dono:null, view:'inicio', lista:[], cob:[], desp:[], prop:[], aj:{}, termos:null, prom:[], erros:[], saude:{}, rest:null, aba:'passo', cobR:[], hist:[], aceite:null, res:{}, parte:{}, cdIdx:{}, filtro:'todos', busca:'', mes:hoje().slice(0, 7), filtroProp:'abertas', tudoAberto:{} }; }
 let timerAviso = null, timerAuto = null;
@@ -87,7 +87,9 @@ const nEtapas = r => ETAPAS.filter(e => etapaFeita(r, e.id)).length;
 const proxEtapa = r => ETAPAS.find(e => !etapaFeita(r, e.id));
 const refDe = r => (r.supabase_url || '').replace(/^https?:\/\//, '').split('.')[0] || '';
 const nomeRest = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
-function saudeDe(slug){ const h = S.saude && S.saude[slug]; if(!h) return { geral:'sem', min:null, h:null }; const min = Math.round((Date.now() - new Date(h.atualizado_em).getTime()) / 60000); return { geral: min > 45 ? 'sem' : (h.geral || 'ok'), min, h }; }
+/* restaurante em implantação: o site ainda não está pronto, então falhas e erros não são "problema" (não alertam, não contam no sino) */
+const emImpl = slug => (S.lista.find(r => r.slug === slug) || {}).situacao === 'implantacao';
+function saudeDe(slug){ const h = S.saude && S.saude[slug], im = emImpl(slug); if(!h) return { geral: im ? 'impl' : 'sem', min:null, h:null }; const min = Math.round((Date.now() - new Date(h.atualizado_em).getTime()) / 60000), g = min > 45 ? 'sem' : (h.geral || 'ok'); return { geral: im && g !== 'ok' ? 'impl' : g, min, h }; }
 const haTempo = m => m == null ? 'nunca' : m < 1 ? 'agora' : m < 60 ? 'há ' + m + ' min' : m < 1440 ? 'há ' + Math.round(m / 60) + ' h' : 'há ' + Math.round(m / 1440) + ' d';
 function usoDe(h){ return ((h && h.itens) || []).filter(i => /^Plano grátis:/i.test(i.titulo || '')).map(i => {
   const m = String(i.texto || '').match(/^(?:Cerca de\s+)?([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s+por mês)?,?\s+de\s+([\d.,]+(?:\s*[A-Za-z]+)?)(?:\s*\(([\d.,]+)%\))?/i); if(!m) return null;
@@ -98,6 +100,7 @@ const corPct = p => p >= 90 ? SAUDE_COR.problema : p >= 70 ? SAUDE_COR.atencao :
 function barraUso(u){ return '<div class="uso"><div class="linha"><b>' + esc(u.tit) + '</b><small>' + esc(u.uso) + ' de ' + esc(u.lim) + ' · <b style="color:' + corPct(u.pct) + '">' + String(u.pct).replace('.', ',') + '%</b></small></div><div class="barra"><i style="width:' + Math.min(100, u.pct) + '%;background:' + corPct(u.pct) + '"></i></div></div>'; }
 const ponto = c => '<span class="ponto" style="background:' + c + '"></span>';
 const errosDe = slug => S.erros.filter(e => e.slug === slug);
+const errosAlerta = () => S.erros.filter(e => !emImpl(e.slug));   // os que contam como alerta (fora dos restaurantes em implantação)
 const pagoValor = c => Number(c.valor_pago != null ? c.valor_pago : c.valor) || 0;
 const atrasadas = id => S.cob.filter(c => (!id || c.restaurante_id === id) && !c.pago_em && c.vencimento && c.vencimento < hoje());
 const mrr = () => S.lista.filter(r => r.situacao === 'ativo').reduce((s, r) => s + (Number(r.valor_mensal) || 0), 0);
@@ -151,7 +154,7 @@ const NAV = [['inicio','🏠','Início'],['restaurantes','🍽️','Restaurantes
 const NAV_PC = [['vendas','🤝','Vendas e propostas'],['conectores','🔌','Conectores'],['assistente','✨','Assistente (IA)'],['guia','📘','Como criar'],['ajustes','⚙️','Meus dados e Pix']];
 function desenhar(){
   clearInterval(timerAuto);
-  const v = S.view, alertaSaude = S.erros.length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
+  const v = S.view, alertaSaude = errosAlerta().length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
   const corpo = { inicio:vInicio, restaurantes:vRestaurantes, rest:vRest, novo:vNovo, saude:vSaude, dinheiro:vDinheiro, mais:vMais, vendas:vVendas, ajustes:vAjustes, guia:vGuia, assistente:vAssistente, conectores:vConectores }[v] || vInicio;
   const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais', conectores:'mais' }[v] || v;
   $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a">' + (v === 'rest' || v === 'novo' ? '<button class="mini" onclick="rvChat()" title="Assistente">✨</button> ' : '') + '<button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
@@ -170,7 +173,7 @@ const T = h => { $('tela').innerHTML = h; };
 function alertas(){
   const L = [], h = hoje(), em3 = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
   S.lista.filter(r => r.situacao !== 'encerrado').forEach(r => {
-    const sd = saudeDe(r.slug), er = errosDe(r.slug).length;
+    const sd = saudeDe(r.slug), er = r.situacao === 'implantacao' ? 0 : errosDe(r.slug).length;
     if(er) L.push([3, '🐞', r.nome + ': ' + er + (er === 1 ? ' erro aberto' : ' erros abertos'), 'Erros que apareceram na tela do restaurante.', "rvIr('saude')"]);
     if(sd.geral === 'problema') L.push([3, '🔴', r.nome + ': sistema com problema', 'Veja o que está errado na Saúde.', "rvIr('saude')"]);
     else if(sd.geral === 'sem' && nEtapas(r) >= 8) L.push([2, '📡', r.nome + ': sem sinal ' + (sd.h ? haTempo(sd.min) : 'ainda'), 'O banco dele pode estar pausado ou o site fora do ar.', "rvIr('saude')"]);
@@ -198,7 +201,7 @@ function vInicio(){
    + '</div><div class="ini-b">'
    + '<div class="kpis">' + kpi('Recebido em ' + MESES[Number(m.slice(5)) - 1], BRL(f.recebido), 'ok') + kpi('Falta receber', BRL(f.aReceber), f.aReceber ? 'aviso' : '') + kpi('Lucro do mês', BRL(f.lucro), f.lucro < 0 ? 'erro' : 'ok') + kpi('Receita mensal fixa', BRL(mrr()), '') + '</div>'
    + (meta ? '<div class="card"><div class="linha"><b>🎯 Meta do mês</b><small>' + BRL(f.recebido) + ' de ' + BRL(meta) + '</small></div><div class="barra grossa"><i style="width:' + Math.min(100, f.recebido / meta * 100) + '%;background:var(--ok)"></i></div></div>' : '')
-   + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', S.erros.length, S.erros.length ? 'erro' : '') + '</div>'
+   + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', errosAlerta().length, errosAlerta().length ? 'erro' : '') + '</div>'
    + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>'
    + '</div></div>');
 }
@@ -227,7 +230,7 @@ function vRestaurantes(){
   const q = (S.busca || '').toLowerCase(), passa = r => {
     if(q && !(r.nome + ' ' + r.slug + ' ' + (r.contato_nome || '') + ' ' + (r.cidade || '')).toLowerCase().includes(q)) return false;
     if(S.filtro === 'ativo') return r.situacao === 'ativo'; if(S.filtro === 'implantacao') return ['implantacao','teste'].includes(r.situacao);
-    if(S.filtro === 'atencao') return saudeDe(r.slug).geral !== 'ok' || errosDe(r.slug).length; if(S.filtro === 'atraso') return atrasadas(r.id).length > 0; return true; };
+    if(S.filtro === 'atencao') return r.situacao !== 'implantacao' && (saudeDe(r.slug).geral !== 'ok' || errosDe(r.slug).length); if(S.filtro === 'atraso') return atrasadas(r.id).length > 0; return true; };
   const L = S.lista.filter(passa);
   T('<div class="topo"><h1>Restaurantes</h1><button class="principal" onclick="rvNovo()">＋ Novo</button></div>'
    + dica('Toque num restaurante para ver o passo a passo, a saúde, o cadastro, a marca e as cobranças dele.') + '<input type="search" placeholder="🔎 Buscar por nome, dono ou cidade" value="' + esc(S.busca) + '" oninput="rvBusca(this.value)">'
@@ -240,7 +243,7 @@ function cartaoRest(r){
   const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), sd = saudeDe(r.slug), er = errosDe(r.slug).length, at = atrasadas(r.id), px = proxEtapa(r);
   return '<div class="card cr' + (r.bloqueado ? ' bloq' : '') + '" onclick="rvAbrir(\'' + r.id + '\')"><div class="linha"><b class="cr-n">' + esc(r.nome) + '</b><span class="selo ' + esc(r.situacao) + '">' + (r.bloqueado ? '⛔ Bloqueado' : esc(SIT[r.situacao] || r.situacao)) + '</span></div>'
    + '<small class="mudo">' + esc([r.contato_nome, r.cidade].filter(Boolean).join(' · ') || r.slug) + '</small>'
-   + '<div class="cr-s">' + ponto(SAUDE_COR[sd.geral]) + '<b>' + SAUDE_ROT[sd.geral] + '</b><small class="mudo"> · ' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small>' + (er ? ' <span class="selo erro">🐞 ' + er + '</span>' : '') + '</div>'
+   + '<div class="cr-s">' + ponto(SAUDE_COR[sd.geral]) + '<b>' + SAUDE_ROT[sd.geral] + '</b><small class="mudo"> · ' + (sd.h ? haTempo(sd.min) : 'sem sinal ainda') + '</small>' + (er ? ' <span class="selo' + (r.situacao === 'implantacao' ? '' : ' erro') + '">🐞 ' + er + '</span>' : '') + '</div>'
    + (n < ETAPAS.length ? '<div class="barra"><i style="width:' + p + '%"></i></div><small>Implantação ' + p + '% · próximo: <b>' + esc(px.titulo) + '</b></small>' : '')
    + '<div class="linha cr-d"><small>' + (r.valor_mensal ? BRL(r.valor_mensal) + '/mês' : 'Sem mensalidade') + '</small>' + (at.length ? '<small class="txt-erro">💸 ' + at.length + ' em atraso</small>' : '') + '</div></div>';
 }
@@ -656,18 +659,19 @@ function abaMarcaTudo(){ C('<div class="card"><h2>🎨 Cores e textos</h2><p cla
 function saudeHtml(r, aninhado){
   const sd = saudeDe(r.slug), h = sd.h, sec = x => aninhado ? '<div class="sub-sec">' + x + '</div>' : '<div class="card">' + x + '</div>';
   if(!h) return sec('<b>' + ponto(SAUDE_COR.sem) + 'Sem sinal ainda</b><p class="mudo pequeno">Este restaurante ainda não enviou o resumo de saúde (ele envia sozinho a cada 15 minutos, depois que o banco e o site estão prontos).</p>');
-  const itens = h.itens || [], ruins = itens.filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')), uso = usoDe(h), srv = h.servidores || {};
+  const itens = h.itens || [], ruins = itens.filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')), uso = usoDe(h), srv = h.servidores || {}, im = sd.geral === 'impl';
   const outros = itens.filter(i => !/^Plano grátis:/i.test(i.titulo || '') || !uso.some(u => u.id === i.id));
-  return sec('<div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>' + (sd.geral === 'sem' ? '<p class="mudo pequeno">Parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado por falta de uso).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>'))
+  return sec('<div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + '</b><small class="mudo">' + haTempo(sd.min) + '</small></div>' + (im ? '<p class="mudo pequeno">Ainda em implantação: o que falta aparece abaixo só como lista do que ligar, sem alarme.</p>' : sd.geral === 'sem' ? '<p class="mudo pequeno">Parou de enviar sinal. Confira se o Supabase dele está ativo (pode ter sido pausado por falta de uso).</p>' : '<small class="mudo">' + itens.length + ' verificações</small>'))
     + sec('<b>Servidores</b>' + linhaSrv_('Supabase', 'principal', srv.supabase) + linhaSrv_('Planilha principal', 'reserva', srv.planilha) + '<div id="srvCont_' + r.id + '">' + linhaSrv_('Planilha de contingência', 'último recurso', r.contingencia_url ? { estado:'sem_resposta' } : { estado:'nao_usa' }) + '</div>')
-    + (srv.drive && (srv.drive.principal || srv.drive.contingencia) ? sec('<b>☁️ Google Drive</b>' + driveBarra_('Drive principal', srv.drive.principal) + driveBarra_('Drive da contingência', srv.drive.contingencia)) : '')
-    + (ruins.length ? sec('<b>Pede atenção</b>' + ruins.map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('')) : '')
+    + (srv.drive && (srv.drive.principal || srv.drive.contingencia) ? sec('<b>☁️ Google Drive</b>' + driveBarra_('Drive principal', srv.drive.principal, im) + driveBarra_('Drive da contingência', srv.drive.contingencia, im)) : '')
+    + (ruins.length ? sec('<b>' + (im ? 'Falta ligar' : 'Pede atenção') + '</b>' + ruins.map(i => '<div class="item-ruim" style="border-color:' + (im ? SAUDE_COR.impl : SAUDE_COR[i.nivel]) + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('')) : '')
     + (uso.length ? sec('<b>📊 Plano grátis do Supabase</b>' + uso.map(barraUso).join('') + '<small class="mudo">Estimativa. O número oficial está no Supabase (Settings → Usage).</small>') : '')
     + sec('<details><summary><b>Todas as verificações (' + outros.length + ')</b></summary>' + outros.map(i => '<div style="padding:6px 0">' + ponto(SAUDE_COR[i.nivel] || SAUDE_COR.sem) + '<b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') + '</details>');
 }
 const fmtBytes_ = b => { b = Number(b) || 0; if(b <= 0) return '0 B'; const u = ['B','KB','MB','GB','TB']; let i = 0; while(b >= 1024 && i < u.length - 1){ b /= 1024; i++; } return b.toFixed(i ? 1 : 0).replace('.', ',') + ' ' + u[i]; };
-function driveBarra_(titulo, d){
+function driveBarra_(titulo, d, im){
   if(!d || d.estado === 'sem_resposta') return '<div class="uso"><b>' + titulo + '</b><br><small class="mudo">Aguardando a primeira medição…</small></div>';
+  if(d.estado !== 'ok' && (im || /invalid url|não configurad|nao configurad/i.test(d.mensagem || ''))) return '<div class="uso"><b>' + titulo + '</b><br><small class="mudo">Ainda não ligado.</small></div>';
   if(d.estado !== 'ok') return '<div class="uso"><b>' + titulo + '</b><div class="res erro">⚠️ Não foi possível medir: ' + esc(d.mensagem || 'sem resposta') + '</div></div>';
   const total = (Number(d.usado) || 0) + (Number(d.livre) || 0), pct = d.percentual == null ? 0 : Number(d.percentual);
   return barraUso({ tit:titulo, uso:fmtBytes_(d.usado), lim:d.livre == null ? '—' : fmtBytes_(total), pct }) + (d.nivel === 'Crítico' ? '<small class="txt-erro">⚠️ Quase cheio: novos backups e fotos podem falhar.</small>' : '');
@@ -690,13 +694,13 @@ function errosHtml(lista, comNome){
 const nomeSlug = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
 function abaSaude(){ const r = S.rest, er = errosDe(r.slug); C(saudeHtml(r, false) + '<div class="card"><div class="linha"><h2>🐞 Erros abertos</h2>' + (er.length ? '<button class="mini" onclick="rvErrosOk(\'' + esc(r.slug) + '\')">Marcar todos resolvidos</button>' : '') + '</div>' + (er.length ? errosHtml(er, false) : '<p class="mudo">Nenhum erro aberto. 👍</p>') + '</div>'); medirContingencia_([r]); }
 function vSaude(){
-  const L = S.lista.filter(r => r.situacao !== 'encerrado'), cont = { ok:0, atencao:0, problema:0, sem:0 }; L.forEach(r => cont[saudeDe(r.slug).geral]++);
-  const ordem = { problema:0, atencao:1, sem:2, ok:3 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
+  const L = S.lista.filter(r => r.situacao !== 'encerrado'), cont = { ok:0, atencao:0, problema:0, sem:0, impl:0 }; L.forEach(r => cont[saudeDe(r.slug).geral]++);
+  const ordem = { problema:0, atencao:1, sem:2, ok:3, impl:4 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
   T('<div class="topo"><h1>Saúde</h1><small class="mudo">atualiza sozinho · ' + haTempo(Math.round((Date.now() - (S.saudeEm || Date.now())) / 60000)) + '</small></div>'
    + dica('Cada restaurante manda um resumo a cada 15 minutos. Erros que aparecem nas telas deles chegam aqui; toque em "Copiar para o Claude" para pedir a correção.') + '<div class="kpis quatro">' + kpi('🟢 Tudo certo', cont.ok, 'ok') + kpi('🟡 Atenção', cont.atencao, cont.atencao ? 'aviso' : '') + kpi('🔴 Problema', cont.problema, cont.problema ? 'erro' : '') + kpi('⚪ Sem sinal', cont.sem, '') + '</div>'
-   + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
+   + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h && sd.geral !== 'impl' ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
       return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
-       + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo erro">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
+       + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo' + (sd.geral === 'impl' ? '' : ' erro') + '">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
        + (ruins.length ? ruins.slice(0, 3).map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') : '')
        + (pior ? barraUso(pior) : '') + (er.length ? '<details><summary class="pequeno"><b>Ver os erros</b></summary>' + errosHtml(er, false) + '</details>' : '')
        + '<details><summary class="pequeno"><b>Ver tudo</b></summary>' + saudeHtml(r, true) + '</details><p style="margin:8px 0 0"><button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'saude\')">Abrir restaurante ›</button></p></div>'; }).join('')
