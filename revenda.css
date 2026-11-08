@@ -235,3 +235,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
 .pronto summary{ cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .pronto-i{ display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--linha); font-size:.92rem; }
 .pronto-i:last-of-type{ border-bottom:0; }
+/* Ao vivo (conector do Supabase) */
+.av-topo{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 8px;}
+.av-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.av-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border:1px solid var(--linha);border-radius:999px;font-size:.85rem;}
+.av-sec{border-top:1px solid var(--linha);padding:10px 0 4px;}
+.av-sec summary{cursor:pointer;}
+.av-i{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:.92rem;}
+.av-i .ponto{margin-top:6px;flex:none;}
+.av-l{padding:4px 0;font-size:.9rem;}
+.av-mini{margin:6px 0 2px;}

@@ -195,6 +195,7 @@ function alertas(){
     if(sd.geral === 'problema') L.push([3, '🔴', r.nome + ': sistema com problema', 'Veja o que está errado na Saúde.', "rvIr('saude')"]);
     else if(sd.geral === 'sem' && nEtapas(r) >= 8) L.push([2, '📡', r.nome + ': sem sinal ' + (sd.h ? haTempo(sd.min) : 'ainda'), 'O banco dele pode estar pausado ou o site fora do ar.', "rvIr('saude')"]);
     usoDe(sd.h).filter(u => u.pct >= 70).forEach(u => L.push([u.pct >= 90 ? 3 : 2, '📊', r.nome + ': ' + u.tit + ' em ' + String(u.pct).replace('.', ',') + '%', 'Plano grátis do Supabase perto do limite.', "rvIr('saude')"]));
+    const av = (S.avCache || {})[r.id]; if(av && av.d.projeto && av.d.projeto.estado === 'INACTIVE' && r.situacao !== 'implantacao') L.push([3, '⏸️', r.nome + ': banco PAUSADO pelo Supabase', 'O site dele não funciona. Toque para reativar.', "rvAbrir('" + r.id + "','saude')"]);
     if(r.bloqueado) L.push([1, '⛔', r.nome + ': acesso bloqueado', 'Libere quando ele pagar.', "rvAbrir('" + r.id + "','dinheiro')"]);
     const px = proxEtapa(r); if(px && ['implantacao','teste'].includes(r.situacao)) L.push([1, '🛠️', r.nome + ': próximo passo', px.titulo, "rvAbrir('" + r.id + "','passo')"]);
   });
@@ -221,6 +222,7 @@ function vInicio(){
    + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', errosAlerta().length, errosAlerta().length ? 'erro' : '') + '</div>'
    + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>'
    + '</div></div>');
+  S.lista.filter(r => r.situacao !== 'encerrado' && temSb(r) && !(S.avCache || {})[r.id]).forEach(aoVivoMini);   // pausado aparece em "Precisa de você"
 }
 window.rvBemvindoOk = async () => { if(await salvarAjustes({ bemvindo_ok:true }, 'Pronto! Você pode rever o guia em Mais → Guia.')) vInicio(); };
 function boasPainel(){
@@ -457,6 +459,7 @@ function desenharExtra(et, tipo, box){
     codigos: () => codigosHtml(et.id),
     conectar: () => conectarEtapaHtml(),
     bancoauto: () => bancoAutoHtml(),
+    loginurls: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> o painel grava os dois endereços no Supabase sozinho.<br><button class="principal" style="margin-top:8px" onclick="rvLoginUrls()">⚡ Configurar os endereços agora</button><div id="con_lu_' + r.id + '"></div></div>' : '',
     publicarauto: () => publicarAutoHtml(),
     push: () => pushHtml(),
     marca: () => marcaHtml(),
@@ -735,7 +738,70 @@ function errosHtml(lista, comNome){
     + '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvErroOk(' + e.id + ')">✓ Resolvido</button><button class="mini" onclick="rvErroClaude(' + e.id + ')">🤖 Copiar para o Claude</button></div></div>').join('');
 }
 const nomeSlug = s => (S.lista.find(r => r.slug === s) || {}).nome || s;
-function abaSaude(){ const r = S.rest, er = errosDe(r.slug); C(saudeHtml(r, false) + '<div class="card"><div class="linha"><h2>🐞 Erros abertos</h2>' + (er.length ? '<button class="mini" onclick="rvErrosOk(\'' + esc(r.slug) + '\')">Marcar todos resolvidos</button>' : '') + '</div>' + (er.length ? errosHtml(er, false) : '<p class="mudo">Nenhum erro aberto. 👍</p>') + '</div>'); medirContingencia_([r]); }
+function abaSaude(){ const r = S.rest, er = errosDe(r.slug); C(aoVivoCaixa(r) + saudeHtml(r, false) + '<div class="card"><div class="linha"><h2>🐞 Erros abertos</h2>' + (er.length ? '<button class="mini" onclick="rvErrosOk(\'' + esc(r.slug) + '\')">Marcar todos resolvidos</button>' : '') + '</div>' + (er.length ? errosHtml(er, false) : '<p class="mudo">Nenhum erro aberto. 👍</p>') + '</div>'); medirContingencia_([r]); aoVivoCarregar(r); }
+/* ---------- AO VIVO pelo conector do Supabase: estado do projeto, serviços, plano grátis, tarefas, erros, login e segurança ---------- */
+const AV_LIM = { banco:500 * 1048576, storage:1073741824, logins:50000, funcoesMes:500000 };
+const avEstado = { ACTIVE_HEALTHY:['No ar','ok'], ACTIVE_UNHEALTHY:['No ar, com falha','problema'], INACTIVE:['PAUSADO','problema'], PAUSING:['Pausando…','atencao'], RESTORING:['Voltando…','atencao'], COMING_UP:['Ligando…','atencao'], GOING_DOWN:['Desligando…','atencao'], UPGRADING:['Atualizando…','atencao'] };
+function aoVivoCaixa(r){
+  if(!temSb(r)) return '<div class="card"><div class="linha"><b>📡 Ao vivo</b><button class="mini" onclick="rvAba(\'passo\')">Ligar o conector</button></div><small class="mudo">Com o conector do Supabase ligado, aqui aparecem na hora: se o banco está no ar ou pausado, o uso do plano grátis, tarefas que falharam, erros das últimas 24 h, o login e os alertas de segurança do Supabase.</small></div>';
+  return '<div class="card av"><div class="linha"><b>📡 Ao vivo (direto do Supabase)</b><button class="mini" onclick="aoVivoCarregar(S.rest, true)">↻ Medir agora</button></div><div id="av_' + r.id + '"><small class="mudo">Medindo…</small></div></div>';
+}
+async function aoVivoCarregar(r, forcar){
+  if(!r || !temSb(r)) return; const box = () => $('av_' + r.id);
+  const c = (S.avCache || {})[r.id]; if(c && !forcar && Date.now() - c.t < 60000){ if(box()) box().innerHTML = aoVivoHtml(r, c.d); return; }
+  if(box() && forcar) box().innerHTML = '<small class="mudo">Medindo…</small>';
+  let d; try{ d = await chamarConector({ acao:'sb_ao_vivo', restaurante_id:r.id }); }catch(e){ d = { ok:false, erro:e.message }; }
+  if(d.ok) (S.avCache = S.avCache || {})[r.id] = { t:Date.now(), d };
+  if(box()) box().innerHTML = d.ok ? aoVivoHtml(r, d) : conLinha(false, esc(d.erro || 'Não consegui medir.'));
+  clearTimeout(S.avTimer); S.avTimer = setTimeout(() => { if(S.view === 'rest' && S.aba === 'saude' && S.rest && S.rest.id === r.id && !document.hidden) aoVivoCarregar(r, true); }, 180000);
+}
+window.aoVivoCarregar = aoVivoCarregar;
+/* linha curta do "ao vivo" na tela Saúde (todos os restaurantes) */
+async function aoVivoMini(r){
+  const c = (S.avCache || {})[r.id]; let d = c && Date.now() - c.t < 60000 ? c.d : null;
+  if(!d){ try{ d = await chamarConector({ acao:'sb_ao_vivo', restaurante_id:r.id }); }catch(e){ d = { ok:false, erro:e.message }; } if(d.ok) (S.avCache = S.avCache || {})[r.id] = { t:Date.now(), d }; }
+  const box = $('avr_' + r.id); if(!box) return; if(!d.ok){ box.innerHTML = '<small class="txt-erro">📡 ' + esc(d.erro || 'sem resposta') + '</small>'; return; }
+  const p = d.projeto || {}, b = d.banco || {}, f = d.funcoes24h || {}, est = avEstado[p.estado] || [p.estado || '—', 'sem'];
+  box.innerHTML = '<small>📡 <b style="color:' + SAUDE_COR[r.situacao === 'implantacao' && est[1] !== 'ok' ? 'impl' : est[1]] + '">' + esc(est[0]) + '</b>'
+    + (b.banco != null ? ' · banco ' + fmtBytes_(b.banco) + ' de 500 MB' : '') + (b.tarefas_falhas ? ' · <b class="txt-erro">' + b.tarefas_falhas + ' tarefa(s) falharam</b>' : '') + (f.erros ? ' · <b class="txt-erro">' + f.erros + ' erro(s) nas funções</b>' : '')
+    + (d.seguranca && d.seguranca.erro ? ' · <b class="txt-erro">' + d.seguranca.erro + ' alerta(s) de segurança</b>' : '') + '</small>';
+  if(p.estado === 'INACTIVE' && S.view === 'inicio') desenhar();
+}
+function aoVivoHtml(r, d){
+  const im = r.situacao === 'implantacao', p = d.projeto || {}, est = avEstado[p.estado] || [p.estado || (p.erro ? 'Sem resposta' : '—'), p.erro ? 'problema' : 'sem'];
+  const cor = k => SAUDE_COR[im && k !== 'ok' ? 'impl' : k] || SAUDE_COR.sem, n = v => Number(v || 0).toLocaleString('pt-BR'), b = d.banco || {}, f = d.funcoes24h, a = d.api24h, lg = d.login;
+  const pct = (x, y) => Math.round(Math.min(100, (Number(x) || 0) / y * 100) * 10) / 10, it = (ok, t, sub) => '<div class="av-i">' + ponto(cor(ok === null ? 'sem' : ok ? 'ok' : 'atencao')) + '<span><b>' + t + '</b>' + (sub ? '<br><small class="mudo">' + sub + '</small>' : '') + '</span></div>';
+  let h = '<div class="av-topo">' + ponto(cor(est[1])) + '<b>' + esc(est[0]) + '</b><small class="mudo"> · ' + esc(p.regiao || '') + (b.postgres ? ' · Postgres ' + esc(b.postgres) : '') + ' · medido ' + new Date(d.em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '</small></div>';
+  if(p.estado === 'INACTIVE') h += '<div class="res erro">O Supabase pausou este banco (plano grátis sem uso). O site do restaurante não funciona até reativar.<br><button class="principal" style="margin-top:8px" onclick="rvReativar()">▶️ Reativar o banco agora</button></div>';
+  if(d.servicos) h += '<div class="av-chips">' + d.servicos.map(s => '<span class="av-chip">' + ponto(cor(s.ok ? 'ok' : 'problema')) + esc({ db:'Banco', rest:'API', auth:'Login', storage:'Arquivos', realtime:'Tempo real' }[s.nome] || s.nome) + '</span>').join('') + '</div>';
+  h += '<div class="av-sec"><b>📊 Plano grátis (agora)</b>';
+  if(b.banco != null) h += barraUso({ tit:'Tamanho do banco', uso:fmtBytes_(b.banco), lim:'500 MB', pct:pct(b.banco, AV_LIM.banco) });
+  if(b.storage != null) h += barraUso({ tit:'Arquivos (Storage)', uso:fmtBytes_(b.storage) + ' · ' + n(b.storage_arquivos) + ' arq.', lim:'1 GB', pct:pct(b.storage, AV_LIM.storage) });
+  if(f) h += barraUso({ tit:'Funções do servidor (24 h × 30)', uso:n(f.total * 30) + '/mês', lim:'500 mil', pct:pct(f.total * 30, AV_LIM.funcoesMes) });
+  if(b.logins != null) h += barraUso({ tit:'Logins cadastrados', uso:n(b.logins), lim:'50 mil', pct:pct(b.logins, AV_LIM.logins) });
+  h += '<small class="mudo">Medido agora no Supabase. Funções: estimativa do mês pelo uso das últimas 24 h.</small></div>';
+  h += '<div class="av-sec"><b>🩺 Últimas 24 horas</b>'
+    + (b.tarefas != null ? it(!b.tarefas_falhas, n(b.tarefas) + ' tarefas agendadas · ' + n(b.tarefas_rodadas) + ' execuções', b.tarefas_falhas ? n(b.tarefas_falhas) + ' falharam: ' + (b.falhas_lista || []).map(x => esc(x.tarefa) + ' (' + esc(x.msg || '') + ')').join('; ') : 'nenhuma falhou') : '')
+    + (f ? it(!f.erros, n(f.total) + ' chamadas às funções do servidor', f.erros ? n(f.erros) + ' com erro (500)' : 'nenhuma com erro') : '')
+    + (d.erros_banco24h != null ? it(!d.erros_banco24h, n(d.erros_banco24h) + ' erros no banco', d.erros_banco24h ? 'veja em Supabase → Logs → Postgres' : '') : '')
+    + (b.chamadas_saida != null ? it(!b.chamadas_saida_erro, n(b.chamadas_saida) + ' chamadas do banco para fora', b.chamadas_saida_erro ? n(b.chamadas_saida_erro) + ' falharam (planilha, avisos, IA…)' : 'nenhuma falhou') : '')
+    + (a ? it(null, n(a.rest + a.auth + a.storage + a.realtime) + ' pedidos à API', 'dados ' + n(a.rest) + ' · login ' + n(a.auth) + ' · arquivos ' + n(a.storage) + ' · tempo real ' + n(a.realtime)) : '')
+    + (b.fila_planilha != null ? it(!b.fila_planilha, n(b.fila_planilha) + ' itens esperando para a planilha', '') : '')
+    + (b.pedidos_hoje != null ? it(null, n(b.pedidos_hoje) + ' pedidos hoje', n(b.conexoes) + ' conexões abertas no banco') : '') + '</div>';
+  if(f && f.top && f.top.length) h += '<details class="av-sec"><summary><b>⚙️ Funções mais chamadas (24 h)</b></summary>' + f.top.map(x => '<div class="linha av-l"><span>' + esc(x.nome) + '</span><small>' + n(x.n) + '</small></div>').join('') + '</details>';
+  if(b.tabelas && b.tabelas.length) h += '<details class="av-sec"><summary><b>🗄️ Maiores tabelas</b></summary>' + b.tabelas.map(x => '<div class="linha av-l"><span>' + esc(x.nome) + ' <small class="mudo">' + n(x.linhas) + ' linhas</small></span><small>' + fmtBytes_(x.bytes) + '</small></div>').join('') + '</details>';
+  if(lg){ const site = (r.site_url || '').replace(/\/?$/, '/'), siteOk = !!r.site_url && lg.site === site, redOk = !!r.site_url && lg.redirecionos.some(u => u.indexOf(site) === 0);
+    h += '<div class="av-sec"><b>🔑 Login</b>' + it(siteOk && redOk, 'Endereços do login', siteOk && redOk ? esc(lg.site) : 'Site URL: ' + esc(lg.site || '(vazio)') + (r.site_url ? ' · esperado ' + esc(site) : ''))
+      + it(lg.google, 'Entrar com o Google', lg.google ? 'ligado' : 'desligado (etapa Entrar com o Google)')
+      + (!(siteOk && redOk) && r.site_url ? '<button class="mini" onclick="rvLoginUrls(true)">⚡ Arrumar os endereços do login</button><div id="con_lu_' + r.id + '"></div>' : '') + '</div>'; }
+  const adv = (x, t) => x ? '<div class="av-sec"><div class="linha"><b>' + t + '</b><small>' + (x.erro ? '<span class="selo erro">' + x.erro + ' grave(s)</span> ' : '') + (x.aviso ? '<span class="selo aviso">' + x.aviso + ' aviso(s)</span>' : '') + (!x.erro && !x.aviso ? '<span class="selo ativo">✓ ok</span>' : '') + '</small></div>'
+    + (x.itens.length ? '<details><summary class="pequeno">Ver</summary>' + x.itens.map(i => '<div class="item-ruim" style="border-color:' + (i.nivel === 'ERROR' ? SAUDE_COR.problema : SAUDE_COR.atencao) + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.detalhe) + '</small></div>').join('') + '</details>' : '') + '</div>' : '';
+  h += adv(d.seguranca, '🛡️ Segurança (Supabase)') + adv(d.desempenho, '🚀 Desempenho (Supabase)');
+  h += '<div class="av-sec"><div class="linha"><b>🧩 Funções do servidor</b><small>' + (d.funcoes || []).length + ' publicadas</small></div>' + ((d.funcoes || []).length ? '<small class="mudo">Última atualização: ' + esc(new Date(Math.max(...d.funcoes.map(x => Number(x.em) || Date.parse(x.em) || 0))).toLocaleString('pt-BR')) + '</small>' : '') + '<p style="margin:6px 0 0"><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\',\'avf_' + r.id + '\')">⬆️ Publicar / atualizar as funções</button></p><div id="con_avf_' + r.id + '"></div></div>';
+  return h;
+}
+window.rvReativar = async () => { const r = S.rest; const nome = prompt('Reativar o banco de "' + r.nome + '"? Leva uns minutos.\n\nPara confirmar, digite o nome do restaurante:'); if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere.');
+  try{ const a = await chamarConector({ acao:'sb_reativar', restaurante_id:r.id, confirmar:r.nome }); if(!a.ok) return erro(a.erro || 'Não consegui reativar.'); hist(r.id, 'Banco reativado pelo painel', ''); aviso('Pedido enviado. Em alguns minutos o banco volta; toque em Medir agora.', 'ok'); }catch(e){ erro(e.message); } };
 function vSaude(){
   const L = S.lista.filter(r => r.situacao !== 'encerrado'), cont = { ok:0, atencao:0, problema:0, sem:0, impl:0 }; L.forEach(r => cont[saudeDe(r.slug).geral]++);
   const ordem = { problema:0, atencao:1, sem:2, ok:3, impl:4 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
@@ -746,10 +812,11 @@ function vSaude(){
        + '<div class="linha" style="justify-content:flex-start;gap:6px">' + '<span class="selo">' + SAUDE_ROT[sd.geral] + '</span>' + (er.length ? '<span class="selo' + (sd.geral === 'impl' ? '' : ' erro') + '">🐞 ' + er.length + ' erro(s)</span>' : '') + (ruins.length ? '<span class="selo aviso">' + ruins.length + ' alerta(s)</span>' : '') + '</div>'
        + (ruins.length ? ruins.slice(0, 3).map(i => '<div class="item-ruim" style="border-color:' + SAUDE_COR[i.nivel] + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.texto) + '</small></div>').join('') : '')
        + (pior ? barraUso(pior) : '') + (er.length ? '<details><summary class="pequeno"><b>Ver os erros</b></summary>' + errosHtml(er, false) + '</details>' : '')
+       + (temSb(r) ? '<div class="av-mini" id="avr_' + r.id + '"><small class="mudo">📡 medindo ao vivo…</small></div>' : '')
        + '<details><summary class="pequeno"><b>Ver tudo</b></summary>' + saudeHtml(r, true) + '</details><p style="margin:8px 0 0"><button class="mini" onclick="rvAbrir(\'' + r.id + '\',\'saude\')">Abrir restaurante ›</button></p></div>'; }).join('')
    + (S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)).length ? '<div class="card"><h2>Erros de sites sem cadastro</h2>' + errosHtml(S.erros.filter(e => !S.lista.some(r => r.slug === e.slug)), true) + '</div>' : '')
    + (!L.length ? '<div class="card vazio">Nenhum restaurante ainda.</div>' : ''));
-  medirContingencia_(L);
+  medirContingencia_(L); L.filter(temSb).forEach(aoVivoMini);
 }
 window.rvErroOk = async id => { try{ await rest('erros_app?id=eq.' + id, 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.id !== id); aviso('Marcado como resolvido.', 'ok'); S.view === 'rest' ? abaSaude() : desenhar(); }catch(e){ erro('Não foi possível marcar: ' + e.message); } };
 window.rvErrosOk = async slug => { if(!confirm('Marcar todos os erros deste restaurante como resolvidos?')) return; try{ await rest('erros_app?slug=eq.' + encodeURIComponent(slug) + '&resolvido=eq.false', 'PATCH', { resolvido:true, resolvido_em:new Date().toISOString() }); S.erros = S.erros.filter(e => e.slug !== slug); aviso('Pronto.', 'ok'); abaSaude(); }catch(e){ erro(e.message); } };
@@ -1274,9 +1341,13 @@ function bancoAutoHtml(){
   const r = S.rest; if(!temSb(r)) return '<div class="res erro">Antes, ligue o Supabase na etapa "Ligar o GitHub e o Supabase". Sem isso, use o jeito manual abaixo.</div>';
   if(!/^[a-z0-9]{20}$/.test(refDe(r))) return '<div class="res erro">Preencha antes o endereço do banco (etapa "Criar o banco de dados").</div>';
   return '<p class="pequeno"><b>Fase 1</b>: o painel roda sozinho as ' + bancoAutoItens(1).length + ' partes da estrutura, em ordem.</p><button class="principal" onclick="rvBancoAuto(1)">⚡ Montar a estrutura sozinho</button><div id="con_banco1_' + r.id + '"></div>'
-   + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o código do "Cofre de chaves · parte 1" pede a chave secreta do Supabase, então faça-o à mão (jeito manual abaixo). Depois toque aqui para os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Rodar os dados iniciais</button><div id="con_banco2_' + r.id + '"></div>'
+   + '<p class="pequeno" style="margin-top:12px;"><b>Fase 2</b>: o painel guarda as chaves no cofre do banco sozinho (a chave secreta é lida direto no Supabase e não passa por aqui) e depois roda os dados iniciais.</p><button class="principal" onclick="rvBancoAuto(2)">⚡ Cofre de chaves e dados iniciais</button><div id="con_banco2_' + r.id + '"></div>'
    + '<p class="pequeno" style="margin-top:12px;"><b>Opcional</b>: um cardápio de exemplo (3 categorias, 9 produtos com preço, marcados "exemplo") para o dono ver como fica e testar um pedido. Só entra com o cardápio vazio.</p><button class="mini" onclick="rvBancoExemplo()">🍔 Pôr o cardápio de exemplo</button><div id="con_banco3_' + r.id + '"></div>';
 }
+window.rvLoginUrls = async () => {
+  const r = S.rest; if(!r.site_url) return erro('Preencha antes o endereço do site.'); const box = 'lu_' + r.id; conMsg(box, '<small class="mudo">Gravando…</small>');
+  try{ const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); conMsg(box, conLinha(a.ok, a.ok ? 'Site URL e Redirect URL gravados: ' + esc(a.site) : esc(a.erro))); if(a.ok) hist(r.id, 'Endereços do login configurados pelo conector', a.site); }catch(e){ conMsg(box, conLinha(false, esc(e.message))); }
+};
 window.rvBancoExemplo = async () => {
   const r = S.rest; if(!confirm('Pôr o cardápio de exemplo em "' + r.nome + '"? Só entra se o cardápio estiver vazio.')) return;
   ctxCod(r, []); const ok = await conRodar(r, [['exemplo', 'Cardápio de exemplo']], 'banco3_' + r.id); if(ok){ hist(r.id, 'Cardápio de exemplo colocado', ''); aviso('Pronto. Abra o site para ver.', 'ok'); }
@@ -1284,6 +1355,10 @@ window.rvBancoExemplo = async () => {
 window.rvBancoAuto = async fase => {
   const r = S.rest; if(!confirm('O painel vai rodar no banco de "' + r.nome + '" (projeto ' + refDe(r) + '). Só use em banco NOVO e vazio. Continuar?')) return;
   const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  if(fase === 2){ conMsg('banco2_' + r.id, '<small class="mudo">⏳ Cofre de chaves (parte 1)…</small>');
+    let c; try{ c = await chamarConector({ acao:'sb_cofre1', restaurante_id:r.id, confirmar:r.nome }); }catch(e){ c = { ok:false, erro:e.message }; }
+    if(!c.ok){ conMsg('banco2_' + r.id, conLinha(false, 'Cofre de chaves: ' + esc(c.erro || 'erro') + '. Faça o cofre à mão (jeito manual abaixo) e toque de novo.')); return; }
+    if(c.chave_publica && !r.supabase_chave){ r.supabase_chave = c.chave_publica; await salvar('Chave pública preenchida.'); } }
   ctxCod(r, []); const lista = bancoAutoItens(fase);
   const ok = await conRodar(r, lista, 'banco' + fase + '_' + r.id); hist(r.id, 'Banco montado pelo conector (fase ' + fase + ')', ok ? 'completo (' + lista.length + ' partes)' : 'parou com erro');
   if(ok) aviso(fase === 1 ? 'Estrutura pronta ✓ Agora faça o código do cofre de chaves à mão.' : 'Dados iniciais prontos ✓ Toque em Testar.', 'ok');

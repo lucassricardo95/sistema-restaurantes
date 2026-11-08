@@ -170,7 +170,7 @@ window.ETAPAS = [
    porque:'Deixa o cliente entrar no cardápio com a conta Google (para cupons e carimbos) e prepara o backup no Drive.',
    precisa:['O e-mail Google do restaurante','O site já no ar (etapa anterior)'],
    partes:[
-    { t:'SUPABASE → Authentication → URL Configuration. Em "Site URL" cole o primeiro endereço abaixo. Em "Redirect URLs" toque em "Add URL", cole o segundo e salve.', link:SB + '/auth/url-configuration', copiar:'{site_url}\n{site_url}**' },
+    { t:'SUPABASE → Authentication → URL Configuration. Em "Site URL" cole o primeiro endereço abaixo. Em "Redirect URLs" toque em "Add URL", cole o segundo e salve. Com o conector do Supabase ligado, basta tocar no botão abaixo.', link:SB + '/auth/url-configuration', copiar:'{site_url}\n{site_url}**', extra:'loginurls' },
     { t:'GOOGLE CLOUD: entre com o e-mail do restaurante e crie um projeto: nome {slug} → Criar. Confira no alto da tela que ele ficou selecionado.', link:'https://console.cloud.google.com/projectcreate', copiar:'{slug}' },
     { t:'Abra "Google Auth Platform" → "Começar". Nome do app: {nome}. E-mail de suporte: o do restaurante. Público: "Externo". E-mail de contato: o mesmo. Aceite e toque em "Criar".', link:'https://console.cloud.google.com/auth/overview', copiar:'{nome}' },
     { t:'O Google exige uma página de privacidade. O painel gera para você: toque no botão abaixo, baixe o privacidade.html e suba no GitHub do restaurante NA RAIZ (mesmo lugar do index.html): "Add file" → "Upload files" → escolha o arquivo → "Commit changes".', extra:'privacidade', link:'{github_url}/upload/main' },
