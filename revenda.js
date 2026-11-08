@@ -1516,7 +1516,7 @@ window.rvImplantarTudo = async () => {
     const agora = new Date().toISOString(); ['conectar', 'banco', 'funcoes', 'admin', 'push'].forEach(id => { const e = S.rest.etapas[id]; if(!e || !e.feita) S.rest.etapas[id] = Object.assign(e || {}, { feita:true, pulada:false, em:agora }); });
     try{ await salvar('Etapas já feitas pelo painel foram marcadas.'); }catch(e){}
     setTimeout(() => { try{ rvConConferir(r.id); }catch(e){} }, 2500); }
-  conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> As chaves dos avisos também ficaram prontas e as etapas Conectar, Banco, Funções, Logins e Avisos já foram marcadas como feitas. Falta confirmar o site no ar. Falta só o que depende das suas contas: Entrar com o Google, Drive e chaves das IAs (próximas etapas). A conferência abaixo roda sozinha. Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou no passo que deu erro. Resolva e toque de novo: os passos já feitos podem rodar outra vez sem estragar (menos em banco que já tem dados).</div>'));
+  conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> As chaves dos avisos também ficaram prontas e as etapas Conectar, Banco, Funções, Logins e Avisos já foram marcadas como feitas. Falta confirmar o site no ar. Falta só o que depende das suas contas: Entrar com o Google, Drive e chaves das IAs (próximas etapas). A conferência abaixo roda sozinha. Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou neste passo. Nada do que já deu certo se perde: quando você resolver e tocar de novo, o painel pula o que já foi feito e continua daqui.</div>'));
 };
 /* ---------- AVISOS DE ERRO NO CELULAR (SQL 018 do painel + função avisar-painel): um botão por aparelho ---------- */
 function avErroCard_(){
@@ -1583,7 +1583,10 @@ window.rvConCorrigir = async id => {
 async function conRodarSilencioso(r, lista, cb){
   if(typeof window.cdObter !== 'function') return { ok:false, erro:'A tela de códigos ainda não carregou. Abra Restaurantes e volte.' };
   let n = 0; const feitas = await updsFeitas_(r); lista = lista.filter(u => !feitas.has(u[0]));
-  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ let sql = await window.cdObter(u[0]); if(/^upd\d+$/.test(u[0])) sql += MARCA_UPD(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
+  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ let sql = await window.cdObter(u[0]); const marcavel = /^(upd|est|dad)\d+$/.test(u[0]); if(marcavel) sql += MARCA_UPD(u[0]); let a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
+    /* restos de uma tentativa anterior que parou: o banco recusa com "já existe". Cada parte roda inteira ou nada (se algo já existe, a parte já tinha sido aplicada antes): só anota e segue. */
+    if(!a.ok && /^(est|dad)\d+$/.test(u[0]) && /already exists|duplicate key|j[aá] existe/i.test(a.erro || '')){ const m = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql:MARCA_UPD(u[0]).replace(/^\n;/, ''), rotulo:u[1] + ' (anotar)', confirmar:r.nome }); if(m.ok) a = { ok:true, jaTinha:true }; }
+    if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
   return { ok:true };
 }
 window.rvConFuncoes = async id => {
