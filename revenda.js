@@ -607,7 +607,7 @@ function manifestTexto(r){
 }
 function configTexto(r){
   const m = r.marca || {}, mod = r.modulos || {}, c = m.cores || {}, lg = m.logos || {}, mo = r.motor || MOTOR_PADRAO;
-  const o = { motor:mo, slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:mod.planilhas === false ? '' : (r.api_url || ''), contingenciaUrl:mod.planilhas === false ? '' : (r.contingencia_url || ''), contingenciaChave:mod.planilhas === false ? '' : (r.contingencia_chave || ''), pushChave:r.push_chave_publica || '',
+  const o = { motor:mo, slug:r.slug, nome:r.nome, siteUrl:r.site_url || '', supabaseUrl:r.supabase_url || '', supabaseChave:r.supabase_chave || '', apiUrl:r.api_url || '', contingenciaUrl:r.contingencia_url || '', contingenciaChave:r.contingencia_chave || '', pushChave:r.push_chave_publica || '',
     marca:{ slogan:m.slogan || '', assistente:m.assistente || 'Assistente', tema:m.tema || '', jogos:{ tema:(m.jogos && m.jogos.tema) || 'generico' }, cores:{ destaque:c.destaque || '#d9a21b', botao:c.botao || '#8c1c13', fundo:c.fundo || '#14100c' }, logos:{ cardapio:lg.cardapio || mo + 'img/logo.png', impressao:lg.impressao || '', icone:lg.icone || mo + 'img/icon-512.png' } }, modulos:mod };
   return '/* CONFIGURAÇÃO DE ' + r.nome.replace(/\*\//g, '') + ' — gerado pelo Painel de Revenda em ' + new Date().toLocaleString('pt-BR') + '.\n   Só endereços e chaves PÚBLICAS. Marca e módulos também vêm do painel na hora; para mudar o resto, gere de novo. */\nwindow.RESTAURANTE = ' + JSON.stringify(o, null, 2) + ';\n';
 }

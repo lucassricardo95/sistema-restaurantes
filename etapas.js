@@ -11,7 +11,6 @@ window.MODULOS = [
   { id:'mesas', nome:'Mesas e garçom', pad:true, desc:'QR Code na mesa e tela do garçom.' },
   { id:'ponto', nome:'Ponto da equipe (com foto)', pad:true, desc:'Entrada e saída dos funcionários.' },
   { id:'eventos', nome:'Eventos e orçamentos', pad:true, desc:'Festas, contratos e recebimentos.' },
-  { id:'planilhas', nome:'Planilhas Google de reserva', pad:false, desc:'Cópia em planilha caso o banco caia.' },
   { id:'ia', nome:'Assistente virtual (IA)', pad:true, desc:'Atendente automático no cardápio.' }
 ];
 window.TEMAS = [
@@ -49,7 +48,7 @@ window.LOGOS = [
 /* Contas que você vai criar para cada restaurante (aparece no Guia e na primeira etapa). */
 window.CONTAS = [
   ['📧 E-mail Google do restaurante (principal)', 'Um e-mail só do restaurante (ex.: nomedorestaurante@gmail.com). Ele abre o Supabase, o Google Cloud, o Drive, a planilha principal e as IAs.', 'https://accounts.google.com/signup'],
-  ['📧 Segundo e-mail Google (só se usar planilhas)', 'Para a planilha de contingência, que precisa ficar em OUTRA conta Google.', 'https://accounts.google.com/signup'],
+  ['📧 Segundo e-mail Google (para as planilhas de reserva)', 'Para a planilha de contingência, que precisa ficar em OUTRA conta Google.', 'https://accounts.google.com/signup'],
   ['🗄️ Supabase', 'O banco de dados (produtos, pedidos, clientes, caixa). Entra com o e-mail do restaurante.', 'https://supabase.com/dashboard/sign-in'],
   ['🐙 GitHub', 'Onde o site fica publicado, de graça. Pode ser a sua conta (o endereço terá o seu usuário).', 'https://github.com/signup'],
   ['☁️ Google Cloud', 'Para o "Entrar com o Google" e o backup no Drive. Mesmo e-mail do restaurante.', 'https://console.cloud.google.com/'],
@@ -213,11 +212,11 @@ window.ETAPAS = [
     { t:'Teste final: no cardápio, toque no botão do atendente e pergunte "qual o horário?". Se responder, está pronto.', link:'{site_url}' }
    ] },
 
- { id:'planilhas', titulo:'Planilhas Google de reserva', curto:'Opcional: para vender se o banco cair', quem:'voce', tempo:'30 min', opcional:true, modulo:'planilhas', campos:['contingencia_url','contingencia_chave','api_url'],
-   porque:'Uma cópia do sistema em planilhas do Google. Se o banco cair, o cardápio continua mostrando os produtos e recebendo pedidos numa fila. É opcional.',
+ { id:'planilhas', titulo:'Planilhas Google de reserva', curto:'Obrigatório: reserva para vender se o banco cair', quem:'voce', tempo:'30 min', campos:['contingencia_url','contingencia_chave','api_url'],
+   porque:'Uma cópia do sistema em planilhas do Google. Se o banco cair, o cardápio continua mostrando os produtos e recebendo pedidos numa fila. É OBRIGATÓRIO em todos os restaurantes: nenhum restaurante é entregue sem as planilhas funcionando.',
    precisa:['Duas contas Google: a do restaurante (principal) e OUTRA (contingência)','Um computador ajuda, mas dá pelo navegador do celular em modo "versão para computador"'],
    partes:[
-    { t:'Se o restaurante não vai usar planilhas: desligue o módulo "Planilhas" na etapa "Módulos" e toque em "Pular". Se vai usar, comece pela CONTINGÊNCIA, na OUTRA conta Google.' },
+    { t:'As planilhas são obrigatórias em todos os restaurantes. Comece pela CONTINGÊNCIA, na OUTRA conta Google.' },
     { t:'CONTINGÊNCIA (outra conta): crie uma planilha nova com o nome "Contingência {nome}". Menu "Extensões" → "Apps Script". Apague tudo, cole o código abaixo e toque no disquete (Salvar).', link:'https://sheets.new', extra:'cod:gs-modelo-contingencia' },
     { t:'Ainda na contingência: lá em cima, na lista de funções, escolha "setup" e toque em "Executar". Na primeira vez: "Revisar permissões" → escolha a conta → "Avançado" → "Acessar (não seguro)" → "Permitir".' },
     { t:'Escolha a função "gerarChaves" → "Executar". Embaixo, no "Registro de execução", aparecem 3 chaves. Cole a CONTINGENCIA_CHAVE_PUBLICA no campo abaixo e salve. Guarde as outras duas (SERVIDOR e INTERNA) para a parte 7.', extra:'campos:contingencia_chave' },
@@ -261,4 +260,4 @@ window.ETAPAS = [
     { t:'Gere a taxa de implantação e a primeira mensalidade e mude a situação para "Ativo". Pronto! 🎉', extra:'cobranca' }
    ] }
 ];
-window.FASES = [['Banco',['cadastro','supabase','repositorio','conectar','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive']],['Extras',['ia','planilhas','leitura']],['Entrega',['contas','teste','entrega']]];
+window.FASES = [['Banco',['cadastro','supabase','repositorio','conectar','banco','funcoes','admin']],['Site no ar',['push','marca','modulos','publicar']],['Google',['entrada','drive','planilhas']],['Extras',['ia','leitura']],['Entrega',['contas','teste','entrega']]];
