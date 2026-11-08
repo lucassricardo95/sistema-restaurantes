@@ -807,7 +807,7 @@ function aoVivoHtml(r, d){
     h += '<div class="av-sec"><b>🔑 Login</b>' + it(siteOk && redOk, 'Endereços do login', siteOk && redOk ? esc(lg.site) : 'Site URL: ' + esc(lg.site || '(vazio)') + (r.site_url ? ' · esperado ' + esc(site) : ''))
       + it(lg.google, 'Entrar com o Google', lg.google ? 'ligado' : 'desligado (etapa Entrar com o Google)')
       + (!(siteOk && redOk) && r.site_url ? '<button class="mini" onclick="rvLoginUrls(true)">⚡ Arrumar os endereços do login</button><div id="con_lu_' + r.id + '"></div>' : '') + '</div>'; }
-  const adv = (x, t) => x ? '<div class="av-sec"><div class="linha"><b>' + t + '</b><small>' + (x.erro ? '<span class="selo erro">' + x.erro + ' grave(s)</span> ' : '') + (x.aviso ? '<span class="selo aviso">' + x.aviso + ' aviso(s)</span>' : '') + (!x.erro && !x.aviso ? '<span class="selo ativo">✓ ok</span>' : '') + '</small></div>'
+  const adv = (x, t) => x ? '<div class="av-sec"><div class="linha"><b>' + t + '</b><small>' + (x.erro ? '<span class="selo erro">' + x.erro + ' grave(s)</span> ' : '') + (x.aviso ? '<span class="selo aviso">' + x.aviso + ' aviso(s)</span>' : '') + (!x.erro && !x.aviso ? '<span class="selo ativo">✓ ok</span>' : '') + (x.aceitos ? ' <span class="selo" title="Alertas que são decisão do sistema (cardápio público, funções liberadas). Não precisam de ação.">' + x.aceitos + ' por desenho</span>' : '') + '</small></div>'
     + (x.itens.length ? '<details><summary class="pequeno">Ver</summary>' + x.itens.map(i => '<div class="item-ruim" style="border-color:' + (i.nivel === 'ERROR' ? SAUDE_COR.problema : SAUDE_COR.atencao) + '"><b>' + esc(i.titulo) + '</b><br><small class="mudo">' + esc(i.detalhe) + '</small></div>').join('') + '</details>' : '') + '</div>' : '';
   h += adv(d.seguranca, '🛡️ Segurança (Supabase)') + adv(d.desempenho, '🚀 Desempenho (Supabase)');
   h += '<div class="av-sec"><div class="linha"><b>🧩 Funções do servidor</b><small>' + (d.funcoes || []).length + ' publicadas</small></div>' + ((d.funcoes || []).length ? '<small class="mudo">Última atualização: ' + esc(new Date(Math.max(...d.funcoes.map(x => Number(x.em) || Date.parse(x.em) || 0))).toLocaleString('pt-BR')) + '</small>' : '') + '<p style="margin:6px 0 0"><button class="mini" onclick="rvConPublicarFuncoes(\'' + r.id + '\',\'avf_' + r.id + '\')">⬆️ Publicar / atualizar as funções</button></p><div id="con_avf_' + r.id + '"></div></div>';
@@ -1223,7 +1223,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação']];
 async function chamarConector(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1316,18 +1316,44 @@ window.rvConConferir = async id => {
     else {
       const faltam = g.arquivos.filter(x => !x.existe).map(x => x.nome);
       h += conLinha(!faltam.length, faltam.length ? 'Site no GitHub: faltam arquivos (' + esc(faltam.join(', ')) + ').' : 'Site no GitHub: os 4 arquivos estão em ' + esc(g.repo) + '.');
-      if(faltam.length) precisaSite = true;
-      if(!g.motor) { h += conLinha(false, 'Não achei o endereço do motor em config-restaurante.js.'); precisaSite = true; }
+      if(faltam.length){ precisaSite = true; (window._confSite = window._confSite || {})[id] = faltam; }
+      if(!g.motor) { h += conLinha(false, 'Não achei o endereço do motor em config-restaurante.js (arquivo lido: ' + (g.cfgTam >= 0 ? g.cfgTam + ' letras' : 'não lido') + (g.amostra ? ' · trecho: ' + esc(g.amostra) : '') + ').'); precisaSite = true; }
       else if(!g.motorOk){ h += conLinha(false, 'O motor (' + esc(g.motor) + ') não respondeu: confira o endereço.'); precisaSite = true; }
       else h += conLinha(!g.ultima || g.versao === g.ultima, 'Motor em uso: ' + esc(g.versao) + (g.ultima && g.versao !== g.ultima ? ' (a última é ' + esc(g.ultima) + ')' : ' (a última)'));
     }
   }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
-  const bt = []; if(precisaBanco && temSb(r)) bt.push('<button class="principal mini" onclick="rvConAtualizar(\'' + id + '\')">⬆️ Atualizar banco</button>');
+  (window._confEst = window._confEst || {})[id] = { banco:precisaBanco && temSb(r), funcoes:precisaFuncoes && temSb(r), site:precisaSite && temGh(r) && !!((window._confSite || {})[id] || []).length };
+  const bt = []; if(window._confEst[id].banco || window._confEst[id].funcoes || window._confEst[id].site) bt.push('<button class="principal" onclick="rvConCorrigir(\'' + id + '\')">🔧 Corrigir tudo que foi encontrado</button>');
+  if(precisaBanco && temSb(r)) bt.push('<button class="principal mini" onclick="rvConAtualizar(\'' + id + '\')">⬆️ Atualizar banco</button>');
   if(precisaFuncoes && temSb(r)) bt.push('<button class="mini" onclick="rvConPublicarFuncoes(\'' + id + '\')">⬆️ Publicar funções</button>');
   if(!precisaBanco && !precisaFuncoes && !precisaSite && h.indexOf('class="res erro"') < 0 && h.indexOf('⚠️') < 0) h += '<div class="res ok"><b>🎉 Tudo implantado.</b></div>';
   conMsg(id, h + (bt.length ? '<div class="linha" style="justify-content:flex-start">' + bt.join('') + '</div>' : ''));
   hist(id, 'Conferência da implantação', precisaBanco || precisaFuncoes || precisaSite ? 'faltam itens' : 'completa');
 };
+window.rvConCorrigir = async id => {
+  const r = S.lista.find(x => x.id === id), E = (window._confEst || {})[id]; if(!r || !E) return;
+  const passos = [E.banco ? 'atualizar o banco (' + updFaixa() + ')' : '', E.funcoes ? 'publicar as funções do servidor' : '', E.site ? 'gravar no GitHub os arquivos que faltam' : ''].filter(Boolean);
+  const nome = prompt('Vai corrigir "' + r.nome + '":\n• ' + passos.join('\n• ') + '\n\nTudo pode rodar de novo sem erro. Para confirmar, digite o nome do restaurante exatamente:');
+  if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
+  let h = '', ok = true; const mostra = t => conMsg(id, h + (t ? '<small class="mudo">⏳ ' + esc(t) + '</small>' : ''));
+  try{
+    if(E.banco){ mostra('Atualizando o banco…'); ctxCod(r, []); const a = await conRodarSilencioso(r, UPDS); h += conLinha(a.ok, a.ok ? 'Banco atualizado.' : 'Banco: ' + esc(a.erro)); ok = a.ok; }
+    if(ok && E.funcoes){ mostra('Publicando as funções (uns 2 minutos)…'); const f = await conPublicarFuncoes(r, id); h += conLinha(!!f, f ? 'Funções do servidor publicadas.' : 'Funções: não terminou (veja acima).'); ok = !!f; }
+    if(ok && E.site){ mostra('Gravando os arquivos no GitHub…'); const falt = (window._confSite || {})[id] || [], arqs = [];
+      for(const n of falt){ if(n === 'config-restaurante.js') arqs.push({ caminho:n, conteudo:configTexto(r) }); else if(n === 'manifest.webmanifest') arqs.push({ caminho:n, conteudo:manifestTexto(r) });
+        else { const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n); arqs.push({ caminho:n, conteudo:await x.text() }); } }
+      const a = await chamarConector({ acao:'gh_publicar', restaurante_id:id, arquivos:arqs, mensagem:'Arquivos que faltavam, pelo Painel de Revenda' });
+      h += (a.arquivos || []).map(f => conLinha(f.ok, esc(f.caminho) + (f.ok ? ' gravado' : ': ' + esc(f.erro)))).join(''); ok = !!a.ok; }
+  }catch(e){ h += conLinha(false, esc(e.message)); ok = false; }
+  hist(id, 'Correção da implantação', ok ? 'ok' : 'parou com erro'); conMsg(id, h + '<small class="mudo">⏳ Conferindo de novo…</small>');
+  if(ok) await rvConConferir(id); else conMsg(id, h);
+};
+/* roda as atualizações sem escrever na tela; devolve {ok, erro} */
+async function conRodarSilencioso(r, lista){
+  if(typeof window.cdObter !== 'function') return { ok:false, erro:'A tela de códigos ainda não carregou. Abra Restaurantes e volte.' };
+  for(const u of lista){ try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
+  return { ok:true };
+}
 window.rvConFuncoes = async id => {
   conMsg(id, '<small class="mudo">Consultando…</small>');
   try{ const a = await chamarConector({ acao:'sb_funcoes', restaurante_id:id });
@@ -1463,10 +1489,31 @@ async function abaAjustesRest(){
    + '<div class="card"><h2>👥 Usuários do sistema</h2><p class="mudo pequeno">Para quando alguém esquece a senha. Peça a ele uma senha nova (mínimo 8, com letras e números) ou crie uma e passe para ele.</p>'
    + ((a.usuarios || []).length ? (a.usuarios || []).map(u => '<div class="linha mapa-l"><span>' + (u.ativo ? '' : '⏸️ ') + '<b>' + esc(u.login) + '</b> <small class="mudo">' + esc(u.nivel) + (u.ativo ? '' : ' · desativado') + '</small></span><button class="mini" onclick="rvAjSenha(\'' + esc(u.login).replace(/'/g, '&#39;') + '\')">🔑 Trocar senha</button></div>').join('') : '<small class="mudo">Nenhum usuário ainda (etapa "Criar os logins").</small>')
    + '<div id="aj_s_res"></div></div>'
+   + '<div class="card"><h2>🛠️ Logins de Desenvolvedor</h2><p class="mudo pequeno">Os seus logins de suporte neste restaurante. Dentro do sistema dele eles ficam protegidos: só você mexe aqui. Entram mesmo com o restaurante bloqueado e não veem os termos de uso.</p><div id="aj_dev"><small class="mudo">Carregando…</small></div><p class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvAjDev(\'criar\')">➕ Novo Desenvolvedor</button></p><div id="aj_dev_res"></div></div>'
    + ((a.integracoes || []).length ? '<div class="card"><h2>🔗 Integrações</h2><p class="mudo pequeno">Só para ver. Ligar ou desligar é dentro do sistema dele (Administrador → Sistema → Integrações), porque cada uma tem o seu passo a passo.</p>'
       + a.integracoes.map(x => '<div class="linha mapa-l"><span>' + (x.ligado ? '🟢' : '⚪') + ' <b>' + esc({ ifood:'iFood', nfce:'Nota fiscal (NFC-e)', mercadopago:'Mercado Pago', infinitepay:'InfinitePay' }[x.provedor] || x.provedor) + '</b></span><small class="mudo">' + (x.ligado ? 'ligado' : 'desligado') + (x.modo ? ' · ' + esc(x.modo === 'producao' ? 'produção' : 'teste') : '') + '</small></div>').join('') + '</div>' : '')
    + '</div></div>');
+  setTimeout(() => { if(window.rvAjDev) rvAjDev('listar'); }, 0);
 }
+window.rvAjDev = async (acao, login, extra) => {
+  const r = S.rest; if(!r) return; const box = $('aj_dev'), res = $('aj_dev_res');
+  const msg = h => { if(res) res.innerHTML = h; };
+  const pe = { acao };
+  if(acao === 'criar'){
+    login = prompt('Login do novo Desenvolvedor (3 a 30 letras ou números):'); if(!login) return;
+    const nova = prompt('Senha para "' + login + '" (mínimo 8, com letras e números):'); if(!nova) return; pe.novaSenha = nova;
+  } else if(acao === 'senha'){
+    const nova = prompt('Nova senha para "' + login + '" (mínimo 8, com letras e números):'); if(!nova) return; pe.novaSenha = nova;
+  } else if(acao === 'ativar'){ pe.ativo = !!extra; }
+  pe.login = login || '';
+  let conf = '';
+  if(acao !== 'listar'){ conf = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(conf !== r.nome) return erro('O nome não confere. Nada foi feito.'); msg('<small class="mudo">Aplicando…</small>'); }
+  try{
+    const a = await chamarConector({ acao:'sb_dev', restaurante_id:r.id, confirmar:conf, p:pe }); if(!a.ok) throw new Error(a.erro || 'Não foi possível.');
+    if(acao !== 'listar'){ msg(conLinha(true, esc(a.message || 'Pronto.'))); hist(r.id, 'Desenvolvedor: ' + acao, login || ''); return rvAjDev('listar'); }
+    if(box) box.innerHTML = (a.devs || []).map(u => '<div class="linha mapa-l"><span>' + (u.ativo ? '' : '⏸️ ') + '<b>' + esc(u.login) + '</b>' + (u.ativo ? '' : ' <small class="mudo">desativado</small>') + '</span><span><button class="mini" onclick="rvAjDev(\'senha\',\'' + esc(u.login).replace(/'/g, '&#39;') + '\')">🔑 Senha</button> <button class="mini" onclick="rvAjDev(\'ativar\',\'' + esc(u.login).replace(/'/g, '&#39;') + '\',' + (u.ativo ? 'false' : 'true') + ')">' + (u.ativo ? '⏸️ Desativar' : '▶️ Ativar') + '</button></span></div>').join('') || '<small class="mudo">Nenhum Desenvolvedor.</small>';
+  }catch(e){ if(acao === 'listar'){ if(box) box.innerHTML = conLinha(false, esc(e.message)); } else msg(conLinha(false, esc(e.message))); }
+};
 /* comanda (impressão do pedido): mesma regra da tela Administrador → Sistema → Comanda do restaurante */
 const CM_SIM = [['mostrarLogo','Logo no topo'],['mostrarTelefone','Telefone do cliente'],['mostrarEntregador','Nome do entregador'],['mostrarHoraImpressa','Hora da impressão'],['mostrarWhatsapp','WhatsApp da loja'],['mostrarVersiculo','Versículo'],['mostrarQr','QR Code']];
 const CM_TXT = [['topo','Texto do topo',60],['whatsapp','WhatsApp da loja (com DDD)',20],['agradecimento','Agradecimento',120],['versiculo','Versículo',260],['qrTitulo','Título do QR Code',40],['qrTexto','Texto do QR Code',140]];
