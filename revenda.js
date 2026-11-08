@@ -1309,7 +1309,7 @@ async function vConectores(){
    + '<li>No banco do <b>painel</b> (SQL Editor): rode o arquivo <code>015-conector.sql</code>.</li>'
    + '<li>No Supabase do <b>painel</b>: Edge Functions → Deploy a new function → nome <code>conector</code> → cole o arquivo <code>conector/index.ts</code> → desligue <b>Verify JWT</b> (igual à função assistente) → Deploy.</li>'
    + '<li>Pronto. Agora é só ligar cada restaurante abaixo. Os dois arquivos estão na pasta <i>1-PAINEL-DE-REVENDA</i> do Sistemas.zip.</li></ol></details></div>'
-   + (L.some(r => temSb(r)) ? '<div class="card"><div class="linha"><b>⬆️ Atualizar todos os restaurantes</b><button class="principal mini" onclick="rvConAtualizarTodos()">Atualizar todos</button></div><small class="mudo">Roda as atualizações do banco (' + updFaixa() + ') em todos que têm o Supabase ligado, um por vez.</small><div id="con_todos"></div></div>' : '')
+   + (L.some(r => temSb(r)) ? '<div class="card"><div class="linha"><b>⬆️ Atualizar todos os restaurantes</b><button class="principal mini" onclick="rvConAtualizarTodos()">Atualizar todos</button></div><small class="mudo">Aplica só o que falta das atualizações do banco (' + updFaixa() + ') em todos que têm o Supabase ligado, um por vez.</small><div id="con_todos"></div></div>' : '')
    + L.map(r => '<div class="card"><button class="alerta n0" onclick="rvConAbrir(\'' + r.id + '\')"><span class="ic">' + (temGh(r) && temSb(r) ? '✅' : (temGh(r) || temSb(r) ? '🟡' : '⬜')) + '</span><span><b>' + esc(r.nome) + '</b><small>' + (temSb(r) ? 'Supabase ✓' : 'Supabase: falta') + ' · ' + (temGh(r) ? 'GitHub ✓' : 'GitHub: falta') + '</small></span><span class="seta">' + (aberto === r.id ? '⌃' : '›') + '</span></button>'
       + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (' + UPDS[0][1].slice(0, 3) + '–' + UPDS[UPDS.length - 1][1].slice(0, 3) + ')</button></div>' : '') + '</div>').join('')
    + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
@@ -1480,8 +1480,8 @@ window.rvConCorrigir = async id => {
 /* roda as atualizações sem escrever na tela; devolve {ok, erro} */
 async function conRodarSilencioso(r, lista, cb){
   if(typeof window.cdObter !== 'function') return { ok:false, erro:'A tela de códigos ainda não carregou. Abra Restaurantes e volte.' };
-  let n = 0;
-  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
+  let n = 0; const feitas = await updsFeitas_(r); lista = lista.filter(u => !feitas.has(u[0]));
+  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ let sql = await window.cdObter(u[0]); if(/^upd\d+$/.test(u[0])) sql += MARCA_UPD(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome }); if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
   return { ok:true };
 }
 window.rvConFuncoes = async id => {
@@ -1491,12 +1491,18 @@ window.rvConFuncoes = async id => {
   }catch(e){ conMsg(id, conLinha(false, esc(e.message))); }
 };
 /* roda uma lista de códigos [id, rótulo] em ordem no Supabase do restaurante; para no primeiro erro */
+/* as atualizações numeradas já aplicadas ficam anotadas no banco do restaurante (tabela _atualizacoes): só roda o que falta */
+const MARCA_UPD = id => "\n;create table if not exists public._atualizacoes (id text primary key, em timestamptz not null default now());\nalter table public._atualizacoes enable row level security;\ninsert into public._atualizacoes (id) values ('" + id + "') on conflict do nothing;";
+async function updsFeitas_(r){ try{ const a = await chamarConector({ acao:'sb_atualizacoes', restaurante_id:r.id }); return a.ok ? new Set(a.feitas || []) : new Set(); }catch(e){ return new Set(); } }
 async function conRodar(r, lista, onde){
   if(typeof window.cdObter !== 'function') { erro('A tela de códigos ainda não carregou. Abra Restaurantes e volte.'); return false; }
   let h = '';
+  const feitas = await updsFeitas_(r), pulou = lista.filter(u => feitas.has(u[0])).length; lista = lista.filter(u => !feitas.has(u[0]));
+  if(pulou) h += '<small class="mudo">⏭️ ' + pulou + ' atualizaç' + (pulou > 1 ? 'ões já estavam aplicadas' : 'ão já estava aplicada') + ' (puladas).</small>';
+  if(!lista.length){ conMsg(onde, h + conLinha(true, 'Este banco já está em dia: nada para aplicar.')); return true; }
   for(const u of lista){
     conMsg(onde, h + '<small class="mudo">⏳ ' + esc(u[1]) + '…</small>');
-    try{ const sql = await window.cdObter(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
+    try{ let sql = await window.cdObter(u[0]); if(/^upd\d+$/.test(u[0])) sql += MARCA_UPD(u[0]); const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
       h += conLinha(a.ok, esc(u[1]) + (a.ok ? '' : ': ' + esc(a.erro))); if(!a.ok){ conMsg(onde, h); return false; }
     }catch(e){ h += conLinha(false, esc(u[1]) + ': ' + esc(e.message)); conMsg(onde, h); return false; }
   }
@@ -1520,7 +1526,7 @@ window.rvConPublicarFuncoes = async (id, onde) => { const r = S.lista.find(x => 
 const updFaixa = () => UPDS[0][1].slice(0, 3) + ' a ' + UPDS[UPDS.length - 1][1].slice(0, 3);
 window.rvConAtualizarTodos = async () => {
   const L = S.lista.filter(r => r.situacao !== 'encerrado' && temSb(r) && /^[a-z0-9]{20}$/.test(refDe(r))); if(!L.length) return erro('Nenhum restaurante com o Supabase ligado.');
-  const t = prompt('Vai rodar as atualizações ' + updFaixa() + ' no banco de ' + L.length + ' restaurante(s): ' + L.map(r => r.nome).join(', ') + '.\nElas podem rodar de novo sem erro.\n\nPara confirmar, digite TODOS:');
+  const t = prompt('Vai aplicar só as atualizações que ainda faltam (de ' + updFaixa() + ') no banco de ' + L.length + ' restaurante(s): ' + L.map(r => r.nome).join(', ') + '.\nO que já foi aplicado é pulado.\n\nPara confirmar, digite TODOS:');
   if(t === null) return; if(t.trim().toUpperCase() !== 'TODOS') return erro('Não confere. Nada foi feito.');
   const box = $('con_todos'); let h = '';
   for(const r of L){ if(box) box.innerHTML = h + '<small class="mudo">⏳ ' + esc(r.nome) + '…</small><div id="con_todos_' + r.id + '"></div>';
@@ -1530,7 +1536,7 @@ window.rvConAtualizarTodos = async () => {
 };
 window.rvConAtualizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  const nome = prompt('Vai rodar as atualizações ' + updFaixa() + ' no banco de "' + r.nome + '". Elas podem rodar de novo sem erro.\n\nPara confirmar, digite o nome do restaurante exatamente:');
+  const nome = prompt('Vai aplicar só as atualizações que ainda faltam (de ' + updFaixa() + ') no banco de "' + r.nome + '". O que já foi aplicado é pulado.\n\nPara confirmar, digite o nome do restaurante exatamente:');
   if(nome === null) return; if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
   ctxCod(r, []); await conRodar(r, UPDS, id); hist(id, 'Atualização do banco pelo conector', UPDS.map(u => u[0]).join(', '));
 };
