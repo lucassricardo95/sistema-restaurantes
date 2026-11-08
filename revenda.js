@@ -1585,9 +1585,9 @@ window.rvConCorrigir = async id => {
 async function conRodarSilencioso(r, lista, cb){
   if(typeof window.cdObter !== 'function') return { ok:false, erro:'A tela de códigos ainda não carregou. Abra Restaurantes e volte.' };
   let n = 0; const feitas = await updsFeitas_(r); lista = lista.filter(u => !feitas.has(u[0]));
-  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ let sql = await window.cdObter(u[0]); const marcavel = /^(upd|est|dad)\d+$/.test(u[0]); if(marcavel) sql += MARCA_UPD(u[0]); let a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
+  for(const u of lista){ if(cb) cb(++n, lista.length, u[1]); try{ let sql = await window.cdObter(u[0]); const marcavel = /^((upd|est|dad)\d+|manual)$/.test(u[0]); if(marcavel) sql += MARCA_UPD(u[0]); let a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:u[1], confirmar:r.nome });
     /* restos de uma tentativa anterior que parou: o banco recusa com "já existe". Cada parte roda inteira ou nada (se algo já existe, a parte já tinha sido aplicada antes): só anota e segue. */
-    if(!a.ok && /^(est|dad)\d+$/.test(u[0]) && /already exists|duplicate key|j[aá] existe/i.test(a.erro || '')){ const m = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql:MARCA_UPD(u[0]).replace(/^\n;/, ''), rotulo:u[1] + ' (anotar)', confirmar:r.nome }); if(m.ok) a = { ok:true, jaTinha:true }; }
+    if(!a.ok && /^((est|dad)\d+|manual)$/.test(u[0]) && /already exists|duplicate key|j[aá] existe/i.test(a.erro || '')){ const m = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql:MARCA_UPD(u[0]).replace(/^\n;/, ''), rotulo:u[1] + ' (anotar)', confirmar:r.nome }); if(m.ok) a = { ok:true, jaTinha:true }; }
     if(!a.ok) return { ok:false, erro:u[1] + ': ' + (a.erro || 'falhou') }; }catch(e){ return { ok:false, erro:u[1] + ': ' + e.message }; } }
   return { ok:true };
 }
