@@ -1467,7 +1467,6 @@ function avErroCard_(){
   return '<div class="card"><h2>🔔 Avisos de erro neste aparelho</h2><p class="mudo pequeno">Quando um restaurante tiver um erro novo no sistema, este aparelho recebe um aviso, mesmo com o painel fechado. Restaurante em implantação não avisa.</p><div id="av_erro"><small class="mudo">Verificando…</small></div></div>';
 }
 const avB64_ = b => { const p = '='.repeat((4 - b.length % 4) % 4), r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
-const avEnc_ = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 async function avFn_(corpo){ if(S.sess && Date.now() > S.sess.exp) await renovar(); const r = await fetch(URL_ + '/functions/v1/avisar-painel', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) }); return r.json().catch(() => ({ ok:false, erro:'Sem resposta (erro ' + r.status + ').' })); }
 async function avErroEstado_(){
   const box = $('av_erro'); if(!box) return;
