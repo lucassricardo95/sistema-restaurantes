@@ -147,6 +147,8 @@ function telaLogin(){
 window.rvSair = () => { sessGravar(null); S = novoEstado(); tela(); };
 
 const NAV = [['inicio','🏠','Início'],['restaurantes','🍽️','Restaurantes'],['saude','🩺','Saúde'],['dinheiro','💰','Dinheiro'],['mais','☰','Mais']];
+/* no PC (tela larga) o menu vira uma barra lateral e mostra também estes atalhos, que no celular ficam em "Mais" */
+const NAV_PC = [['vendas','🤝','Vendas e propostas'],['conectores','🔌','Conectores'],['assistente','✨','Assistente (IA)'],['guia','📘','Como criar'],['ajustes','⚙️','Meus dados e Pix']];
 function desenhar(){
   clearInterval(timerAuto);
   const v = S.view, alertaSaude = S.erros.length + S.lista.filter(r => r.situacao !== 'encerrado' && ['problema'].includes(saudeDe(r.slug).geral)).length;
@@ -154,7 +156,8 @@ function desenhar(){
   const navOn = { rest:'restaurantes', novo:'restaurantes', vendas:'mais', ajustes:'mais', guia:'mais', assistente:'mais', conectores:'mais' }[v] || v;
   $('app').innerHTML = '<header class="cab"><div class="cab-t" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div><div class="cab-a">' + (v === 'rest' || v === 'novo' ? '<button class="mini" onclick="rvChat()" title="Assistente">✨</button> ' : '') + '<button class="mini" onclick="rvRecarregar()" title="Atualizar">⟳</button></div></header>'
     + '<main id="tela"></main>'
-    + '<nav class="nav">' + NAV.map(n => '<button class="' + (navOn === n[0] ? 'on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('') + '</nav>' + (v === 'rest' || v === 'novo' ? '' : '<button id="bAssist" class="b-assist" onclick="rvChat()" title="Assistente" aria-label="Abrir o assistente">✨</button>');
+    + '<nav class="nav" aria-label="Menu"><div class="nav-marca" onclick="rvIr(\'inicio\')">🍽️ <b>Revenda</b></div>' + NAV.map(n => '<button class="' + (navOn === n[0] && !(n[0] === 'mais' && NAV_PC.some(x => x[0] === v)) ? 'on' : '') + (n[0] === 'mais' ? ' nav-mais' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + (n[0] === 'saude' && alertaSaude ? '<i class="bolha">' + alertaSaude + '</i>' : '') + '</button>').join('')
+    + '<div class="nav-sep"></div>' + NAV_PC.map(n => '<button class="nav-pc' + (v === n[0] ? ' on' : '') + '" onclick="rvIr(\'' + n[0] + '\')"><span>' + n[1] + '</span>' + n[2] + '</button>').join('') + '</nav>' + (v === 'rest' || v === 'novo' ? '' : '<button id="bAssist" class="b-assist" onclick="rvChat()" title="Assistente" aria-label="Abrir o assistente">✨</button>');
   corpo();
   if(['inicio','saude'].includes(v)) timerAuto = setInterval(async () => { if(document.hidden) return; await carregarSaude(); if(['inicio','saude'].includes(S.view) && !document.querySelector('.modal')) desenhar(); }, 120000);
   window.scrollTo(0, 0);
@@ -188,17 +191,20 @@ function vInicio(){
   T('<h1 class="ola">' + (hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ' 👋</h1><p class="mudo">' + new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' }) + '</p>'
    + (S.aj.bemvindo_ok ? '' : boasPainel())
    + '<button class="principal grande acao-novo" onclick="rvNovo()">＋ Criar restaurante novo</button>'
-   + '<div class="kpis">' + kpi('Recebido em ' + MESES[Number(m.slice(5)) - 1], BRL(f.recebido), 'ok') + kpi('Falta receber', BRL(f.aReceber), f.aReceber ? 'aviso' : '') + kpi('Lucro do mês', BRL(f.lucro), f.lucro < 0 ? 'erro' : 'ok') + kpi('Receita mensal fixa', BRL(mrr()), '') + '</div>'
-   + (meta ? '<div class="card"><div class="linha"><b>🎯 Meta do mês</b><small>' + BRL(f.recebido) + ' de ' + BRL(meta) + '</small></div><div class="barra grossa"><i style="width:' + Math.min(100, f.recebido / meta * 100) + '%;background:var(--ok)"></i></div></div>' : '')
+   + '<div class="ini"><div class="ini-a">'
    + '<h2 class="sec-t">Precisa de você ' + (A.length ? '<span class="selo erro">' + A.length + '</span>' : '') + '</h2>'
    + (A.length ? '<div class="lista-alertas">' + A.slice(0, 12).map(a => '<button class="alerta n' + a[0] + '" onclick="' + a[4] + '"><span class="ic">' + a[1] + '</span><span><b>' + esc(a[2]) + '</b><small>' + esc(a[3]) + '</small></span><span class="seta">›</span></button>').join('') + '</div>'
       : '<div class="card vazio">✅ Tudo em dia. Nada pede a sua atenção agora.</div>')
+   + '</div><div class="ini-b">'
+   + '<div class="kpis">' + kpi('Recebido em ' + MESES[Number(m.slice(5)) - 1], BRL(f.recebido), 'ok') + kpi('Falta receber', BRL(f.aReceber), f.aReceber ? 'aviso' : '') + kpi('Lucro do mês', BRL(f.lucro), f.lucro < 0 ? 'erro' : 'ok') + kpi('Receita mensal fixa', BRL(mrr()), '') + '</div>'
+   + (meta ? '<div class="card"><div class="linha"><b>🎯 Meta do mês</b><small>' + BRL(f.recebido) + ' de ' + BRL(meta) + '</small></div><div class="barra grossa"><i style="width:' + Math.min(100, f.recebido / meta * 100) + '%;background:var(--ok)"></i></div></div>' : '')
    + '<div class="kpis tres">' + kpi('Restaurantes ativos', ativos, '') + kpi('Em implantação', impl, '') + kpi('Erros abertos', S.erros.length, S.erros.length ? 'erro' : '') + '</div>'
-   + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>');
+   + '<div class="card"><div class="linha"><b>Últimos 6 meses</b><button class="mini" onclick="rvIr(\'dinheiro\')">Ver dinheiro ›</button></div>' + grafico(6) + '</div>'
+   + '</div></div>');
 }
 window.rvBemvindoOk = async () => { if(await salvarAjustes({ bemvindo_ok:true }, 'Pronto! Você pode rever o guia em Mais → Guia.')) vInicio(); };
 function boasPainel(){
-  return '<div class="card bem-vindo"><h2>👋 Bem-vindo ao seu Painel de Revenda</h2><p>Aqui você cria e cuida dos sistemas dos seus restaurantes. Embaixo da tela ficam as 5 partes:</p><ul class="lista-bv">'
+  return '<div class="card bem-vindo"><h2>👋 Bem-vindo ao seu Painel de Revenda</h2><p>Aqui você cria e cuida dos sistemas dos seus restaurantes. No menu (embaixo no celular, do lado no computador) ficam as 5 partes:</p><ul class="lista-bv">'
    + '<li><b>🏠 Início</b>: o que precisa de você hoje e como está o mês.</li><li><b>🍽️ Restaurantes</b>: cada cliente. Lá dentro, o <b>passo a passo</b> que monta um restaurante novo do zero, uma parte por vez.</li>'
    + '<li><b>🩺 Saúde</b>: se os sistemas estão funcionando e os erros que aparecem nas telas.</li><li><b>💰 Dinheiro</b>: mensalidades, quem pagou, suas despesas e o lucro.</li><li><b>☰ Mais</b>: propostas de venda, seus dados, Pix, planos e o assistente.</li></ul>'
    + '<p>O botão <b>✨</b> é o seu assistente: pergunte qualquer coisa ou peça para ele preparar uma cobrança.</p>'
@@ -352,7 +358,7 @@ function abaPasso(){
      + (p.link ? '<a class="btn mini abrir" href="' + esc(sub(p.link, true)) + '" target="_blank" rel="noopener">Abrir ↗</a>' : '')
      + (p.copiar ? '<div class="tabela-copia">' + sub(p.copiar).split('\n').map((l, n) => '<div class="linha-copia"><div class="linha"><code id="cp_' + atual.id + '_' + j + '_' + n + '">' + esc(l) + '</code><button class="mini" onclick="rvCopiar(\'cp_' + atual.id + '_' + j + '_' + n + '\')">📋 Copiar</button></div></div>').join('') + '</div>' : '')
      + (p.extra ? '<div class="extra" id="ex_' + atual.id + '_' + j + '"></div>' : '') + '</div></div>';
-  C('<div class="fases">' + fases + '</div>'
+  C('<div class="fases">' + fases + '</div><div class="passo-grid"><div class="passo-main">'
    + '<div class="card etapa' + (f ? ' feita' : '') + '"><div class="linha"><small class="mudo">Etapa ' + (i + 1) + ' de ' + ETAPAS.length + (atual.opcional ? ' · opcional' : '') + ' · ⏱️ ' + esc(atual.tempo || '') + '</small>' + (f ? '<span class="selo ativo">✓ Feita</span>' : '') + '</div>'
    + '<h2 class="etapa-t">' + esc(atual.titulo) + '</h2>'
    + '<div class="porque">💡 <b>Para que serve:</b> ' + esc(sub(atual.porque)) + '</div>'
@@ -366,11 +372,11 @@ function abaPasso(){
    + (!todas && k < N - 1 ? '<button class="principal grande" onclick="rvParte(\'' + atual.id + '\',' + (k + 1) + ')">Próxima parte →</button>'
       : f ? '<span class="dir"><button class="mini" onclick="rvEtapa(\'' + atual.id + '\',false)">Desmarcar</button>' + (i < ETAPAS.length - 1 ? ' <button class="principal" onclick="rvVerPasso(\'' + ETAPAS[i + 1].id + '\')">Próxima etapa →</button>' : '') + '</span>'
       : '<span class="dir">' + (atual.opcional || moduloDesligado(atual) || atual.id === 'drive' || atual.id === 'ia' ? '<button class="mini" onclick="rvEtapa(\'' + atual.id + '\',true,true)">Pular</button> ' : '') + '<button class="principal grande" onclick="rvEtapa(\'' + atual.id + '\',true)">✅ Fiz esta etapa</button></span>')
-   + '</div></div>' + listaEtapas(atual.id));
+   + '</div></div></div><aside class="passo-lado">' + listaEtapas(atual.id) + '</aside></div>');
   (todas ? atual.partes.map((p, j) => [p, j]) : [[atual.partes[k], k]]).forEach(([p, j]) => { if(p.extra) desenharExtra(atual, p.extra, $('ex_' + atual.id + '_' + j)); });
 }
 function listaEtapas(atualId){
-  return '<details class="card"><summary><b>📋 Ver todas as etapas</b> <small class="mudo">(' + nEtapas(S.rest) + ' de ' + ETAPAS.length + ' feitas)</small></summary>'
+  return '<details class="card lista-etapas"' + (innerWidth >= 1024 ? ' open' : '') + '><summary><b>📋 Ver todas as etapas</b> <small class="mudo">(' + nEtapas(S.rest) + ' de ' + ETAPAS.length + ' feitas)</small></summary>'
    + ETAPAS.map((x, k) => { const e = S.rest.etapas[x.id], f = e && e.feita; return '<button class="item-etapa' + (x.id === atualId ? ' on' : '') + '" onclick="rvVerPasso(\'' + x.id + '\')"><span>' + (f ? (e.pulada ? '⏭️' : '✅') : '⬜') + '</span><span><b>' + (k + 1) + '. ' + esc(x.titulo) + '</b><small>' + esc(x.curto || '') + '</small></span><span class="seta">›</span></button>'; }).join('') + '</details>';
 }
 window.rvVerPasso = id => { S.passoVer = id; abaPasso(); window.scrollTo(0, 0); };

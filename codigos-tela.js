@@ -4,16 +4,14 @@
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
 const PLACEHOLDER = 'abcdefghijklmnopqrst';
-let aberto = {}, cache = {};
+let cache = {};
 function msg(t, erro){ const a = $('aviso'); if(!a) return; a.textContent = (erro ? '⚠️ ' : '') + t; a.className = 'aviso ' + (erro ? 'erro' : 'ok'); a.hidden = false; setTimeout(() => { a.hidden = true; }, 3500); }
-function ler(k){ try{ return localStorage.getItem(k) || ''; }catch(e){ return ''; } }
-function gravar(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
 function ref(){ const v = (window.CD_CTX && window.CD_CTX.ref) || ''; return v.trim().replace(/^https?:\/\//, '').replace(/\.supabase\.co.*$/, ''); }
 function cod(){ return ((window.CD_CTX && window.CD_CTX.cod) || '').trim(); }
 function achar(id){ for(const k in window.CODIGOS) for(const i of window.CODIGOS[k]) if(i.id === id) return i; }
 async function texto(i){
   if(i.especial) return especial(i.especial);
-  if(i.subRef && !ref()) throw new Error('Preencha o endereço do Supabase deste restaurante na aba Ligações (passo 2) antes de copiar.');
+  if(i.subRef && !ref()) throw new Error('Preencha antes o endereço do Supabase deste restaurante (etapa "Criar o banco de dados").');
   if(cache[i.arq]) return pronto(i, cache[i.arq]);
   const r = await fetch('codigos/' + i.arq + '.enc?t=' + Date.now(), { cache:'no-store' });
   if(!r.ok) throw new Error('Não consegui carregar ' + i.arq + ' (erro ' + r.status + ').');
@@ -75,23 +73,6 @@ async function copiarTxt(t){
 window.cdCopiar = async id => { const i = achar(id); try{ const t = await texto(i); if(await copiarTxt(t)) msg('Copiado: ' + i.titulo + ' (' + t.length.toLocaleString('pt-BR') + ' letras). Agora cole no editor.'); else msg('O celular não deixou copiar. Use "Ver" e copie o texto à mão.', true); }catch(e){ msg(e.message, true); } };
 window.cdBaixar = async id => { const i = achar(id); try{ const t = await texto(i); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type:'text/plain;charset=utf-8' })); a.download = (i.arq ? i.arq.split('/').pop() : 'cofre-de-chaves.sql'); document.body.appendChild(a); a.click(); a.remove(); }catch(e){ msg(e.message, true); } };
 window.cdVer = async id => { const i = achar(id), box = $('cd-ver-' + id); if(box.innerHTML){ box.innerHTML = ''; return; } try{ const t = await texto(i); box.innerHTML = '<textarea readonly rows="14" style="width:100%;font:12px/1.4 monospace;background:#0b0b0b;color:#ddd;border:1px solid #2a2a2a;border-radius:8px;padding:8px" onfocus="this.select()">' + esc(t) + '</textarea>'; }catch(e){ msg(e.message, true); } };
-window.cdGrupo = id => { aberto[id] = !aberto[id]; desenhar(); };
-window.cdCampo = () => { gravar('cd_ref', ($('cd-ref') || {}).value || ''); gravar('cd_cod', ($('cd-cod') || {}).value || ''); };
-function linha(i, etapa, n){
-  const fe = (window.CD_CTX && window.CD_CTX.feitos) || [], f = fe.includes('cd:' + i.id);
-  return '<div style="border:1px solid #2a2a2a;border-radius:10px;padding:10px;margin:8px 0;overflow-wrap:anywhere' + (f ? ';opacity:.6' : '') + '"><div class="linha"><b>' + n + '. ' + esc(i.titulo) + '</b>' + (i.kb ? '<span class="selo">' + i.kb + ' KB</span>' : '') + '</div>'
-   + '<p style="margin:6px 0 2px"><b>O que é:</b> ' + esc(i.desc) + '</p>'
-   + '<p style="margin:2px 0"><b>Onde colar:</b> ' + esc(i.onde) + '</p>'
-   + '<p style="margin:2px 0 8px" class="mudo"><b>Cuidado:</b> ' + esc(i.cuidado) + '</p>'
-   + '<button class="mini principal" onclick="cdCopiar(\'' + i.id + '\')">Copiar</button> <button class="mini" onclick="cdBaixar(\'' + i.id + '\')">Baixar</button> <button class="mini" onclick="cdVer(\'' + i.id + '\')">Ver</button>'
-   + '<label style="display:flex;gap:8px;align-items:center;font-weight:400;color:var(--txt);margin:8px 0 0"><input type="checkbox" ' + (f ? 'checked ' : '') + 'onchange="rvItem(\'' + etapa + '\',\'cd:' + i.id + '\',this.checked)"> Já apliquei</label>'
-   + '<div id="cd-ver-' + i.id + '" style="margin-top:8px"></div></div>';
-}
-window.cdEtapa = (etapa, ctx) => {
-  const L = (window.CODIGOS || {})[etapa]; if(!L || !L.length) return '';
-  ctx.ref = /^[a-z0-9]{20}$/.test(ctx.ref || '') ? ctx.ref : ''; window.CD_CTX = ctx;
-  return '<div style="margin:10px 0"><b>Códigos desta etapa, na ordem</b><p class="mudo" style="margin:4px 0 6px">Toque em Copiar, abra o editor indicado, cole e rode. Marque "Já apliquei" ao terminar cada um.</p>' + L.map((i, n) => linha(i, etapa, n + 1)).join('') + '</div>';
-};
 window.cdCtx = ctx => { window.CD_CTX = ctx; };
 window.cdObter = async id => { const i = achar(id); if(!i) throw new Error('Código não encontrado: ' + id); return texto(i); };
 })();

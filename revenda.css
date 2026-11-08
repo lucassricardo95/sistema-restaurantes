@@ -134,7 +134,9 @@ label{display:block;font-weight:700;font-size:13px;color:var(--mudo);margin:12px
 .erro-item{border:1px solid var(--linha);border-radius:12px;padding:10px;margin:8px 0;background:var(--card2)}.erro-item .pre{white-space:pre-wrap;display:block}
 .saude-r details{margin-top:6px}.saude-r summary{cursor:pointer;padding:6px 0}
 /* dinheiro */
-.mes-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:4px;margin:8px 0}.mes-nav b{text-transform:capitalize}.mes-nav button{background:none;border:0;font-size:22px;min-width:48px}
+/* mês com só a primeira letra maiúscula ("Novembro de 2026", não "Novembro De 2026") */
+.mes-nav b::first-letter{text-transform:uppercase}
+.mes-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--linha);border-radius:14px;padding:4px;margin:8px 0}.mes-nav b{display:inline-block}.mes-nav button{background:none;border:0;font-size:22px;min-width:48px}
 .cob{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)}
 .cob-i b{display:block;font-size:14px}.cob-i small{display:block}.cob-v{font-size:15px;white-space:nowrap}
 .cob-a{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}.cob.paga .cob-v{color:var(--ok)}.cob.atrasada .cob-v{color:var(--erro)}
@@ -192,3 +194,35 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
 .parte-t .copiar{font-size:14px}
 .cor-bt{width:60px;height:48px;padding:0;border-radius:12px;border:2px solid var(--linha);box-shadow:inset 0 0 0 2px #0003}
 .pal-linha{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0}.pal-cor{width:100%;aspect-ratio:1;min-height:0;padding:0;border-radius:10px;border:2px solid #0004}.pal-cor.on{outline:3px solid #fff;outline-offset:2px}
+/* ===== menu lateral e colunas no PC (v2): no celular nada muda ===== */
+.nav-marca,.nav-sep,.nav .nav-pc{display:none}
+.ini-a .sec-t{margin-top:16px}
+@media(min-width:1024px){
+  #app{max-width:none;margin:0 0 0 248px;padding:0 40px 48px}
+  #tela{max-width:1180px;margin:0 auto}
+  .cab{max-width:1180px;margin:0 auto;justify-content:flex-end;padding:14px 0 6px;background:none;backdrop-filter:none;pointer-events:none}
+  .cab .cab-a{pointer-events:auto}
+  .cab-t{display:none}
+  .nav{top:0;bottom:0;left:0;right:auto;width:248px;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:3px;padding:18px 14px;border-top:0;border-right:1px solid var(--linha);background:#0f0d12;overflow-y:auto}
+  .nav-marca{display:flex;align-items:center;gap:8px;font-size:19px;padding:6px 12px 20px;cursor:pointer}
+  .nav button{flex:none;max-width:none;flex-direction:row;justify-content:flex-start;gap:12px;font-size:15px;min-height:46px;padding:8px 12px;text-align:left;color:var(--mudo)}
+  .nav button:hover{background:#ffffff08;color:var(--txt)}
+  .nav button span{font-size:19px;width:26px;text-align:center}
+  .nav .nav-pc{display:flex;font-size:14px;min-height:42px}
+  .nav .nav-mais{display:none}
+  .nav-sep{display:block;height:1px;background:var(--linha);margin:12px 8px}
+  .nav .bolha{position:static;margin-left:auto}
+  h1{font-size:30px}
+  .acao-novo{max-width:420px}
+  .ini{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px;align-items:start}
+  .ini-b .kpis{grid-template-columns:repeat(2,1fr)}
+  .ini-b .kpis.tres{grid-template-columns:repeat(3,1fr)}
+  .passo-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;align-items:start}
+  .passo-lado{position:sticky;top:70px}
+  .passo-lado .lista-etapas{margin-top:12px;max-height:calc(100vh - 96px);overflow:auto}
+  .grade{grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+  .abas{margin:8px 0;padding:2px 0 6px;flex-wrap:wrap;overflow:visible}
+  .fases{gap:10px}
+  .b-assist{right:28px;bottom:28px}
+}
+@media(min-width:1500px){ .passo-grid{grid-template-columns:minmax(0,1fr) 360px} }
