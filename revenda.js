@@ -461,7 +461,7 @@ function desenharExtra(et, tipo, box){
     campos: () => (et.campos || []).map(k => campo(k)).join('') + '<div class="linha" style="justify-content:flex-start"><button class="principal" onclick="rvSalvarTestar(\'' + et.id + '\')">💾 Salvar' + (et.teste ? ' e testar' : '') + '</button></div><div id="res_' + (et.teste || 'x') + '"></div>',
     teste: () => '<button class="principal" onclick="rvTeste(\'' + et.teste + '\')">▶️ Testar agora</button><div id="res_' + et.teste + '"></div>',
     codigos: () => codigosHtml(et.id),
-    conectar: () => conectarEtapaHtml() + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
+    conectar: () => conectarEtapaHtml() + '<div class="res ok" style="margin-top:12px"><b>⚡ Fazer tudo de uma vez</b><br><small>Com os dois tokens salvos e testados, o painel monta o banco, publica as funções, cria os logins e grava o site, numa tela só.</small><div class="cols" style="margin-top:8px"><label>Login do dono<input id="tdLogin" autocomplete="off" placeholder="ex.: maria" maxlength="30"></label><label>Senha do dono<input id="tdSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label><label>O seu login de suporte<input id="tdDLogin" autocomplete="off" value="Lucas" maxlength="30"></label><label>A sua senha de suporte<input id="tdDSenha" type="password" autocomplete="new-password" placeholder="mínimo 8, letras e números"></label></div><small class="mudo">As senhas só passam direto para o banco do restaurante: o painel não guarda nenhuma.</small><br><button class="principal" style="margin-top:8px" onclick="rvImplantarTudo()">⚡ Implantar tudo agora</button><div id="con_tudo_' + r.id + '"></div><div id="con_tudo_' + r.id + '_f"></div></div>',
     bancoauto: () => bancoAutoHtml(),
     googleauto: () => temSb(r) ? '<div class="res ok"><b>⚡ Jeito rápido:</b> cole os dois e toque no botão. O painel liga o "Entrar com o Google" no Supabase e já guarda as credenciais no cofre (a etapa do Drive usa as mesmas).'
       + '<label for="gaId">ID do cliente (termina em .apps.googleusercontent.com)</label><input id="gaId" autocomplete="off" value="' + esc((window.CD_VALS || {}).gid || '') + '"><label for="gaSec">Chave secreta do cliente (começa com GOCSPX-)</label><input id="gaSec" type="password" autocomplete="off">'
@@ -538,8 +538,7 @@ function pushHtml(){
 window.rvPushAuto = async () => {
   const r = S.rest; if(r.push_chave_publica && !confirm('Gerar chaves NOVAS? Os celulares já cadastrados vão precisar ativar os avisos de novo.')) return;
   conMsg('pa_' + r.id, '<small class="mudo">Gerando…</small>');
-  try{ const a = await chamarConector({ acao:'sb_vapid', restaurante_id:r.id }); if(!a.ok){ conMsg('pa_' + r.id, conLinha(false, esc(a.erro))); return; }
-    r.push_chave_publica = a.chave_publica; if(await salvar('Chaves dos avisos prontas e guardadas no cofre.')){ await hist(r.id, 'Chaves de aviso geradas pelo conector', ''); abaPasso(); } }catch(e){ conMsg('pa_' + r.id, conLinha(false, esc(e.message))); }
+  try{ const a = await gerarChavesAviso_(r); if(!a.ok){ conMsg('pa_' + r.id, conLinha(false, esc(a.erro))); return; } abaPasso(); }catch(e){ conMsg('pa_' + r.id, conLinha(false, esc(e.message))); }
 };
 window.rvGerarPush = async () => {
   const r = S.rest; if(r.push_chave_publica && !confirm('Gerar chaves NOVAS? Os celulares já cadastrados vão precisar ativar os avisos de novo.')) return;
@@ -1308,10 +1307,11 @@ async function vConectores(){
     if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
 }
 window.rvConAbrir = id => { S.conAberto = S.conAberto === id ? '' : id; vConectores(); };
+const expiraHtml = e => { if(!e) return ''; const d = new Date(String(e).replace(' UTC', 'Z').replace(' ', 'T')); if(isNaN(d)) return ''; const dias = Math.ceil((d - Date.now()) / 864e5); return dias < 0 ? conLinha(false, 'O token do GitHub VENCEU. Crie outro e salve de novo.') : dias <= 14 ? '<div class="res" style="border-left:3px solid #f0b429;">⚠️ O token do GitHub vence em ' + dias + ' dia(s) (' + d.toLocaleDateString('pt-BR') + '). Crie outro antes disso e salve de novo.</div>' : '<div class="res"><small class="mudo">ℹ️ Token do GitHub vale até ' + d.toLocaleDateString('pt-BR') + '.</small></div>'; };
 window.rvConTestar = async id => {
   conMsg(id, '<small class="mudo">Testando…</small>'); let h = '';
   try{ const a = await chamarConector({ acao:'sb_testar', restaurante_id:id }); h += conLinha(a.ok, a.ok ? 'Supabase: projeto "' + esc(a.nome || a.ref) + '" (' + esc(a.estado || '') + ')' : 'Supabase: ' + esc(a.erro)); }catch(e){ h += conLinha(false, 'Supabase: ' + esc(e.message)); }
-  try{ const b = await chamarConector({ acao:'gh_testar', restaurante_id:id }); h += conLinha(b.ok, b.ok ? 'GitHub: ' + esc(b.repo) + ' (pode gravar)' : 'GitHub: ' + esc(b.erro)); }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
+  try{ const b = await chamarConector({ acao:'gh_testar', restaurante_id:id }); h += conLinha(b.ok, b.ok ? 'GitHub: ' + esc(b.repo) + ' (pode gravar)' : 'GitHub: ' + esc(b.erro)); if(b.ok) h += expiraHtml(b.expira); }catch(e){ h += conLinha(false, 'GitHub: ' + esc(e.message)); }
   conMsg(id, h);
 };
 
@@ -1348,6 +1348,7 @@ window.rvConConferir = async id => {
     const g = await chamarConector({ acao:'gh_conferir', restaurante_id:id });
     if(!g.ok) h += conLinha(false, 'GitHub: ' + esc(g.erro || 'não consegui conferir'));
     else {
+      h += expiraHtml(g.expira);
       const faltam = g.arquivos.filter(x => !x.existe).map(x => x.nome);
       h += conLinha(!faltam.length, faltam.length ? 'Site no GitHub: faltam arquivos (' + esc(faltam.join(', ')) + ').' : 'Site no GitHub: os 4 arquivos estão em ' + esc(g.repo) + '.');
       if(faltam.length){ precisaSite = true; (window._confSite = window._confSite || {})[id] = faltam; }
@@ -1371,10 +1372,12 @@ window.rvImplantarTudo = async () => {
   if(!temSb(r) || !temGh(r)) return erro('Antes, salve os dois tokens (GitHub e Supabase) deste restaurante e toque em Testar ligações.');
   if(!/^[a-z0-9]{20}$/.test(refDe(r))) return erro('Preencha antes o endereço do banco (etapa "Criar o banco de dados").');
   if(!r.site_url || !r.github_url) return erro('Preencha antes o endereço do site e do GitHub (etapa "Criar o endereço do site").');
-  const aLogin = prompt('Login do DONO do restaurante (Administrador). Ex.: nome do dono, sem espaços:'); if(!aLogin) return;
-  const aSenha = prompt('Senha do dono (mínimo 8, com letras e números). Você entrega a ele depois:'); if(!aSenha) return;
-  const dLogin = prompt('O SEU login de Desenvolvedor (suporte) neste restaurante:', 'Lucas'); if(!dLogin) return;
-  const dSenha = prompt('A SUA senha de Desenvolvedor (mínimo 8, com letras e números):'); if(!dSenha) return;
+  if(r.situacao !== 'implantacao') return erro('Este restaurante não está "em implantação". Por segurança, o painel só monta o banco de restaurante novo. Se for refazer de propósito, mude a situação para "Em implantação" na aba Contrato.');
+  const val = id => (($(id) || {}).value || ''), aLogin = val('tdLogin').trim(), aSenha = val('tdSenha'), dLogin = val('tdDLogin').trim(), dSenha = val('tdDSenha');
+  const senhaOk = x => x.length >= 8 && /[A-Za-z]/.test(x) && /[0-9]/.test(x), loginOk = x => /^[A-Za-z0-9._-]{3,30}$/.test(x);
+  if(!loginOk(aLogin) || !loginOk(dLogin)) return erro('Os logins têm de 3 a 30 letras, números, ponto, traço ou _ (sem espaço).');
+  if(aLogin.toLowerCase() === dLogin.toLowerCase()) return erro('O login do dono e o seu de suporte precisam ser diferentes.');
+  if(!senhaOk(aSenha) || !senhaOk(dSenha)) return erro('As senhas precisam de 8 caracteres ou mais, com letras e números.');
   if(!confirm('O painel vai montar o banco VAZIO de "' + r.nome + '", publicar as funções, criar os dois logins e gravar o site no GitHub. Leva uns 6 a 10 minutos: deixe esta tela aberta. Só use em restaurante NOVO. Continuar?')) return;
   const nome = prompt('Para confirmar, digite o nome do restaurante exatamente:'); if(nome !== r.nome) return erro('O nome não confere. Nada foi feito.');
   const caixa = 'tudo_' + r.id; let h = '', ok = true; const tela = t => conMsg(caixa, h + (t ? '<small class="mudo">⏳ ' + esc(t) + '</small>' : ''));
@@ -1382,23 +1385,25 @@ window.rvImplantarTudo = async () => {
   const q = v => String(v).replace(/'/g, "''");
   try{
     ctxCod(r, []);
-    await passo('1/6 Estrutura do banco', () => conRodarSilencioso(r, bancoAutoItens(1), (n, t, rot) => tela('1/6 Estrutura do banco: parte ' + n + ' de ' + t + ' (' + rot + ')')));
-    await passo('2/6 Cofre de chaves e dados iniciais', async () => {
+    await passo('1/7 Estrutura do banco', () => conRodarSilencioso(r, bancoAutoItens(1), (n, t, rot) => tela('1/7 Estrutura do banco: parte ' + n + ' de ' + t + ' (' + rot + ')')));
+    await passo('2/7 Cofre de chaves e dados iniciais', async () => {
       const c = await chamarConector({ acao:'sb_cofre1', restaurante_id:r.id, confirmar:r.nome }); if(!c.ok) return { ok:false, erro:'Cofre: ' + (c.erro || 'erro') };
       if(c.chave_publica && !r.supabase_chave){ r.supabase_chave = c.chave_publica; await salvar('Chave pública preenchida.'); }
-      ctxCod(r, []); return conRodarSilencioso(r, bancoAutoItens(2), (n, t, rot) => tela('2/6 Dados iniciais: parte ' + n + ' de ' + t)); });
-    await passo('3/6 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f'); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
-    await passo('4/6 Logins (dono e Desenvolvedor)', async () => {
+      ctxCod(r, []); return conRodarSilencioso(r, bancoAutoItens(2), (n, t, rot) => tela('2/7 Dados iniciais: parte ' + n + ' de ' + t)); });
+    await passo('3/7 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f'); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
+    await passo('4/7 Logins (dono e Desenvolvedor)', async () => {
       const sql = "select public.instalar_admin_inicial('" + q(aLogin) + "', '" + q(aSenha) + "', 'Administrador');\nselect public.instalar_desenvolvedor('" + q(dLogin) + "', '" + q(dSenha) + "');";
       const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:'Logins iniciais', confirmar:r.nome }); return { ok:!!a.ok, erro:a.erro }; });
-    await passo('5/6 Endereços de login (Supabase)', async () => { const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); return { ok:!!a.ok, erro:a.erro }; });
-    await passo('6/6 Site no GitHub', async () => {
-      const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
-      for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) return { ok:false, erro:'não achei ' + n }; arqs.push({ caminho:n, conteudo:await x.text() }); }
-      const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' }); return { ok:!!a.ok, erro:a.erro || 'algum arquivo falhou' }; });
+    await passo('5/7 Endereços de login (Supabase)', async () => { const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); return { ok:!!a.ok, erro:a.erro }; });
+    await passo('6/7 Site no GitHub', async () => { const a = await gravarSite_(r); return { ok:!!a.ok, erro:a.erro || 'algum arquivo falhou' }; });
+    await passo('7/7 Avisos no celular (chaves)', async () => r.push_chave_publica ? { ok:true } : gerarChavesAviso_(r));   // se já tem, não gera outra (os celulares já ligados parariam de receber)
   }catch(e){ h += conLinha(false, esc(e.message)); ok = false; }
   hist(r.id, 'Implantação automática', ok ? 'completa' : 'parou com erro');
-  conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> Falta o que depende das suas contas: avisos no celular, Entrar com o Google, Drive e chaves das IAs (próximas etapas). Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou no passo que deu erro. Resolva e toque de novo: os passos já feitos podem rodar outra vez sem estragar (menos em banco que já tem dados).</div>'));
+  if(ok){
+    const agora = new Date().toISOString(); ['conectar', 'banco', 'funcoes', 'admin', 'push'].forEach(id => { const e = S.rest.etapas[id]; if(!e || !e.feita) S.rest.etapas[id] = Object.assign(e || {}, { feita:true, pulada:false, em:agora }); });
+    try{ await salvar('Etapas já feitas pelo painel foram marcadas.'); }catch(e){}
+    setTimeout(() => { try{ rvConConferir(r.id); }catch(e){} }, 2500); }
+  conMsg(caixa, h + (ok ? '<div class="res ok"><b>🎉 Pronto.</b> As chaves dos avisos também ficaram prontas e as etapas Conectar, Banco, Funções, Logins e Avisos já foram marcadas como feitas. Falta confirmar o site no ar. Falta só o que depende das suas contas: Entrar com o Google, Drive e chaves das IAs (próximas etapas). A conferência abaixo roda sozinha. Em Mais → Conectores toque em <b>Conferir implantação</b> para ver se ficou tudo.</div>' : '<div class="res erro">Parou no passo que deu erro. Resolva e toque de novo: os passos já feitos podem rodar outra vez sem estragar (menos em banco que já tem dados).</div>'));
 };
 window.rvConSincronizar = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
@@ -1532,16 +1537,25 @@ function publicarAutoHtml(){
   const r = S.rest; if(!temGh(r)) return '<div class="res erro">Antes, ligue o GitHub na etapa "Ligar o GitHub e o Supabase". Sem isso, use o jeito manual abaixo.</div>';
   return '<p class="pequeno">O painel grava no repositório os 4 arquivos do site, já prontos para este restaurante.</p><button class="principal" onclick="rvPublicarAuto()">⚡ Publicar o site sozinho</button><div id="con_pub_' + r.id + '"></div>';
 }
+/* grava no GitHub os 4 arquivos do site (um lugar só: usado pela etapa "Colocar o site no ar" e pelo "Implantar tudo") */
+async function gravarSite_(r){
+  const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
+  for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n + ' (erro ' + x.status + ')'); arqs.push({ caminho:n, conteudo:await x.text() }); }
+  const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' });
+  hist(r.id, 'Site publicado pelo conector', arqs.map(x => x.caminho).join(', '));
+  return a;
+}
+/* gera as chaves dos avisos no celular (a privada vai direto ao cofre do banco) e guarda a pública no cadastro */
+async function gerarChavesAviso_(r){
+  const a = await chamarConector({ acao:'sb_vapid', restaurante_id:r.id }); if(!a.ok) return a;
+  r.push_chave_publica = a.chave_publica; await salvar('Chaves dos avisos prontas e guardadas no cofre.'); await hist(r.id, 'Chaves de aviso geradas pelo conector', ''); return a;
+}
 window.rvPublicarAuto = async () => {
   const r = S.rest, caixa = 'pub_' + r.id;
   try{
-    conMsg(caixa, '<small class="mudo">⏳ Preparando os arquivos…</small>');
-    const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
-    for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n + ' (erro ' + x.status + ')'); arqs.push({ caminho:n, conteudo:await x.text() }); }
-    conMsg(caixa, '<small class="mudo">⏳ Gravando no GitHub…</small>');
-    const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' });
+    conMsg(caixa, '<small class="mudo">⏳ Gravando os arquivos no GitHub…</small>');
+    const a = await gravarSite_(r);
     conMsg(caixa, (a.arquivos || []).map(f => conLinha(f.ok, esc(f.caminho) + (f.ok ? '' : ': ' + esc(f.erro)))).join('') + (a.ok ? '<div class="res ok">Pronto! Espere 1 a 2 minutos e toque em "Conferir o site".</div>' : conLinha(false, esc(a.erro || 'Alguns arquivos falharam.'))));
-    hist(r.id, 'Site publicado pelo conector', arqs.map(x => x.caminho).join(', '));
   }catch(e){ conMsg(caixa, conLinha(false, esc(e.message))); }
 };
 
