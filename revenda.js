@@ -1416,7 +1416,7 @@ const amarela = t => '<div class="res" style="border-left:3px solid #f0b429;">�
 const listaCurta = (a, n = 8) => a.slice(0, n).map(esc).join(', ') + (a.length > n ? ' e mais ' + (a.length - n) : '');
 window.rvConConferir = async id => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  const box = 'con_' + id; conMsg(id, '<small class="mudo">⏳ Conferindo o banco e o GitHub de ' + esc(r.nome) + '…</small>');
+  conMsg(id, '<small class="mudo">⏳ Conferindo o banco e o GitHub de ' + esc(r.nome) + '…</small>');
   let h = '<div class="res"><b>Conferência de ' + esc(r.nome) + '</b> <small class="mudo">· ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) + '</small></div>', precisaBanco = false, precisaFuncoes = false, precisaSite = false, precisaSync = false;
   if(!temSb(r)) h += amarela('Banco: ligue o token do Supabase deste restaurante para conferir.');
   else try{
