@@ -1405,11 +1405,28 @@ async function carregarSaudePainel_(){
      + barraUso({ tit:'Banco do painel', uso:fmtBytes_(d.banco_bytes), lim:'500 MB', pct:pct(d.banco_bytes, d.banco_limite) })
      + barraUso({ tit:'Arquivo (Storage)', uso:fmtBytes_(d.storage_bytes), lim:'1 GB', pct:pct(d.storage_bytes, d.storage_limite) })
      + (d.cron_falhas ? conLinha(false, d.cron_falhas + ' tarefa(s) agendada(s) falharam nas últimas 24 h') : conLinha(true, 'Tarefas agendadas em dia'))
-     + (d.saida_erros >= 5 ? conLinha(false, d.saida_erros + ' chamadas a outros serviços com erro nas últimas 24 h') : '')
+     + (d.saida_erros > 0 || d.cron_falhas > 0 ? errosSaudeHtml_(d) : '')
      + '<small class="mudo">Conferido de 6 em 6 horas; chega aviso no celular acima de 70%. O que é antigo (histórico, registro do conector e erros resolvidos) vai sozinho para o Storage 1 vez por mês' + (ua ? ' · último: ' + esc(new Date(ua.em).toLocaleDateString('pt-BR')) + ' (' + esc(ua.tabela) + ', ' + ua.linhas + ' linhas)' : '') + '. Cobranças e contratos nunca são arquivados.</small>'
      + '<p><button class="mini" onclick="rvArquivarPainel()">🗄️ Arquivar agora</button></p>';
   }catch(e){ box.innerHTML = '<h2>🩺 Saúde do painel</h2>' + conLinha(false, 'Não consegui ler (' + esc(e.message) + '). Falta aplicar o código 025 no banco do painel.'); }
 }
+/* o que significa cada erro, em palavras simples */
+function explicaErro_(x){
+  const e = String(x.erro || '');
+  if(/timeout/i.test(e)) return 'A tarefa esperou mais de 5 segundos pela resposta e desistiu. Costuma ser só demora do servidor; o tempo já foi aumentado para 55 s, então não deve se repetir.';
+  if(x.status === 401 || x.status === 403) return 'O serviço recusou a chamada (sem permissão). Confira a chave ou o token usado.';
+  if(x.status === 404) return 'O endereço chamado não existe (função não publicada ou nome errado).';
+  if(x.status >= 500) return 'O outro serviço falhou do lado dele. Normalmente passa sozinho.';
+  return 'Erro ao chamar outro serviço. Se continuar aparecendo, copie este texto e mande para o Claude.';
+}
+function errosSaudeHtml_(d){
+  const l = d.saida_lista || [];
+  const itens = l.map(x => '<div class="mudo" style="margin:6px 0">• ' + esc(new Date(x.em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })) + ' — ' + esc(x.status ? 'erro ' + x.status : (String(x.erro).split('.')[0] || 'sem resposta')) + '<br><small>' + esc(explicaErro_(x)) + '</small></div>').join('');
+  return conLinha(false, (d.saida_erros ? d.saida_erros + ' chamada(s) a outros serviços com erro' : '') + (d.saida_erros && d.cron_falhas ? ' · ' : '') + (d.cron_falhas ? d.cron_falhas + ' tarefa(s) agendada(s) falharam' : ''))
+    + (itens ? '<div style="margin:6px 0 10px">' + itens + (d.saida_erros > l.length ? '<small class="mudo">(mostrando as ' + l.length + ' mais recentes)</small>' : '') + '</div>' : '')
+    + '<p><button class="mini" onclick="rvErrosVistos()">✅ Marcar como resolvido</button> <small class="mudo">Zera o contador; só erros novos voltam a aparecer.</small></p>';
+}
+window.rvErrosVistos = async () => { try{ await rpc('painel_saude_visto'); aviso('Marcado como resolvido.', 'ok'); }catch(e){ erro(e.message); } carregarSaudePainel_(); };
 window.rvArquivarPainel = async () => {
   aviso('Arquivando…', 'ok');
   try{ if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
