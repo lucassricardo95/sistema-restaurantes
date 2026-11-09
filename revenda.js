@@ -1782,6 +1782,7 @@ async function gravarSite_(r){
   for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n + ' (erro ' + x.status + ')'); arqs.push({ caminho:n, conteudo:await x.text() }); }
   const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:arqs, mensagem:'Site de ' + r.nome + ' publicado pelo Painel de Revenda' });
   hist(r.id, 'Site publicado pelo conector', arqs.map(x => x.caminho).join(', '));
+  if(a && a.ok && S.rest && S.rest.id === r.id) S._snap = snapSite_(S.rest);   // o que está no GitHub agora é o que o painel gerou: a próxima mudança salva compara com isso
   return a;
 }
 /* gera as chaves dos avisos no celular (a privada vai direto ao cofre do banco) e guarda a pública no cadastro */
