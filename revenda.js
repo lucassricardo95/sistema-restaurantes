@@ -263,10 +263,27 @@ function vRestaurantes(){
   T('<div class="topo"><h1>Restaurantes</h1><button class="principal" onclick="rvNovo()">＋ Novo</button></div>'
    + dica('Toque num restaurante para ver o passo a passo, a saúde, o cadastro, a marca e as cobranças dele.') + '<input type="search" placeholder="🔎 Buscar por nome, dono ou cidade" value="' + esc(S.busca) + '" oninput="rvBusca(this.value)">'
    + '<div class="chips">' + Object.keys(F).map(k => '<button class="chip ' + (S.filtro === k ? 'on' : '') + '" onclick="rvFiltro(\'' + k + '\')">' + F[k] + '</button>').join('') + '</div>'
-   + '<div id="listaR" class="grade">' + (L.length ? L.map(cartaoRest).join('') : '<div class="card vazio">' + (S.lista.length ? 'Nenhum restaurante neste filtro.' : 'Nenhum restaurante ainda. Toque em "＋ Novo" para criar o primeiro.') + '</div>') + '</div>');
+   + '<div id="listaR" class="grade">' + (L.length ? listaAgrupada_(L) : '<div class="card vazio">' + (S.lista.length ? 'Nenhum restaurante neste filtro.' : 'Nenhum restaurante ainda. Toque em "＋ Novo" para criar o primeiro.') + '</div>') + '</div>');
 }
 window.rvBusca = v => { S.busca = v; const a = document.activeElement, p = a && a.selectionStart; vRestaurantes(); const i = document.querySelector('input[type=search]'); if(i){ i.focus(); try{ i.setSelectionRange(p, p); }catch(e){} } };
 window.rvFiltro = f => { S.filtro = f; vRestaurantes(); };
+function listaAgrupada_(L){
+  const feito = {}, out = [];
+  L.forEach(r => {
+    const g = r.cliente_id ? S.lista.filter(x => x.cliente_id === r.cliente_id) : [];
+    if(g.length < 2) return out.push(cartaoRest(r));
+    if(feito[r.cliente_id]) return; feito[r.cliente_id] = 1;
+    const ls = L.filter(x => x.cliente_id === r.cliente_id);
+    out.push('<div class="card" style="grid-column:1/-1"><div class="linha"><b>👥 ' + esc(r.contato_nome || r.nome) + '</b><small class="mudo">' + g.length + ' lojas</small></div><div class="grade" style="margin-top:8px">' + ls.map(cartaoRest).join('') + '</div><button class="mini" style="margin-top:8px" onclick="rvOutraLoja(\'' + r.id + '\')">＋ Adicionar outra loja</button></div>');
+  });
+  return out.join('');
+}
+window.rvOutraLoja = id => {
+  const r = S.lista.find(x => x.id === id); if(!r) return;
+  const cid = r.cliente_id || r.id, n = S.lista.filter(x => (x.cliente_id || x.id) === cid).length + 1;
+  rvNovo({ nome:r.nome.replace(/\s*[-–]\s*loja\s*\d+$/i, '') + ' - Loja ' + n, contato_nome:r.contato_nome, telefone:r.contato_telefone, email:r.contato_email, cidade:r.cidade, plano:r.plano, valor_mensal:r.valor_mensal, taxa_implantacao:r.taxa_implantacao, modulos:r.modulos });
+  S.novo.cliente_id = cid; S.novo.base = r; S.novo.dia_vencimento = r.dia_vencimento || S.novo.dia_vencimento; vNovo();
+};
 function cartaoRest(r){
   const n = nEtapas(r), p = Math.round(n / ETAPAS.length * 100), sd = saudeDe(r.slug), er = errosDe(r.slug).length, at = atrasadas(r.id), px = proxEtapa(r);
   return '<div class="card cr' + (r.bloqueado ? ' bloq' : '') + '" onclick="rvAbrir(\'' + r.id + '\')"><div class="linha"><b class="cr-n">' + esc(r.nome) + '</b><span class="selo ' + esc(r.situacao) + '">' + (r.bloqueado ? '⛔ Bloqueado' : esc(SIT[r.situacao] || r.situacao)) + '</span></div>'
@@ -310,11 +327,13 @@ window.rvNovoPasso = async d => {
 async function criarRest(){
   const n = S.novo, mod = {}; MODULOS.forEach(m => { mod[m.id] = n.modulos && n.modulos[m.id] != null ? !!n.modulos[m.id] : m.pad; });
   const t = TEMAS.find(x => x.id === 'classico');
+  const marcaBase = n.base && n.base.marca ? JSON.parse(JSON.stringify(n.base.marca)) : null;
   const dia = Math.min(28, Math.max(1, parseInt(n.dia_vencimento, 10) || 10));
   try{
     const r = await rest('restaurantes', 'POST', { slug:n.slug, nome:n.nome, situacao:'implantacao', contato_nome:n.contato_nome || null, contato_telefone:n.contato_telefone || null, contato_email:n.contato_email || null, cidade:n.cidade || null, plano:n.plano || null, valor_mensal:num(n.valor_mensal), taxa_implantacao:num(n.taxa_implantacao), dia_vencimento:dia, inicio_em:hoje(), motor:MOTOR_PADRAO, modulos:mod,
-      marca:{ tema:t.id, slogan:'', assistente:'Assistente', jogos:{ tema:'generico' }, cores:{ destaque:t.destaque, botao:t.botao, fundo:t.fundo }, logos:{} }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
-    await hist(r[0].id, 'Restaurante criado', n.nome);
+      cliente_id:n.cliente_id || null, marca:marcaBase || { tema:t.id, slogan:'', assistente:'Assistente', jogos:{ tema:'generico' }, cores:{ destaque:t.destaque, botao:t.botao, fundo:t.fundo }, logos:{} }, etapas:{ cadastro:{ feita:true, em:new Date().toISOString() } } });
+    if(n.base && !n.base.cliente_id){ try{ await rest('restaurantes?id=eq.' + n.base.id, 'PATCH', { cliente_id:n.cliente_id }); }catch(e){} }
+    await hist(r[0].id, 'Restaurante criado', n.nome + (n.base ? ' (outra loja de ' + n.base.nome + ')' : ''));
     if(n.proposta){ try{ await rest('propostas?id=eq.' + n.proposta, 'PATCH', { status:'fechado', restaurante_id:r[0].id, atualizado_em:new Date().toISOString() }); }catch(e){} }
     await carregar(); aviso('Restaurante criado! Agora é seguir o passo a passo.', 'ok'); window.rvAbrir(r[0].id, 'passo');
   }catch(e){ erro(/duplicate|unique/i.test(e.message) ? 'Já existe um restaurante com esse código.' : e.message); }
@@ -334,6 +353,7 @@ function vRest(){
    + '<h1>' + esc(r.nome) + '</h1><div class="linha" style="justify-content:flex-start;gap:6px"><small class="mudo">' + ponto(SAUDE_COR[sd.geral]) + SAUDE_ROT[sd.geral] + ' · implantação ' + n + ' de ' + ETAPAS.length + '</small></div>'
    + '<div class="atalhos">' + (r.site_url ? '<a class="btn mini" href="' + esc(r.site_url) + '" target="_blank" rel="noopener">🌐 Site</a>' : '') + (r.contato_telefone ? '<a class="btn mini" href="' + esc(waLink(r.contato_telefone)) + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '')
      + (sb ? '<a class="btn mini" href="https://supabase.com/dashboard/project/' + esc(sb) + '" target="_blank" rel="noopener">🗄️ Supabase</a>' : '') + (r.github_url ? '<a class="btn mini" href="' + esc(r.github_url) + '" target="_blank" rel="noopener">🐙 GitHub</a>' : '') + '</div>'
+   + '<div class="atalhos"><button class="btn mini" onclick="rvOutraLoja(\'' + r.id + '\')">＋ Adicionar outra loja deste cliente</button></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>');
   ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
 }
@@ -350,7 +370,7 @@ const NUMS = ['valor_mensal','taxa_implantacao','dia_vencimento'];
 function campo(k, o){ o = o || {}; const v = get(S.rest, k); const tipo = k === 'inicio_em' ? 'date' : k === 'contato_email' ? 'email' : k === 'contato_telefone' ? 'tel' : 'text';
   return '<label for="f_' + k.replace(/\./g, '_') + '">' + esc(o.rot || ROT[k] || k) + '</label><input id="f_' + k.replace(/\./g, '_') + '" data-k="' + k + '" type="' + tipo + '"' + (NUMS.includes(k) ? ' inputmode="decimal"' : '') + ' value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(PH[k] || o.ph || '') + '">'; }
 function lerForm(){ document.querySelectorAll('#tela [data-k]').forEach(el => { const k = el.dataset.k; let v = el.type === 'checkbox' ? el.checked : el.value.trim(); if(NUMS.includes(k)) v = num(v); else if(v === '' && el.type !== 'checkbox' && !/^(marca|modulos)\./.test(k)) v = null; set(S.rest, k, v); }); }
-const COLS = ['nome','situacao','dominio','site_url','github_url','supabase_url','supabase_chave','api_url','contingencia_url','contingencia_chave','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','motor','inicio_em','observacoes'];
+const COLS = ['cliente_id','nome','situacao','dominio','site_url','github_url','supabase_url','supabase_chave','api_url','contingencia_url','contingencia_chave','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','motor','inicio_em','observacoes'];
 async function salvar(msg){
   const _antesSite = S._snap;
   lerForm();
