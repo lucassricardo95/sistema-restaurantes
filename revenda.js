@@ -1356,7 +1356,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado']];
 async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1506,6 +1506,8 @@ window.rvImplantarTudo = async () => {
       ctxCod(r, []); return conRodarSilencioso(r, bancoAutoItens(2), (n, t, rot) => tela('2/7 Dados iniciais: parte ' + n + ' de ' + t)); });
     await passo('3/7 Funções do servidor', async () => { conMsg(caixa + '_f', ''); const f = await conPublicarFuncoes(r, caixa + '_f', true); return { ok:!!f, erro:'veja abaixo e toque em Publicar funções para repetir' }; });
     await passo('4/7 Logins (dono e Desenvolvedor)', async () => {
+      const ua = await conRodarSilencioso(r, UPDS.filter(u => u[0] === 'upd151'));   // a trava do Desenvolvedor que o Supabase não bloqueia (banco montado antes dessa versão)
+      if(!ua.ok) return { ok:false, erro:ua.erro };
       const sql = "select public.instalar_admin_inicial('" + q(aLogin) + "', '" + q(aSenha) + "', 'Administrador');\nselect public.instalar_desenvolvedor('" + q(dLogin) + "', '" + q(dSenha) + "');";
       const a = await chamarConector({ acao:'sb_sql', restaurante_id:r.id, sql, rotulo:'Logins iniciais', confirmar:r.nome }); return { ok:!!a.ok, erro:a.erro }; });
     await passo('5/7 Endereços de login (Supabase)', async () => { const a = await chamarConector({ acao:'sb_login_urls', restaurante_id:r.id }); return { ok:!!a.ok, erro:a.erro }; });
