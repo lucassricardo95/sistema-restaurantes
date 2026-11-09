@@ -15,7 +15,7 @@ import webpush from "npm:web-push@3.6.7";
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SVC = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const svc = createClient(URL_, SVC, { auth: { persistSession: false } });
-const NIVEIS = ["Admin", "Operador", "Desenvolvedor"];
+const NIVEIS = ["Admin", "Operador"];   // o Desenvolvedor não recebe avisos de operação do restaurante (só o dono e a equipe)
 const SUBJECT = "https://github.com/";
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
 const seg = async (nome: string) => { try { const { data } = await svc.rpc("api_segredo", { p_nome: nome }); return (data as string) || ""; } catch { return ""; } };
@@ -55,9 +55,9 @@ Deno.serve(async (req) => {
       const { data: subs } = await svc.from("push_inscricoes").select("id,endpoint,p256dh,auth,usuario_id,falhas");
       const { data: usrs } = await svc.from("usuarios").select("id,nivel,ativo");
       // alertas (auditoria 18/10/2026): "niveis" escolhe os perfis (Cozinha e Garçom também); "usuarios" manda só para essas pessoas (aviso de teste).
-      // Sem os dois, igual a antes: Admin, Operador e Desenvolvedor. Desenvolvedor recebe o que vai para o Admin.
+      // Sem os dois: Admin e Operador. O Desenvolvedor não recebe aviso de operação (é do dono).
       const pedidos: string[] = Array.isArray(b.niveis) ? b.niveis.map((x: unknown) => String(x)).filter((x: string) => ["Admin", "Operador", "Cozinha", "Garçom"].includes(x)) : [];
-      const quem = pedidos.length ? (pedidos.includes("Admin") ? [...pedidos, "Desenvolvedor"] : pedidos) : NIVEIS;
+      const quem = pedidos.length ? pedidos : NIVEIS;
       const soEstes = new Set(Array.isArray(b.usuarios) ? b.usuarios.map((x: unknown) => String(x)) : []);
       const ok = new Set((usrs || []).filter((u: any) => u.ativo !== false && (soEstes.size ? soEstes.has(u.id) : quem.includes(String(u.nivel)))).map((u: any) => u.id));
       alvo = (subs || []).filter((s: any) => ok.has(s.usuario_id));
