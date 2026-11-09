@@ -824,7 +824,7 @@ function acoesCard(){
   const A = S.acoes || [];
   const pend = A.filter(a => a.nivel === 2 && a.estado === 'pendente'), sug = A.filter(a => a.nivel === 3 && a.estado === 'pendente');
   const auto = A.filter(a => a.nivel === 1).slice(0, 5), fei = A.filter(a => a.nivel === 2 && ['aplicada','falhou','desfeita','recusada'].includes(a.estado)).slice(0, 4);
-  if(!pend.length && !sug.length && !auto.length && !fei.length) return '<div class="card"><b>🛠️ Correções do vigia</b><br><small class="mudo">Nada por enquanto. Erro pequeno o vigia resolve sozinho (fica registrado aqui); correção de banco espera a sua aprovação; melhoria maior chega como sugestão para você mandar ao Claude.</small></div>';
+  if(!pend.length && !sug.length && !auto.length && !fei.length) return '<div class="card"><b>🛠️ Correções do vigia</b><br><small class="mudo">Nada por enquanto. Erro pequeno o vigia resolve sozinho (fica registrado aqui); correção de banco espera a sua aprovação; melhoria maior chega como sugestão para você mandar ao Claude.</small>' + ghPainelHtml() + '</div>';
   const de = a => a.slug ? esc(nomeSlug(a.slug)) + ' · ' : '';
   return '<div class="card"><b>🛠️ Correções do vigia</b>'
    + pend.map(a => '<div class="erro-item"><b>⏳ ' + de(a) + esc(a.titulo) + '</b><br><small>' + esc(a.problema || '') + '</small><br><small>🛠️ <b>Correção proposta:</b> ' + esc(a.solucao || '') + '</small>'
@@ -835,8 +835,18 @@ function acoesCard(){
    + fei.map(a => '<div class="erro-item"><small><b>' + ({ aplicada:'✅ Aplicada', falhou:'❌ Não aplicada', desfeita:'↩️ Desfeita', recusada:'🚫 Recusada' }[a.estado]) + ':</b> ' + de(a) + esc(a.titulo) + '<br><span class="mudo">' + esc(a.resultado || '') + '</span></small>'
       + (a.estado === 'aplicada' && a.desfazer ? '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvAcao(\'' + a.id + '\',\'desfazer\')">↩️ Desfazer em todos</button></div>' : '') + '</div>').join('')
    + (auto.length ? '<small class="mudo" style="display:block;margin-top:8px"><b>🤖 Feito sozinho (recente):</b></small>' + auto.map(a => '<small class="mudo" style="display:block">• ' + haTempo(Math.round((Date.now() - new Date(a.criado_em).getTime()) / 60000)) + ' · ' + esc(a.titulo) + '</small>').join('') : '')
+   + ghPainelHtml()
    + '</div>';
 }
+function ghPainelHtml(){
+  const g = (S.segs || {}).github_painel;
+  return '<details style="margin-top:10px"' + (g ? '' : ' open') + '><summary class="mudo pequeno">' + (g ? '✅ GitHub do painel conectado (…' + esc(g.fim) + '): as correções aprovadas são salvas sozinhas no repositório' : '⬜ Conectar o GitHub do painel: para as correções aprovadas serem salvas sozinhas no repositório') + '</summary>'
+   + '<small class="mudo" style="display:block;margin:6px 0">Sem isso a correção funciona igual, mas o código dela só fica no painel. Passo a passo no celular: github.com → seu perfil → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. Em "Repository access" escolha <b>Only select repositories</b> e marque <b>sistema-restaurantes</b>. Em Permissions → Repository permissions → <b>Contents: Read and write</b>. Gere e copie o token.</small>'
+   + '<div class="linha ia-campo"><input type="password" id="k_github_painel" placeholder="' + (g ? 'colar para trocar' : 'colar o token aqui') + '" autocomplete="off"><button class="mini principal" onclick="rvSalvarGH()">Salvar</button>' + (g ? '<button class="mini" onclick="rvApagarGH()">Apagar</button>' : '') + '</div></details>';
+}
+window.rvSalvarGH = async () => { const v = jv('k_github_painel'); if(!v) return erro('Cole o token no campo.');
+  try{ const x = await rpc('revenda_segredo_salvar', { p_nome:'github_painel', p_valor:v }); if(!x || !x.ok) throw new Error((x && x.erro) || 'não salvou'); S.segs = await rpc('revenda_segredos_status'); aviso('Guardado no cofre ✓', 'ok'); }catch(e){ erro(e.message); } desenhar(); };
+window.rvApagarGH = async () => { if(!confirm('Desconectar o GitHub do painel?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:'github_painel', p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); }catch(e){ erro(e.message); } desenhar(); };
 async function recarregarAcoes(){ const ac = await tenta(() => rest('vigia_acoes?select=*&order=criado_em.desc&limit=60'), null); if(ac) S.acoes = ac; }
 async function acaoCall(corpo){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
