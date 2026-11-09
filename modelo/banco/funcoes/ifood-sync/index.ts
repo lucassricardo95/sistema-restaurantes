@@ -35,6 +35,22 @@ const textoErro = (er: unknown) => er instanceof HttpErro
   ? (er.status === 401 ? "401 (credenciais recusadas)" : er.status === 403 ? "403 (módulo não liberado para este app)" : er.status === 429 ? "429 (limite de chamadas)" : `${er.status} ${er.corpo}`)
   : String(er);
 
+// v1.85 (atualização 153) — "Liberado pelo iFood": só consulta o módulo que o Desenvolvedor marcou como liberado (ifood_modulos.liberado).
+// Sem a coluna (banco ainda sem a 153) ou com erro na leitura: LIBERA TUDO (como era antes), para nunca derrubar um restaurante que já funciona.
+let LIBERADOS: Set<string> | null = null;
+let liberadosLido = 0;
+async function carregarLiberados(): Promise<Set<string> | null> {
+  if (Date.now() - liberadosLido < 60000) return LIBERADOS;   // no máximo 1 leitura por minuto (plano grátis)
+  try {
+    const { data, error } = await svc.from("ifood_modulos").select("modulo, liberado");
+    if (error || !Array.isArray(data) || !data.length || data.some((x: any) => typeof x.liberado !== "boolean")) LIBERADOS = null;
+    else LIBERADOS = new Set(data.filter((x: any) => x.liberado).map((x: any) => String(x.modulo)));
+  } catch { LIBERADOS = null; }
+  liberadosLido = Date.now();
+  return LIBERADOS;
+}
+const moduloLiberado = (mod: string) => !LIBERADOS || mod === "authentication" || mod === "outro" || LIBERADOS.has(mod);
+
 // v1.15 (homologação) — estado de cada módulo nesta rodada (D-01): vai para o banco uma vez no fim
 const MODULOS: Record<string, { ok: boolean; status?: number; msg?: string }> = {};
 function moduloDe(caminho: string) {
@@ -49,6 +65,7 @@ function marcarModulo(caminho: string, ok: boolean, status?: number, msg?: strin
 
 // 429 (limite de chamadas): espera e tenta de novo, no máximo 3 vezes (1 s, 2 s, 4 s ou o Retry-After do iFood, até 10 s).
 async function http(metodo: string, caminho: string, token: string | null, corpo?: unknown, extra: Record<string, string> = {}) {
+  if (!moduloLiberado(moduloDe(caminho))) throw new HttpErro(499, "módulo ainda não liberado pelo desenvolvedor");   // nem chama o iFood, nem registra erro, nem avisa ninguém
   for (let tentativa = 0; ; tentativa++) {
     try { const r = await http1(metodo, caminho, token, corpo, extra); marcarModulo(caminho, true); return r; }
     catch (e) {
@@ -567,6 +584,11 @@ Deno.serve(async (req) => {
       try { if ((await rpc("ifood_pode_consultar")) === false) return json({ ok: true, aguardando: "acesso recusado: nova tentativa em até 5 min" }); } catch { /* sem a função: segue */ }
       if (!(await rpc("ifood_trava_pegar", { p_dono: dono, p_seg: 100 }))) return json({ ok: true, ocupado: true });
     }
+    await carregarLiberados();
+    if (LIBERADOS && !LIBERADOS.has("events")) {   // o iFood ainda não liberou o módulo de eventos (pedidos): não há o que consultar, nem erro para avisar
+      try { await rpc("ifood_trava_soltar", { p_dono: dono }); } catch { /* a trava vence sozinha */ }
+      return json({ ok: true, aguardando: "módulo events ainda não liberado (marque Liberado pelo iFood no painel)" });
+    }
     try {
       for (let volta = 0; volta < 1; volta++) {   // 1 rodada por chamada: o agendamento (pg_cron) chama a cada 30 s, que é o ritmo que o iFood pede
         if (volta > 0 && !(await rpc("ifood_trava_pegar", { p_dono: dono, p_seg: 100 }))) break;   // renova a trava a cada volta (mesmo dono); se perdeu, para
@@ -589,7 +611,7 @@ Deno.serve(async (req) => {
             if (volta === 0 && await rpc("ifood_precisa", { p_tarefa: "lojas", p_minutos: 1440 })) await conferirLojas(cred);
           }
         } catch { /* reforços: não podem derrubar o ciclo */ }
-        try { await processarFinanceiro({ rpc, pegarToken, marcarModulo, BASE }, cred, 6, 20000, PRE ? PRE.fin : undefined); } catch { /* financeiro: nunca derruba o ciclo */ }
+        try { if (moduloLiberado("financial")) await processarFinanceiro({ rpc, pegarToken, marcarModulo, BASE }, cred, 6, 20000, PRE ? PRE.fin : undefined); } catch { /* financeiro: nunca derruba o ciclo */ }
       }
     } finally {
       let fechou = false;

@@ -352,7 +352,7 @@ window.rvAbrir = async (id, aba) => {
   await carregarRest(); desenhar();
 };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; S.dono_link = (await tenta(() => rest('dono_links?restaurante_id=eq.' + S.rest.id + '&select=*'), []))[0] || null; }catch(e){ erro(e.message); } }
-const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
+const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['integ','🔗 Integrações'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
 function vRest(){
   const r = S.rest, n = nEtapas(r), sd = saudeDe(r.slug), sb = refDe(r);
   T('<div class="topo"><button class="mini" onclick="rvIr(\'restaurantes\')">← Restaurantes</button><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao] || r.situacao) + '</span></div>'
@@ -361,7 +361,7 @@ function vRest(){
      + (sb ? '<a class="btn mini" href="https://supabase.com/dashboard/project/' + esc(sb) + '" target="_blank" rel="noopener">🗄️ Supabase</a>' : '') + (r.github_url ? '<a class="btn mini" href="' + esc(r.github_url) + '" target="_blank" rel="noopener">🐙 GitHub</a>' : '') + '</div>'
    + '<div class="atalhos"><button class="btn mini" onclick="rvOutraLoja(\'' + r.id + '\')">＋ Adicionar outra loja deste cliente</button></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>');
-  ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
+  ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, integ:abaIntegracoes, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
 }
 window.rvAba = a => { S.aba = a; vRest(); };
 const C = h => { $('corpo').innerHTML = h; };
@@ -1476,7 +1476,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado']];
 async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1901,6 +1901,32 @@ const IA_REST = [['groq','Groq','1º a responder (começa com gsk_).','https://c
   ['cloudflare_conta','Cloudflare · Account ID','32 letras e números (barra de endereço do dash.cloudflare.com).','https://dash.cloudflare.com/'],['cloudflare','Cloudflare · Token','API Tokens → modelo "Workers AI".','https://dash.cloudflare.com/profile/api-tokens'],
   ['gemini','Gemini','Também faz a pesquisa na internet (AIza… ou AQ.…).','https://aistudio.google.com/apikey'],['nvidia','NVIDIA','Reserva mais lenta (nvapi-…).','https://build.nvidia.com/settings/api-keys'],['gemini_2','Gemini 2','Último recurso: chave de outro projeto do Google.','https://aistudio.google.com/apikey']];
 const DADOS_REST = [['nome','Nome que aparece no cardápio e nas impressões',60],['endereco','Endereço',200],['telefone','WhatsApp / telefone da loja',30],['horario','Horário de funcionamento',300],['redes','Redes sociais (Instagram, etc.)',300]];
+/* ---------- INTEGRAÇÕES DO RESTAURANTE (só o desenvolvedor mexe; o dono e a equipe nunca) ---------- */
+const IF_MODS = [['events','Eventos (chegada dos pedidos)','É o que traz os pedidos do iFood. Sem ele liberado, o sistema nem consulta o iFood.'],['order','Pedidos (detalhes e ações)','Detalhes, confirmar, preparar e despachar.'],['merchant','Loja','Abrir, fechar, pausar e horário.'],['catalog','Cardápio','Importar e atualizar cardápio e preços.'],['review','Avaliações','Ler e responder avaliações.'],['financial','Financeiro e repasses','Vendas, repasses e comissão.'],['shipping','Entregador','Código de entrega e rastreio.'],['logistics','Logística','Rota e acompanhamento da entrega.'],['analytics','Indicadores','Desempenho da loja.']];
+async function abaIntegracoes(){
+  const C = h => { const b = $('corpo'); if(b) b.innerHTML = h; }; const r = S.rest;
+  const manual = '<details><summary>Sem o conector? Faça à mão no SQL Editor do Supabase deste restaurante</summary><p class="mudo pequeno">Para liberar um módulo (troque <code>events</code> pelo nome do módulo; para desligar, troque <code>true</code> por <code>false</code>):</p><pre class="codigo" style="white-space:pre-wrap">update public.ifood_modulos set liberado = true, liberado_em = now() where modulo = \'events\';</pre></details>';
+  if(!temSb(r)){ C('<div class="card"><h2>🔗 Integrações</h2><p>Aqui você controla o que o iFood já liberou para este restaurante. O dono e a equipe não veem nem mexem nisso.</p><div class="res aviso">Para mexer daqui, ligue antes o conector do Supabase deste restaurante.</div><button class="principal" onclick="rvIr(\'conectores\')">🔌 Ligar o conector</button>' + manual + '</div>'); return; }
+  C('<div class="card"><small class="mudo">Carregando as integrações de ' + esc(r.nome) + '…</small></div>');
+  let a; try{ a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'ler' } }, 'conector-integ'); }catch(e){ a = { ok:false, erro:e.message }; }
+  if(S.view !== 'rest' || S.aba !== 'integ' || S.rest.id !== r.id) return;
+  if(!a || !a.ok){ C('<div class="card"><h2>🔗 Integrações</h2>' + conLinha(false, esc((a && a.erro) || 'Não consegui ler.')) + '<button class="mini" onclick="rvAba(\'integ\')">↻ Tentar de novo</button>' + manual + '</div>'); return; }
+  const M = {}; (a.modulos || []).forEach(x => { M[x.modulo] = x; });
+  const ligado = !!(a.ifood && a.ifood.ligado), nLib = IF_MODS.filter(m => (M[m[0]] || {}).liberado).length;
+  C('<div class="card"><h2>🛒 iFood · módulos liberados pelo iFood</h2><p class="mudo pequeno">O iFood libera cada módulo do aplicativo em separado, no Portal do Desenvolvedor. Marque aqui só quando o iFood já liberou. <b>Módulo desligado não é consultado e não avisa ninguém.</b> O dono não vê erro de módulo que você ainda não liberou.</p>'
+   + '<div class="linha mapa-l"><span>' + (ligado ? '🟢 iFood ligado neste restaurante' : '⚪ iFood desligado neste restaurante') + (a.ifood && a.ifood.modo ? ' · ' + esc(a.ifood.modo) : '') + '</span><small class="mudo">' + nLib + ' de ' + IF_MODS.length + ' liberados</small></div>'
+   + IF_MODS.map(m => { const x = M[m[0]] || {}; const st = x.liberado ? (x.status && x.status !== 200 && x.ultimoErroEm && (!x.ultimoOk || x.ultimoErroEm > x.ultimoOk) ? '⚠️ liberado, mas o iFood respondeu ' + esc(x.status) : x.ultimoOk ? '✅ funcionando' : '⏳ liberado, aguardando a primeira consulta') : '⏸️ aguardando liberação do iFood';
+      return '<div class="cob"><div class="cob-i"><b>' + m[1] + '</b><small>' + esc(m[2]) + ' · ' + st + '</small></div><div class="cob-a"><button class="mini' + (x.liberado ? '' : ' principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar' : 'Liberar') + '</button></div></div>'; }).join('')
+   + '<div id="integ_res"></div>' + manual + '</div>'
+   + '<div class="card"><h2>📋 Em breve aqui</h2><p class="mudo pequeno">Chaves e credenciais, nota fiscal, Mercado Pago e InfinityPay passam a ser configurados aqui também, só por você.</p></div>');
+}
+window.rvIntegMod = async (mod, on) => {
+  const r = S.rest; if(!r) return;
+  if(on && !confirm('Marcar este módulo como LIBERADO pelo iFood? A partir de agora o sistema passa a consultá-lo e a avisar se o iFood recusar.')) return;
+  try{ const a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'modulo', modulo:mod, liberado:!!on } }, 'conector-integ'); if(!a.ok) throw new Error(a.erro || 'Não salvou.');
+    await hist(r.id, 'iFood: módulo ' + mod + (on ? ' liberado' : ' desligado'), ''); aviso(on ? 'Módulo liberado ✓' : 'Módulo desligado ✓', 'ok'); abaIntegracoes();
+  }catch(e){ erro(e.message); }
+};
 async function abaAjustesRest(){
   const r = S.rest;
   if(!temSb(r)){ C('<div class="card"><h2>⚙️ Ajustes do restaurante</h2><p>Daqui você muda as <b>chaves das IAs</b>, os <b>dados do restaurante</b> (nome, endereço, WhatsApp, horário, redes) e a <b>senha de um usuário</b> (quando o dono esquece), sem entrar no sistema dele.</p>'
