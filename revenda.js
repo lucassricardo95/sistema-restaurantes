@@ -323,7 +323,7 @@ async function criarRest(){
 /* ---------- UM RESTAURANTE ---------- */
 window.rvAbrir = async (id, aba) => {
   const r = S.lista.find(x => x.id === id); if(!r) return;
-  S.rest = normalizar(JSON.parse(JSON.stringify(r))); S.view = 'rest'; S.aba = aba || (nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'); S.passoVer = null; S.res = {};
+  S.rest = normalizar(JSON.parse(JSON.stringify(r))); S._snap = snapSite_(S.rest); S.view = 'rest'; S.aba = aba || (nEtapas(S.rest) < ETAPAS.length ? 'passo' : 'saude'); S.passoVer = null; S.res = {};
   await carregarRest(); desenhar();
 };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; S.dono_link = (await tenta(() => rest('dono_links?restaurante_id=eq.' + S.rest.id + '&select=*'), []))[0] || null; }catch(e){ erro(e.message); } }
@@ -352,6 +352,7 @@ function campo(k, o){ o = o || {}; const v = get(S.rest, k); const tipo = k === 
 function lerForm(){ document.querySelectorAll('#tela [data-k]').forEach(el => { const k = el.dataset.k; let v = el.type === 'checkbox' ? el.checked : el.value.trim(); if(NUMS.includes(k)) v = num(v); else if(v === '' && el.type !== 'checkbox' && !/^(marca|modulos)\./.test(k)) v = null; set(S.rest, k, v); }); }
 const COLS = ['nome','situacao','dominio','site_url','github_url','supabase_url','supabase_chave','api_url','contingencia_url','contingencia_chave','push_chave_publica','marca','modulos','etapas','contato_nome','contato_telefone','contato_email','cidade','documento','plano','valor_mensal','taxa_implantacao','dia_vencimento','motor','inicio_em','observacoes'];
 async function salvar(msg){
+  const _antesSite = S._snap;
   lerForm();
   { const r = S.rest, m = /^https:\/\/([a-z0-9-]+)\.github\.io\/([^/]+)\/?$/i.exec(r.site_url || ''); if(m && !r.github_url) r.github_url = 'https://github.com/' + m[1] + '/' + m[2]; }   // site no GitHub Pages: o repositório sai do endereço
   const corpo = {}; COLS.forEach(c => { if(S.rest[c] !== undefined) corpo[c] = S.rest[c]; });
@@ -365,7 +366,9 @@ async function salvar(msg){
     const igual = (a, b) => Object.keys(b || {}).every(k => !!(a && a[k] && a[k].feita) === !!(b[k] && b[k].feita));
     if(!igual(S.rest.etapas, etLocal)) throw new Error('O banco recebeu, mas não guardou a etapa. Tente de novo.');
     const i = S.lista.findIndex(x => x.id === S.rest.id); if(i >= 0) S.lista[i] = JSON.parse(JSON.stringify(S.rest));
-    aviso(msg || 'Salvo.', 'ok'); return true;
+    aviso(msg || 'Salvo.', 'ok');
+    try{ await autoSite_(_antesSite); }catch(e){ /* a publicação automática nunca atrapalha o salvar */ }
+    return true;
   }catch(e){ S.ultimoErro = /unique|duplicate/i.test(e.message) ? 'Esse endereço já pertence a outro restaurante.' : e.message; erro(S.ultimoErro); return false; }
 }
 window.rvSalvar = async (aba) => { if(await salvar()){ await hist(S.rest.id, 'Dados salvos', aba || S.aba); vRest(); } };
@@ -1703,6 +1706,29 @@ function publicarAutoHtml(){
   return '<p class="pequeno">O painel grava no repositório os 4 arquivos do site, já prontos para este restaurante.</p><button class="principal" onclick="rvPublicarAuto()">⚡ Publicar o site sozinho</button><div id="con_pub_' + r.id + '"></div>';
 }
 /* grava no GitHub os 4 arquivos do site (um lugar só: usado pela etapa "Colocar o site no ar" e pelo "Implantar tudo") */
+/* PUBLICAÇÃO AUTOMÁTICA: quando uma mudança salva no painel altera o config-restaurante.js ou o manifest do site, o painel grava no GitHub sozinho.
+   Só mexe se o arquivo no GitHub ainda for o que o painel gerou (se alguém mudou à mão, avisa e não sobrescreve) e só depois de o site já ter sido publicado. */
+const semHora_ = t => String(t).replace(/gerado pelo Painel de Revenda em [^\n]*?\.\n/, '\n');
+function snapSite_(r){ try{ return { cfg:semHora_(configTexto(r)), man:manifestTexto(r) }; }catch(e){ return null; } }
+const utf8_ = b => { try{ return new TextDecoder().decode(Uint8Array.from(String(b), c => c.charCodeAt(0))); }catch(e){ return String(b); } };
+async function autoSite_(antes){
+  const r = S.rest, agora = snapSite_(r); if(!agora) return; S._snap = agora;
+  if(!antes || !temGh(r) || !r.github_url || !r.site_url) return;
+  const lista = [];
+  if(agora.cfg !== antes.cfg) lista.push(['config-restaurante.js', configTexto(r), antes.cfg, t => semHora_(t)]);
+  if(agora.man !== antes.man) lista.push(['manifest.webmanifest', manifestTexto(r), antes.man, t => t]);
+  if(!lista.length) return;
+  const feitos = [], parados = [];
+  for(const m of lista){
+    const l = await chamarConector({ acao:'gh_ler', restaurante_id:r.id, caminho:m[0] });
+    if(!l.ok || !l.existe) continue;   // o site ainda não foi publicado: nada a atualizar
+    if(m[3](utf8_(l.conteudo || '')).trim() !== m[2].trim()){ parados.push(m[0]); continue; }   // foi mudado fora do painel
+    const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:[{ caminho:m[0], conteudo:m[1] }], mensagem:'Atualização de ' + r.nome + ' pelo Painel de Revenda' });
+    if(a.ok) feitos.push(m[0]); else parados.push(m[0] + ' (' + (a.erro || 'falhou') + ')');
+  }
+  if(feitos.length){ hist(r.id, 'Site atualizado no GitHub automaticamente', feitos.join(', ')); aviso('Salvo e já enviado ao GitHub: ' + feitos.join(', ') + '. O site atualiza em 1 a 2 minutos.', 'ok'); }
+  if(parados.length) aviso('Salvo, mas NÃO enviei ao GitHub: ' + parados.join(', ') + ' (foi mudado fora do painel ou deu erro). Use "Gravar no GitHub" na etapa Colocar o site no ar.', 'erro');
+}
 async function gravarSite_(r){
   const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
   for(const n of ['index.html', 'sw.js']){ const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) throw new Error('não achei ' + n + ' (erro ' + x.status + ')'); arqs.push({ caminho:n, conteudo:await x.text() }); }

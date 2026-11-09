@@ -161,7 +161,7 @@ window.ETAPAS = [
     { t:'Jeito manual: baixe os 4 arquivos abaixo (um toque em cada). Eles já saem prontos para este restaurante. "Onde colocar" diz o lugar de cada um no GitHub.', extra:'publicar' },
     { t:'No GitHub: repositório {slug} → "Add file" → "Upload files" → escolha os 4 arquivos de uma vez → "Commit changes". Eles ficam na RAIZ (a primeira página do repositório, sem pasta). Se já existirem, o GitHub troca pelos novos.', link:'{github_url}/upload/main' },
     { t:'Espere 1 a 2 minutos e toque em "Conferir o site": o painel abre cada arquivo no ar e diz se está certo. Depois abra o site: tem que aparecer o cardápio com o nome e as cores do restaurante.', extra:'conferir', link:'{site_url}' },
-    { t:'Para o futuro: cores, logos e módulos mudam pelo painel, na hora. Se mudar endereço do Supabase, planilhas ou avisos, baixe de novo só o config-restaurante.js e suba por cima.' }
+    { t:'Para o futuro: cores, logos e módulos mudam pelo painel, na hora. Se mudar endereço do Supabase, planilhas, avisos, nome ou ícone, é só salvar no painel: ele envia o config-restaurante.js e o manifest para o GitHub sozinho (com o conector ligado). Se o arquivo no GitHub tiver sido mudado à mão, o painel avisa e não sobrescreve.' }
    ],
    pedido:'Grave no repositório do restaurante "{nome}" ({github_url}) os arquivos index.html, sw.js, manifest.webmanifest e config-restaurante.js que o painel gera para ele. Confirme se publicou e abriu sem erro.' },
 
