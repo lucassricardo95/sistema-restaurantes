@@ -1911,12 +1911,18 @@ async function abaIntegracoes(){
   let a; try{ a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'ler' } }, 'conector-integ'); }catch(e){ a = { ok:false, erro:e.message }; }
   if(S.view !== 'rest' || S.aba !== 'integ' || S.rest.id !== r.id) return;
   if(!a || !a.ok){ C('<div class="card"><h2>🔗 Integrações</h2>' + conLinha(false, esc((a && a.erro) || 'Não consegui ler.')) + '<button class="mini" onclick="rvAba(\'integ\')">↻ Tentar de novo</button>' + manual + '</div>'); return; }
+  if(S.igRest !== r.id){ S.igRest = r.id; S.igAba = 'ifood'; }
+  IG_A = a; IG_MANUAL = manual; igRender();
+}
+function igRender(){
+  const a = IG_A, manual = IG_MANUAL, r = S.rest, C = h => { const b = $('corpo'); if(b) b.innerHTML = h; };
   const M = {}; (a.modulos || []).forEach(x => { M[x.modulo] = x; });
   const ligado = !!(a.ifood && a.ifood.ligado), nLib = IF_MODS.filter(m => (M[m[0]] || {}).liberado).length;
   const INT = a.integracoes || [];
-  const resumo = [{ nome:'iFood', ic:'🛒', on:ligado, modo:a.ifood && a.ifood.modo }].concat(IG_PROVS.filter(p => p.id !== 'ifood').map(p => { const d = INT.find(x => x.provedor === p.id) || {}; return { nome:p.nome.replace(/^\S+\s/, ''), ic:p.nome.split(' ')[0], on:!!d.ligado, modo:d.modo }; }));
+  const aba = S.igAba || 'ifood';
+  const resumo = [{ id:'ifood', nome:'iFood', ic:'🛒', on:ligado, modo:a.ifood && a.ifood.modo }].concat(IG_PROVS.filter(p => p.id !== 'ifood').map(p => { const d = INT.find(x => x.provedor === p.id) || {}; return { id:p.id, nome:p.nome.replace(/^\S+\s/, ''), ic:p.nome.split(' ')[0], on:!!d.ligado, modo:d.modo }; }));
   const topo = '<div class="card"><h2>🔗 Integrações de ' + esc(r.nome) + '</h2><p class="mudo pequeno">Só você mexe aqui. O dono e a equipe não veem nada disto.</p>'
-   + '<div class="ig-resumo">' + resumo.map(x => '<div class="ig-r ' + (x.on ? 'on' : '') + '"><span class="ig-ic">' + x.ic + '</span><b>' + esc(x.nome) + '</b><small>' + (x.on ? '🟢 Ligado' + (x.modo ? ' · ' + (x.modo === 'producao' ? 'produção' : x.modo === 'homologacao' ? 'teste' : esc(x.modo)) : '') : '⚪ Desligado') + '</small></div>').join('') + '</div></div>';
+   + '<div class="ig-resumo">' + resumo.map(x => '<button type="button" class="ig-r ' + (x.on ? 'on' : '') + (x.id === aba ? ' sel' : '') + '" onclick="rvIgAba(\'' + x.id + '\')"><span class="ig-ic">' + x.ic + '</span><b>' + esc(x.nome) + '</b><small>' + (x.on ? '🟢 Ligado' + (x.modo ? ' · ' + (x.modo === 'producao' ? 'produção' : x.modo === 'homologacao' ? 'teste' : esc(x.modo)) : '') : '⚪ Desligado') + '</small></button>').join('') + '</div><p class="ig-ajuda" style="margin:10px 0 0">Toque em uma integração para ver só ela.</p></div>';
   const mods = '<div class="card ig"><div class="ig-cab"><h2>🛒 iFood · módulos</h2><span class="ig-pill ' + (nLib ? 'ok' : '') + '">' + nLib + ' de ' + IF_MODS.length + ' liberados</span></div>'
    + '<p class="ig-ajuda">O iFood libera cada módulo separadamente, no Portal do Desenvolvedor. Toque em <b>Liberar</b> só depois que o iFood liberou. Módulo não liberado não é consultado e não gera aviso para ninguém.</p>'
    + '<p class="ig-ajuda">Liberar Loja, Avaliações, Financeiro, Cardápio, Entregador ou Indicadores também liga o "homologado" desse módulo.</p>'
@@ -1924,10 +1930,25 @@ async function abaIntegracoes(){
       const st = x.liberado ? (x.status && x.status !== 200 && x.ultimoErroEm && (!x.ultimoOk || x.ultimoErroEm > x.ultimoOk) ? ['erro', '⚠️ iFood respondeu ' + esc(x.status)] : x.ultimoOk ? ['ok', '✅ Funcionando'] : ['aviso', '⏳ Aguardando 1ª consulta']) : ['', '⏸️ Aguardando o iFood'];
       return '<div class="ig-mod"><div class="ig-mod-t"><b>' + m[1] + '</b><span class="ig-pill ' + st[0] + '">' + st[1] + '</span></div><small>' + esc(m[2]) + '</small><button class="' + (x.liberado ? 'mini' : 'principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar este módulo' : 'Liberar este módulo') + '</button></div>'; }).join('')
    + '<div id="integ_res"></div>' + manual + '</div>';
-  C(topo + mods
-   + (a.integracoes ? IG_PROVS.map(p => igCard(p, INT.find(x => x.provedor === p.id) || {})).join('') : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>')
-   + (a.integracoes ? igFiscalCard() : ''));
+  const cartao = id => { const p = IG_PROVS.find(x => x.id === id); return a.integracoes ? igCard(p, INT.find(x => x.provedor === id) || {}) : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>'; };
+  C(topo + (aba === 'ifood' ? mods : '') + cartao(aba) + (aba === 'nfce' && a.integracoes ? igFiscalCard() : ''));
 }
+let IG_A = null, IG_MANUAL = '';
+window.rvIgAba = id => { S.igAba = id; igRender(); window.scrollTo({ top:0 }); };
+window.rvIgTestar = async prov => {
+  const box = $('igt_' + prov), btn = $('igtb_' + prov); if(!box) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Testando…'; }
+  box.innerHTML = '<div class="ig-ajuda">Conferindo a conexão…</div>';
+  try{
+    const a = await chamarConector({ acao:'sb_integ', restaurante_id:S.rest.id, p:{ acao:'testar', provedor:prov } }, 'conector-integ');
+    if(!a || !a.ok) throw new Error((a && a.erro) || 'Não consegui testar.');
+    const r = a.resultado || {};
+    const topo = r.geral === 'ok' ? '<div class="ig-pronto">✅ Conectado corretamente</div>' : r.geral === 'erro' ? '<div class="ig-falta"><b>❌ Tem algo errado</b></div>' : '<div class="ig-falta"><b>⚠️ Teste parcial: veja abaixo</b></div>';
+    box.innerHTML = topo + (r.itens || []).map(i => '<div class="ig-res"><span>' + (i.ok === true ? '✅' : i.ok === false ? '❌' : '⚠️') + '</span><div><b>' + esc(i.rotulo) + '</b><small>' + esc(i.texto) + '</small></div></div>').join('');
+    hist(S.rest.id, 'Teste de conexão: ' + prov, r.geral || '');
+  }catch(e){ box.innerHTML = '<div class="ig-falta"><b>❌ ' + esc(e.message) + '</b></div>'; }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '🧪 Testar conexão'; } }
+};
 /* ---------- INTEGRAÇÕES: chaves, ligar/desligar e ajustes técnicos (SQL 154) ---------- */
 const IG_PROVS = [
  { id:'ifood', nome:'🛒 iFood', modos:false, seg:[['ifood_client_id','Client ID'],['ifood_client_secret','Client Secret'],['ifood_merchant_id','Merchant ID (loja)'],['ifood_bi_client_id','BI · Client ID (indicadores)'],['ifood_bi_client_secret','BI · Client Secret']],
@@ -1957,6 +1978,7 @@ function igCard(p, d){
   const btn = lig ? '<button class="perigo" onclick="rvIgLigar(\'' + p.id + '\',false)">Desligar ' + esc(p.nome.replace(/^\S+\s/, '')) + '</button>' : '<button class="principal" onclick="rvIgLigar(\'' + p.id + '\',true)"' + (pend.length ? ' disabled' : '') + '>Ligar ' + esc(p.nome.replace(/^\S+\s/, '')) + '</button>';
   return '<div class="card ig"><div class="ig-cab"><h2>' + p.nome + '</h2><span class="ig-pill ' + (lig ? 'ok' : '') + '">' + (lig ? '🟢 Ligado' + (d.modo ? ' · ' + (d.modo === 'producao' ? 'produção' : 'teste') : '') : '⚪ Desligado') + '</span></div>'
    + aviso
+   + '<div class="ig-teste"><button id="igtb_' + p.id + '" onclick="rvIgTestar(\'' + p.id + '\')">🧪 Testar conexão</button><div id="igt_' + p.id + '"></div></div>'
    + '<details class="ig-sec"><summary><span>🔑 Chaves e códigos</span><small>' + nSeg + ' de ' + tSeg + '</small></summary><div class="ig-corpo">' + segs + ip + '</div></details>'
    + '<details class="ig-sec"><summary><span>📋 Lista de conferência</span><small>' + nCk + ' de ' + ck.length + '</small></summary><div class="ig-corpo">' + (chk || '<p class="ig-ajuda">Sem itens.</p>') + '</div></details>'
    + (temCfg ? '<details class="ig-sec"><summary><span>⚙️ Ajustes técnicos</span><small>opcional</small></summary><div class="ig-corpo">' + bools + nums + ems + '<button class="mini principal" onclick="rvIgCfg(\'' + p.id + '\')">Salvar ajustes</button></div></details>' : '')

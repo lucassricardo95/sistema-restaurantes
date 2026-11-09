@@ -275,3 +275,11 @@ details.ig-sec[open]>summary{border-bottom:1px solid var(--linha)}
 .ig-corpo>button{margin-top:10px}
 .ig-liga{margin-top:14px;display:flex;flex-direction:column;gap:8px}.ig-liga button{width:100%;min-height:50px;font-size:16px}
 .ig-botoes{display:grid;gap:8px}.ig-botoes button{justify-content:flex-start;text-align:left;min-height:50px;font-size:15px}
+
+button.ig-r{font:inherit;text-align:left;cursor:pointer;color:var(--txt);align-items:flex-start;min-height:0}
+button.ig-r.sel{border-color:var(--cor2);box-shadow:0 0 0 2px var(--cor2) inset;background:#e23d4414}
+.ig-teste{margin:10px 0}.ig-teste>button{width:100%;min-height:48px;font-size:15px}
+.ig-res{display:flex;gap:10px;align-items:flex-start;padding:10px 2px;border-bottom:1px solid var(--linha);font-size:14px}.ig-res:last-child{border-bottom:0}
+.ig-res b{display:block;color:var(--txt)}.ig-res small{display:block;color:var(--mudo);font-size:13px;margin-top:2px}.ig-res>span{flex:none;font-size:18px}
+#corpo .ig-teste .ig-pronto,#corpo .ig-teste .ig-falta{margin-top:10px}
+button.ig-r{justify-content:flex-start;width:100%}
