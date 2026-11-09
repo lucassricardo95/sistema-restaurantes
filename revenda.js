@@ -1454,7 +1454,7 @@ const IAS = [
   ['ia_cloudflare_conta','Cloudflare · Account ID','O código de 32 letras e números da barra de endereço do dash.cloudflare.com.','https://dash.cloudflare.com/'],
   ['ia_cloudflare','Cloudflare · Token','Profile → API Tokens → Create Token → modelo "Workers AI" (começa com cfut_).','https://dash.cloudflare.com/profile/api-tokens'],
   ['ia_gemini','Gemini','Também faz a PESQUISA NA INTERNET. aistudio.google.com/apikey (começa com AIza ou AQ.).','https://aistudio.google.com/apikey'],
-  ['ia_nvidia','NVIDIA','Reserva mais lenta. build.nvidia.com → API Keys (começa com nvapi-).','https://build.nvidia.com/settings/api-keys'],
+  ['ia_nvidia','IA reserva (NVIDIA ou outra)','Reserva que se adapta: cole a chave de NVIDIA (nvapi-), Groq, OpenRouter, OpenAI, xAI, DeepSeek, Mistral ou Together. O sistema descobre o provedor e escolhe um modelo que funcione.','https://build.nvidia.com/settings/api-keys'],
   ['ia_gemini_2','Gemini 2','Último recurso e reserva da pesquisa: chave de OUTRO projeto do Google.','https://aistudio.google.com/apikey']
 ];
 async function vAssistente(){
@@ -1899,7 +1899,7 @@ window.rvPublicarAuto = async () => {
    Tudo aqui continua podendo ser mudado dentro do sistema do restaurante (Administrador). */
 const IA_REST = [['groq','Groq','1º a responder (começa com gsk_).','https://console.groq.com/keys'],['groq_2','Groq 2','Reserva do Groq: outra conta.','https://console.groq.com/keys'],
   ['cloudflare_conta','Cloudflare · Account ID','32 letras e números (barra de endereço do dash.cloudflare.com).','https://dash.cloudflare.com/'],['cloudflare','Cloudflare · Token','API Tokens → modelo "Workers AI".','https://dash.cloudflare.com/profile/api-tokens'],
-  ['gemini','Gemini','Também faz a pesquisa na internet (AIza… ou AQ.…).','https://aistudio.google.com/apikey'],['nvidia','NVIDIA','Reserva mais lenta (nvapi-…).','https://build.nvidia.com/settings/api-keys'],['gemini_2','Gemini 2','Último recurso: chave de outro projeto do Google.','https://aistudio.google.com/apikey']];
+  ['gemini','Gemini','Também faz a pesquisa na internet (AIza… ou AQ.…).','https://aistudio.google.com/apikey'],['nvidia','IA reserva (NVIDIA ou outra)','Se adapta à chave: NVIDIA (nvapi-), Groq, OpenRouter, OpenAI, xAI, DeepSeek, Mistral ou Together.','https://build.nvidia.com/settings/api-keys'],['gemini_2','Gemini 2','Último recurso: chave de outro projeto do Google.','https://aistudio.google.com/apikey']];
 const DADOS_REST = [['nome','Nome que aparece no cardápio e nas impressões',60],['endereco','Endereço',200],['telefone','WhatsApp / telefone da loja',30],['horario','Horário de funcionamento',300],['redes','Redes sociais (Instagram, etc.)',300]];
 /* ---------- INTEGRAÇÕES DO RESTAURANTE (só o desenvolvedor mexe; o dono e a equipe nunca) ---------- */
 const IF_MODS = [['events','Eventos (chegada dos pedidos)','É o que traz os pedidos do iFood. Sem ele liberado, o sistema nem consulta o iFood.'],['order','Pedidos (detalhes e ações)','Detalhes, confirmar, preparar e despachar.'],['merchant','Loja','Abrir, fechar, pausar e horário.'],['catalog','Cardápio','Importar e atualizar cardápio e preços.'],['review','Avaliações','Ler e responder avaliações.'],['financial','Financeiro e repasses','Vendas, repasses e comissão.'],['shipping','Entregador','Código de entrega e rastreio.'],['logistics','Logística','Rota e acompanhamento da entrega.'],['analytics','Indicadores','Desempenho da loja.']];
@@ -2145,7 +2145,7 @@ window.rvAjIaTestar = async prov => {
   const alvo = prov === 'todas' ? $('aj_ia_res') : $('aj_ia_t_' + prov); if(alvo) alvo.innerHTML = '<small class="mudo">⏳ Testando… pode levar uns segundos</small>';
   try{ const a = await chamarConector({ acao:'sb_ia_testar', restaurante_id:r.id, provedor:prov }); if(!a.ok) throw new Error(a.erro || 'Não consegui testar.');
     /* NVIDIA: o teste de verdade é uma pergunta mínima (gasta um tiquinho da cota, só quando você clica em Testar) */
-    const iN = (a.resultados || []).findIndex(y => y.provedor === 'nvidia' && y.funcionando === null);
+    const iN = (a.resultados || []).findIndex(y => y.provedor === 'nvidia' && y.tem !== false);
     if(iN >= 0){ try{ const n = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'ia_nvidia' } }, 'conector-integ'); if(n && n.ok && n.resultado) a.resultados[iN] = n.resultado; }catch(e){ /* fica o aviso de formato */ } }
     const linha = y => (y.funcionando === true ? conLinha(true, '<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: funcionando' + (y.ms ? ' (' + (Math.round(y.ms / 100) / 10).toString().replace('.', ',') + ' s)' : '') + (y.motivo ? '. ' + esc(y.motivo) : ''))
       : y.funcionando === null ? amarela('<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: ' + esc(y.motivo))
