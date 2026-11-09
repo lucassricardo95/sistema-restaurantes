@@ -1905,7 +1905,7 @@ const DADOS_REST = [['nome','Nome que aparece no cardápio e nas impressões',60
 const IF_MODS = [['events','Eventos (chegada dos pedidos)','É o que traz os pedidos do iFood. Sem ele liberado, o sistema nem consulta o iFood.'],['order','Pedidos (detalhes e ações)','Detalhes, confirmar, preparar e despachar.'],['merchant','Loja','Abrir, fechar, pausar e horário.'],['catalog','Cardápio','Importar e atualizar cardápio e preços.'],['review','Avaliações','Ler e responder avaliações.'],['financial','Financeiro e repasses','Vendas, repasses e comissão.'],['shipping','Entregador','Código de entrega e rastreio.'],['logistics','Logística','Rota e acompanhamento da entrega.'],['analytics','Indicadores','Desempenho da loja.']];
 async function abaIntegracoes(){
   const C = h => { const b = $('corpo'); if(b) b.innerHTML = h; }; const r = S.rest;
-  const manual = '<details><summary>Sem o conector? Faça à mão no SQL Editor do Supabase deste restaurante</summary><p class="mudo pequeno">Para liberar um módulo (troque <code>events</code> pelo nome do módulo; para desligar, troque <code>true</code> por <code>false</code>):</p><pre class="codigo" style="white-space:pre-wrap">update public.ifood_modulos set liberado = true, liberado_em = now() where modulo = \'events\';</pre></details>';
+  const manual = '<details class="ig-sec"><summary><span>Sem o conector? Faça à mão no SQL Editor</span><small>avançado</small></summary><div class="ig-corpo"><p class="ig-ajuda">Para liberar um módulo, troque <code>events</code> pelo nome do módulo. Para desligar, troque <code>true</code> por <code>false</code>:</p><pre class="codigo" style="white-space:pre-wrap">update public.ifood_modulos set liberado = true, liberado_em = now() where modulo = \'events\';</pre></div></details>';
   if(!temSb(r)){ C('<div class="card"><h2>🔗 Integrações</h2><p>Aqui você controla o que o iFood já liberou para este restaurante. O dono e a equipe não veem nem mexem nisso.</p><div class="res aviso">Para mexer daqui, ligue antes o conector do Supabase deste restaurante.</div><button class="principal" onclick="rvIr(\'conectores\')">🔌 Ligar o conector</button>' + manual + '</div>'); return; }
   C('<div class="card"><small class="mudo">Carregando as integrações de ' + esc(r.nome) + '…</small></div>');
   let a; try{ a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'ler' } }, 'conector-integ'); }catch(e){ a = { ok:false, erro:e.message }; }
@@ -1913,12 +1913,19 @@ async function abaIntegracoes(){
   if(!a || !a.ok){ C('<div class="card"><h2>🔗 Integrações</h2>' + conLinha(false, esc((a && a.erro) || 'Não consegui ler.')) + '<button class="mini" onclick="rvAba(\'integ\')">↻ Tentar de novo</button>' + manual + '</div>'); return; }
   const M = {}; (a.modulos || []).forEach(x => { M[x.modulo] = x; });
   const ligado = !!(a.ifood && a.ifood.ligado), nLib = IF_MODS.filter(m => (M[m[0]] || {}).liberado).length;
-  C('<div class="card"><h2>🛒 iFood · módulos liberados pelo iFood</h2><p class="mudo pequeno">O iFood libera cada módulo do aplicativo em separado, no Portal do Desenvolvedor. Marque aqui só quando o iFood já liberou. <b>Módulo desligado não é consultado e não avisa ninguém.</b> Para Loja, Avaliações, Financeiro, Cardápio, Entregador e Indicadores, liberar também liga o "homologado" desse módulo. O dono não vê erro de módulo que você ainda não liberou.</p>'
-   + '<div class="linha mapa-l"><span>' + (ligado ? '🟢 iFood ligado neste restaurante' : '⚪ iFood desligado neste restaurante') + (a.ifood && a.ifood.modo ? ' · ' + esc(a.ifood.modo) : '') + '</span><small class="mudo">' + nLib + ' de ' + IF_MODS.length + ' liberados</small></div>'
-   + IF_MODS.map(m => { const x = M[m[0]] || {}; const st = x.liberado ? (x.status && x.status !== 200 && x.ultimoErroEm && (!x.ultimoOk || x.ultimoErroEm > x.ultimoOk) ? '⚠️ liberado, mas o iFood respondeu ' + esc(x.status) : x.ultimoOk ? '✅ funcionando' : '⏳ liberado, aguardando a primeira consulta') : '⏸️ aguardando liberação do iFood';
-      return '<div class="cob"><div class="cob-i"><b>' + m[1] + '</b><small>' + esc(m[2]) + ' · ' + st + '</small></div><div class="cob-a"><button class="mini' + (x.liberado ? '' : ' principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar' : 'Liberar') + '</button></div></div>'; }).join('')
-   + '<div id="integ_res"></div>' + manual + '</div>'
-   + (a.integracoes ? IG_PROVS.map(p => igCard(p, (a.integracoes || []).find(x => x.provedor === p.id) || {})).join('') : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>')
+  const INT = a.integracoes || [];
+  const resumo = [{ nome:'iFood', ic:'🛒', on:ligado, modo:a.ifood && a.ifood.modo }].concat(IG_PROVS.filter(p => p.id !== 'ifood').map(p => { const d = INT.find(x => x.provedor === p.id) || {}; return { nome:p.nome.replace(/^\S+\s/, ''), ic:p.nome.split(' ')[0], on:!!d.ligado, modo:d.modo }; }));
+  const topo = '<div class="card"><h2>🔗 Integrações de ' + esc(r.nome) + '</h2><p class="mudo pequeno">Só você mexe aqui. O dono e a equipe não veem nada disto.</p>'
+   + '<div class="ig-resumo">' + resumo.map(x => '<div class="ig-r ' + (x.on ? 'on' : '') + '"><span class="ig-ic">' + x.ic + '</span><b>' + esc(x.nome) + '</b><small>' + (x.on ? '🟢 Ligado' + (x.modo ? ' · ' + (x.modo === 'producao' ? 'produção' : x.modo === 'homologacao' ? 'teste' : esc(x.modo)) : '') : '⚪ Desligado') + '</small></div>').join('') + '</div></div>';
+  const mods = '<div class="card ig"><div class="ig-cab"><h2>🛒 iFood · módulos</h2><span class="ig-pill ' + (nLib ? 'ok' : '') + '">' + nLib + ' de ' + IF_MODS.length + ' liberados</span></div>'
+   + '<p class="ig-ajuda">O iFood libera cada módulo separadamente, no Portal do Desenvolvedor. Toque em <b>Liberar</b> só depois que o iFood liberou. Módulo não liberado não é consultado e não gera aviso para ninguém.</p>'
+   + '<p class="ig-ajuda">Liberar Loja, Avaliações, Financeiro, Cardápio, Entregador ou Indicadores também liga o "homologado" desse módulo.</p>'
+   + IF_MODS.map(m => { const x = M[m[0]] || {};
+      const st = x.liberado ? (x.status && x.status !== 200 && x.ultimoErroEm && (!x.ultimoOk || x.ultimoErroEm > x.ultimoOk) ? ['erro', '⚠️ iFood respondeu ' + esc(x.status)] : x.ultimoOk ? ['ok', '✅ Funcionando'] : ['aviso', '⏳ Aguardando 1ª consulta']) : ['', '⏸️ Aguardando o iFood'];
+      return '<div class="ig-mod"><div class="ig-mod-t"><b>' + m[1] + '</b><span class="ig-pill ' + st[0] + '">' + st[1] + '</span></div><small>' + esc(m[2]) + '</small><button class="' + (x.liberado ? 'mini' : 'principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar este módulo' : 'Liberar este módulo') + '</button></div>'; }).join('')
+   + '<div id="integ_res"></div>' + manual + '</div>';
+  C(topo + mods
+   + (a.integracoes ? IG_PROVS.map(p => igCard(p, INT.find(x => x.provedor === p.id) || {})).join('') : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>')
    + (a.integracoes ? igFiscalCard() : ''));
 }
 /* ---------- INTEGRAÇÕES: chaves, ligar/desligar e ajustes técnicos (SQL 154) ---------- */
@@ -1932,24 +1939,28 @@ const IG_PROVS = [
    bools:[['producaoSoTeste','Produção só para e-mails de teste'],['testeNoCardapio','Mostrar o modo teste no cardápio']], num:[['linkValidadeMin','Validade do link (min, 10–120)']], emails:[['emailsTeste','E-mails liberados para teste (separe por vírgula)',0]] }
 ];
 function igCard(p, d){
-  const cfg = d.config || {}, sg = d.segredos || {}, lig = !!d.ligado;
-  const inp = (id, v, ph) => '<input id="' + id + '" value="' + esc(v || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off" style="width:100%">';
-  const segs = p.seg.map(k => { const x = sg[k[0]]; return '<div class="linha mapa-l"><span><b>' + esc(k[1]) + '</b><br><small class="mudo">' + (x ? '✅ guardado (termina em ' + esc(x.final || '…') + ')' : '⚪ falta preencher') + '</small></span></div>'
-    + '<div style="display:flex;gap:6px;margin-bottom:8px"><input id="ig_' + k[0] + '" type="password" autocomplete="new-password" placeholder="' + (x ? 'Colar para trocar' : 'Colar aqui') + '" style="flex:1;min-width:0"><button class="mini" onclick="rvIgSeg(\'' + k[0] + '\')">Salvar</button></div>'; }).join('');
-  const ip = p.ipSeg ? '<div class="linha mapa-l"><span><b>Segredo do aviso (webhook)</b><br><small class="mudo">' + (sg.ip_webhook_segredo ? '✅ gerado' : '⚪ ainda não gerado') + '</small></span><button class="mini" onclick="rvIgIpSeg()">' + (sg.ip_webhook_segredo ? 'Gerar outro' : 'Gerar') + '</button></div>' : '';
-  const chk = (d.checklist || []).map(c => '<label class="linha" style="gap:8px"><input type="checkbox" ' + (c.feito ? 'checked ' : '') + (c.auto ? 'disabled ' : 'onchange="rvIgMarcar(\'' + p.id + '\',\'' + esc(c.id) + '\',this.checked)" ') + '> <span>' + esc(c.titulo) + (c.auto ? ' <small class="mudo">(automático)</small>' : '') + '</span></label>').join('');
-  const bools = (p.bools || []).map(b => '<label class="linha" style="gap:8px"><input type="checkbox" id="igc_' + b[0] + '" ' + (cfg[b[0]] ? 'checked' : '') + '> <span>' + esc(b[1]) + '</span></label>').join('');
-  const nums = (p.num || []).map(n => '<label class="mudo pequeno">' + esc(n[1]) + '</label>' + inp('igc_' + n[0], cfg[n[0]] != null ? cfg[n[0]] : '')).join('');
-  const ems = (p.emails || []).map(n => '<label class="mudo pequeno">' + esc(n[1]) + '</label>' + inp('igc_' + n[0], n[2] ? cfg[n[0]] : (cfg[n[0]] || []).join(', '))).join('');
+  const cfg = d.config || {}, sg = d.segredos || {}, lig = !!d.ligado, pend = d.pendencias || [];
+  const inp = (id, v, ph) => '<input id="' + id + '" value="' + esc(v || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off">';
+  const nSeg = p.seg.filter(k => sg[k[0]]).length + (p.ipSeg && sg.ip_webhook_segredo ? 1 : 0), tSeg = p.seg.length + (p.ipSeg ? 1 : 0);
+  const segs = p.seg.map(k => { const x = sg[k[0]];
+    return '<div class="ig-seg"><div class="ig-seg-t"><b>' + esc(k[1]) + '</b><span class="ig-pill ' + (x ? 'ok' : '') + '">' + (x ? '✅ guardado · termina em ' + esc(x.final || '…') : '⚪ falta preencher') + '</span></div>'
+      + '<div class="ig-seg-f"><input id="ig_' + k[0] + '" type="password" autocomplete="new-password" placeholder="' + (x ? 'Colar aqui para trocar' : 'Colar aqui') + '"><button class="mini principal" onclick="rvIgSeg(\'' + k[0] + '\')">Salvar</button></div></div>'; }).join('');
+  const ip = p.ipSeg ? '<div class="ig-seg"><div class="ig-seg-t"><b>Segredo do aviso (webhook)</b><span class="ig-pill ' + (sg.ip_webhook_segredo ? 'ok' : '') + '">' + (sg.ip_webhook_segredo ? '✅ gerado' : '⚪ ainda não gerado') + '</span></div><div class="ig-seg-f"><button class="mini" onclick="rvIgIpSeg()">' + (sg.ip_webhook_segredo ? 'Gerar outro' : 'Gerar agora') + '</button></div></div>' : '';
+  const ck = d.checklist || [], nCk = ck.filter(c => c.feito).length;
+  const chk = ck.map(c => '<label class="ig-opt"><input type="checkbox" ' + (c.feito ? 'checked ' : '') + (c.auto ? 'disabled ' : 'onchange="rvIgMarcar(\'' + p.id + '\',\'' + esc(c.id) + '\',this.checked)" ') + '><span>' + esc(c.titulo) + (c.auto ? ' <small>(automático)</small>' : '') + '</span></label>').join('');
+  const bools = (p.bools || []).map(b => '<label class="ig-opt"><input type="checkbox" id="igc_' + b[0] + '" ' + (cfg[b[0]] ? 'checked' : '') + '><span>' + esc(b[1]) + '</span></label>').join('');
+  const nums = (p.num || []).map(n => '<div class="ig-campo"><b>' + esc(n[1]) + '</b>' + inp('igc_' + n[0], cfg[n[0]] != null ? cfg[n[0]] : '') + '</div>').join('');
+  const ems = (p.emails || []).map(n => '<div class="ig-campo"><b>' + esc(n[1]) + '</b>' + inp('igc_' + n[0], n[2] ? cfg[n[0]] : (cfg[n[0]] || []).join(', ')) + '</div>').join('');
   const temCfg = bools || nums || ems;
-  const modo = p.modos ? '<label class="mudo pequeno">Ambiente ao ligar</label><select id="ig_modo_' + p.id + '"><option value="homologacao"' + (d.modo === 'homologacao' ? ' selected' : '') + '>Teste (homologação)</option><option value="producao"' + (d.modo === 'producao' ? ' selected' : '') + '>Produção (valendo)</option></select>' : '';
-  const pend = (d.pendencias || []).length ? '<div class="res aviso"><b>Ainda falta para ligar:</b><br>• ' + d.pendencias.map(esc).join('<br>• ') + '</div>' : '<div class="res ok">Tudo pronto para ligar ✓</div>';
-  return '<div class="card"><h2>' + p.nome + '</h2><div class="linha mapa-l"><span>' + (lig ? '🟢 Ligado' + (d.modo ? ' · ' + (d.modo === 'producao' ? 'produção' : 'teste') : '') : '⚪ Desligado') + '</span></div>'
-   + '<details><summary><b>🔑 Chaves e códigos</b></summary>' + segs + ip + '</details>'
-   + '<details><summary><b>📋 Lista de conferência</b></summary>' + chk + '</details>'
-   + (temCfg ? '<details><summary><b>⚙️ Ajustes técnicos</b></summary>' + bools + nums + ems + '<button class="mini" onclick="rvIgCfg(\'' + p.id + '\')">Salvar ajustes</button></details>' : '')
-   + pend + modo
-   + '<div style="margin-top:8px">' + (lig ? '<button class="mini" onclick="rvIgLigar(\'' + p.id + '\',false)">Desligar</button>' : '<button class="principal" onclick="rvIgLigar(\'' + p.id + '\',true)"' + (d.pendencias && d.pendencias.length ? ' disabled' : '') + '>Ligar</button>') + '</div></div>';
+  const modo = p.modos ? '<div class="ig-campo"><b>Ambiente ao ligar</b><select id="ig_modo_' + p.id + '"><option value="homologacao"' + (d.modo === 'homologacao' ? ' selected' : '') + '>Teste (homologação)</option><option value="producao"' + (d.modo === 'producao' ? ' selected' : '') + '>Produção (valendo)</option></select></div>' : '';
+  const aviso = pend.length ? '<div class="ig-falta"><b>Ainda falta para ligar:</b><ul>' + pend.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : (lig ? '' : '<div class="ig-pronto">✅ Tudo pronto para ligar</div>');
+  const btn = lig ? '<button class="perigo" onclick="rvIgLigar(\'' + p.id + '\',false)">Desligar ' + esc(p.nome.replace(/^\S+\s/, '')) + '</button>' : '<button class="principal" onclick="rvIgLigar(\'' + p.id + '\',true)"' + (pend.length ? ' disabled' : '') + '>Ligar ' + esc(p.nome.replace(/^\S+\s/, '')) + '</button>';
+  return '<div class="card ig"><div class="ig-cab"><h2>' + p.nome + '</h2><span class="ig-pill ' + (lig ? 'ok' : '') + '">' + (lig ? '🟢 Ligado' + (d.modo ? ' · ' + (d.modo === 'producao' ? 'produção' : 'teste') : '') : '⚪ Desligado') + '</span></div>'
+   + aviso
+   + '<details class="ig-sec"><summary><span>🔑 Chaves e códigos</span><small>' + nSeg + ' de ' + tSeg + '</small></summary><div class="ig-corpo">' + segs + ip + '</div></details>'
+   + '<details class="ig-sec"><summary><span>📋 Lista de conferência</span><small>' + nCk + ' de ' + ck.length + '</small></summary><div class="ig-corpo">' + (chk || '<p class="ig-ajuda">Sem itens.</p>') + '</div></details>'
+   + (temCfg ? '<details class="ig-sec"><summary><span>⚙️ Ajustes técnicos</span><small>opcional</small></summary><div class="ig-corpo">' + bools + nums + ems + '<button class="mini principal" onclick="rvIgCfg(\'' + p.id + '\')">Salvar ajustes</button></div></details>' : '')
+   + '<div class="ig-liga">' + modo + btn + '</div></div>';
 }
 async function igCall(p, ok){
   const r = S.rest; if(!r) return;
@@ -1977,8 +1988,8 @@ const IGF_CAMPOS = [['razaoSocial','razao_social','Razão social'],['nomeFantasi
 const IGF_COLS = ['tipo','id','nome','categoria','perfil','ncm','cest','cfop','csosn','cstIcms','origem','unidade'];
 let IGF_PERFIS = null;
 function igFiscalCard(){
-  return '<div class="card"><h2>🧾 Nota fiscal · cadastro fiscal</h2><p class="mudo pequeno">O contador define; você cadastra aqui, antes de ligar a nota fiscal. O dono do restaurante não mexe nisso.</p>'
-   + '<div class="btnrow"><button class="mini" onclick="rvIgfEmpresa()">Dados fiscais da empresa</button><button class="mini" onclick="rvIgfPerfis()">Perfis fiscais</button><button class="mini" onclick="rvIgfSem()">Itens sem perfil</button><button class="mini" onclick="rvIgfBaixar()">Baixar planilha do contador</button><button class="mini" onclick="$(\'igf_arq\').click()">Enviar planilha preenchida</button></div>'
+  return '<div class="card ig"><div class="ig-cab"><h2>🧾 Nota fiscal · cadastro</h2></div><p class="ig-ajuda">O contador define os dados; você cadastra aqui antes de ligar a nota fiscal. O dono não mexe nisso.</p>'
+   + '<div class="ig-botoes"><button onclick="rvIgfEmpresa()">🏢 Dados fiscais da empresa</button><button onclick="rvIgfPerfis()">🏷️ Perfis fiscais</button><button onclick="rvIgfSem()">❓ Itens sem perfil</button><button onclick="rvIgfBaixar()">⬇️ Baixar planilha do contador</button><button onclick="$(\'igf_arq\').click()">⬆️ Enviar planilha preenchida</button></div>'
    + '<input type="file" id="igf_arq" accept=".csv,text/csv,text/plain" style="display:none" onchange="rvIgfEnviar(this)"><div id="igf_res"></div></div>';
 }
 async function igfCall(fn, dados){
