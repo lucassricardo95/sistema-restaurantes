@@ -59,7 +59,7 @@ window.CONTAS = [
 const SB = 'https://supabase.com/dashboard/project/{ref}';
 window.ETAPAS = [
  { id:'cadastro', titulo:'Dados do restaurante', curto:'Nome, dono e contrato', quem:'voce', tempo:'5 min',
-   porque:'É a ficha do cliente: nome, quem é o dono, quanto ele paga e quando vence. Também é a hora de separar as contas que você vai usar.',
+   porque:'É a ficha do cliente: nome, quem é o dono, quanto ele paga e quando vence. Também é a hora de separar as contas que você vai usar. O jeito padrão de criar o restaurante é pelos conectores (GitHub e Supabase): você liga os dois logo no começo e o painel faz o resto.',
    precisa:['Nome do restaurante','WhatsApp do dono','Valor da mensalidade'],
    partes:[
     { t:'Confira os dados do restaurante abaixo e toque em Salvar. O código ({slug}) vai no endereço do site e no nome dos projetos.', extra:'cadastro' },
@@ -75,6 +75,7 @@ window.ETAPAS = [
     { t:'Espere uns 2 minutos até o projeto ficar pronto (some o "Setting up project").' },
     { t:'Pegue o endereço: menu da esquerda → "Project Settings" (engrenagem) → "Data API" → copie o "Project URL" (https://….supabase.co) e cole no primeiro campo abaixo.', link:'https://supabase.com/dashboard/project/_/settings/api', extra:'campos:supabase_url' },
     { t:'Pegue a chave pública: "Project Settings" → "API Keys" → em "Publishable key" copie a chave que começa com sb_publishable_ e cole abaixo. Toque em "Salvar e testar".', link:'https://supabase.com/dashboard/project/_/settings/api-keys', extra:'campos:supabase_url,supabase_chave' },
+    { t:'JÁ AQUI, ligue o conector do Supabase (jeito padrão): crie o token do Supabase desta conta e cole no campo "Token do Supabase" abaixo. O do GitHub você liga logo depois de criar o repositório (próxima etapa). Com o conector ligado o painel faz sozinho o banco, as funções, os logins e as atualizações.', extra:'conectar' },
     { t:'Bom saber: o plano grátis pausa o projeto depois de 7 dias sem uso. O sistema manda sinal a cada 15 minutos e isso o mantém vivo. Se um dia aparecer "Paused" no Supabase, abra o projeto e toque em "Restore project".' }
    ] },
 
@@ -85,20 +86,21 @@ window.ETAPAS = [
     { t:'Entre no GitHub (ou crie a conta em github.com/signup). Toque no "+" lá em cima → "New repository".', link:'https://github.com/new' },
     { t:'Repository name: {slug}. Em "Choose visibility" deixe "Public". Role a tela e em "Add README" ligue a chave (de "Off" para "On"): é obrigatório, sem isso o repositório nasce vazio e o site não funciona. Toque em "Create repository".', copiar:'{slug}' },
     { t:'Copie o endereço da página do repositório que abriu (ex.: https://github.com/usuario/{slug}) e cole abaixo. Salve.', extra:'campos:github_url' },
-    { t:'PODE PULAR esta parte e a próxima se for ligar os conectores (próxima etapa): o painel liga o Pages e preenche o endereço do site sozinho. Para fazer à mão: no repositório, no celular toque em "More" (menu à direita de "Actions") → "Settings" → "Pages". No computador, "Settings" já aparece na barra de cima. Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
+    { t:'Ligue o conector do GitHub (jeito padrão): crie o token deste repositório e cole no campo "Token do GitHub" abaixo. Depois toque em "Testar ligações" (tem que dar ✅ nos dois).', extra:'conectar' },
+    { t:'Jeito padrão: ligue o conector do GitHub agora (token abaixo, no campo "Token do GitHub") e pule as duas partes seguintes: o painel liga o Pages e preenche o endereço do site sozinho. Jeito manual (2ª opção): no repositório, no celular toque em "More" (menu à direita de "Actions") → "Settings" → "Pages". No computador, "Settings" já aparece na barra de cima. Em "Source" escolha "Deploy from a branch". Em "Branch" escolha "main" e a pasta "/ (root)". Toque em "Save".', link:'{github_url}/settings/pages' },
     { t:'Espere 1 minuto e atualize a página Pages: aparece "Your site is live at https://usuario.github.io/{slug}/". Copie esse endereço (com a barra no fim) e cole abaixo. Toque em "Salvar e testar".', link:'{github_url}/settings/pages', extra:'campos:github_url,site_url' },
     { t:'Só se for usar o Claude para gravar arquivos: GitHub → sua foto → Settings → Applications → "Claude" → Configure → libere o repositório {slug}. Fazendo sozinho, pule.', link:'https://github.com/settings/installations' }
    ] },
 
- { id:'conectar', titulo:'Ligar o GitHub e o Supabase', curto:'Os conectores: o painel faz o resto sozinho', opcional:true, quem:'voce', tempo:'5 min',
-   porque:'Com os dois tokens do restaurante guardados no cofre do painel, o botão "Implantar tudo agora" monta o banco, publica as funções do servidor, cria os logins, gera as chaves de aviso e grava o site, tudo de uma vez (uns 6 a 10 minutos). Cada restaurante tem os seus tokens: ligar um não tira o outro. Se preferir, pule: todas as etapas seguintes continuam tendo o jeito manual.',
+ { id:'conectar', titulo:'Ligar os conectores e implantar tudo', curto:'JEITO PADRÃO: o painel faz o resto sozinho', quem:'voce', tempo:'5 min',
+   porque:'Este é o jeito padrão de criar um restaurante. Com os dois tokens do restaurante (Supabase e GitHub) guardados no cofre do painel, o botão "Implantar tudo agora" monta o banco, publica as funções do servidor, cria os logins, gera as chaves de aviso e grava o site, tudo de uma vez (uns 6 a 10 minutos). Depois o painel também mantém tudo atualizado sozinho. Cada restaurante tem os seus tokens: ligar um não tira o outro. O jeito manual (copiar e colar) continua em cada etapa seguinte como segunda opção, para quando o conector não puder ser usado.',
    precisa:['As contas do restaurante (etapa 1)','O projeto do Supabase e o repositório do GitHub já criados (etapas 2 e 3)','A função "conector" publicada no painel (Mais → Conectores → Preparar o painel, uma vez só)'],
    partes:[
     { t:'Siga o passo a passo abaixo: crie o token do Supabase e o do GitHub deste restaurante, cole cada um no seu campo e toque em Salvar. Depois toque em "Testar ligações": tem que aparecer ✅ nos dois.', extra:'conectar' },
     { t:'Com os dois ✅, preencha os 4 campos de "Implantar tudo" (login e senha do dono, o seu login e a sua senha de suporte) e toque em "⚡ Implantar tudo agora". Deixe a tela aberta até aparecer "Pronto". Depois da conferência automática, só faltam as etapas que dependem das suas contas: cores e logos, Entrar com o Google, Drive, chaves das IAs e planilhas (opcional).' }
    ] },
 
- { id:'banco', titulo:'Montar as tabelas do banco', curto:'Copiar e colar os códigos', quem:'voce', tempo:'25 min', teste:'banco',
+ { id:'banco', titulo:'Montar as tabelas do banco', curto:'Automático pelo conector (ou copiar e colar)', quem:'voce', tempo:'25 min', teste:'banco',
    porque:'O banco vem vazio. Estes códigos criam todas as tabelas, regras de segurança e funções do sistema. ⚡ Se você tocar em "Implantar tudo agora" (etapa "Ligar o GitHub e o Supabase"), esta etapa é feita sozinha e já sai marcada.',
    precisa:['O banco criado (etapa 2)','A chave secreta do Supabase (a parte 2 mostra onde)','Paciência: são várias partes, uma de cada vez'],
    partes:[

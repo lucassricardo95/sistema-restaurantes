@@ -70,6 +70,8 @@ async function carregar(){
     tenta(() => rest('promessas?select=*&order=criada_em.desc'), []) ]);
   S.desp = d; S.prop = p; S.aj = (a[0] && a[0].dados) || {}; S.termos = t[0] || null; S.prom = pr;
   S.segs = await tenta(() => rpc('revenda_segredos_status'), {});
+  S.atz = await tenta(() => rest('atualizador_estado?select=*'), []);   // o que o atualizador automático NÃO conseguiu subir
+  S.painelAl = ((await tenta(() => rest('painel_alerta_estado?select=problemas'), [])) || [])[0] || null;   // vigia do próprio painel
   await carregarSaude();
 }
 async function carregarSaude(){
@@ -160,6 +162,7 @@ async function donoVerificar(){
     if(!S.dono){ const tem = await rpc('revenda_tem_dono'); if(!tem){ const r = await rpc('revenda_primeiro_acesso'); S.dono = !!(r && r.ok); } }
     if(S.dono) await carregar();
     tela();
+    if(S.dono) setTimeout(() => { sincronizarServidor_().catch(() => {}); }, 3000);   // leva o código das atualizações para o servidor (atualização automática)
     if(S.dono) setTimeout(() => { carregadorAuto_().catch(() => {}); }, 4000);   // em segundo plano: mantém o carregador dos restaurantes em dia
   }catch(e){ erro(e.message); $('app').innerHTML = '<div class="login card"><p>Não foi possível abrir o painel.</p><button onclick="location.reload()">Tentar de novo</button> <button onclick="rvSair()">Sair</button></div>'; }
 }
@@ -209,6 +212,8 @@ function alertas(){
     if(r.bloqueado) L.push([1, '⛔', r.nome + ': acesso bloqueado', 'Libere quando ele pagar.', "rvAbrir('" + r.id + "','dinheiro')"]);
     const px = proxEtapa(r); if(px && ['implantacao','teste'].includes(r.situacao)) L.push([1, '🛠️', r.nome + ': próximo passo', px.titulo, "rvAbrir('" + r.id + "','passo')"]);
   });
+  (S.atz || []).forEach(a => { const r = S.lista.find(x => x.id === a.restaurante_id); if(r) L.push([3, '⚠️', r.nome + ': atualização ' + ({ banco:'do banco', site:'do site', funcoes:'das funções', revisao:'do banco (precisa de você)' }[a.tipo] || a.tipo) + ' não subiu', (a.erro || '') + (a.detalhe ? ' — ' + a.detalhe : '') + ' Toque para tentar de novo.', "rvAtzTentar('" + r.id + "')"]); });
+  ((S.painelAl || {}).problemas || []).forEach(p => L.push([p.nivel === 'alto' ? 3 : 2, '🩺', 'Painel: ' + p.texto, 'Veja em Mais > Saúde do painel.', "rvIr('mais')"]));
   const atr = atrasadas(); if(atr.length) L.push([3, '💸', atr.length + (atr.length === 1 ? ' cobrança atrasada' : ' cobranças atrasadas') + ' · ' + BRL(atr.reduce((s, c) => s + (Number(c.valor) || 0), 0)), 'Toque para cobrar pelo WhatsApp.', "rvIr('dinheiro')"]);
   const vence = S.cob.filter(c => !c.pago_em && c.vencimento >= h && c.vencimento <= em3); if(vence.length) L.push([2, '📅', vence.length + ' vence(m) nos próximos 3 dias', vence.map(c => nomeRest(c.restaurante_id)).join(', '), "rvIr('dinheiro')"]);
   const pp = (S.prom || []).filter(x => x.status === 'pendente'); if(pp.length) L.push([3, '🤝', pp.length + ' pedido(s) de promessa de pagamento', 'Aprove ou recuse.', "rvAbrir('" + pp[0].restaurante_id + "','dinheiro')"]);
@@ -1031,7 +1036,7 @@ function abaCobranca(){
         + (x.status === 'pendente' ? '<div class="cob-a"><button class="mini principal" onclick="rvPromessa(\'' + x.id + '\',true)">Aprovar</button><button class="mini" onclick="rvPromessa(\'' + x.id + '\',false)">Recusar</button></div>' : '') + '</div>').join('') + '</div>' : '')
    + '<div class="card' + (r.bloqueado ? ' destaque-erro' : '') + '"><h2>🔒 Acesso ao sistema</h2>'
    + (r.bloqueado ? '<p><b class="txt-erro">⛔ Bloqueado' + (r.bloqueado_em ? ' em ' + esc(new Date(r.bloqueado_em).toLocaleDateString('pt-BR')) : '') + '.</b> A equipe vê "Acesso suspenso" (o cardápio do cliente continua funcionando).' + (r.bloqueio_motivo ? '<br><small class="mudo">Mensagem: ' + esc(r.bloqueio_motivo) + '</small>' : '') + '</p><button class="principal" onclick="rvBloquear(false)">🔓 Liberar acesso</button>'
-      : '<p class="mudo pequeno">O bloqueio nunca é automático: só vale quando você tocar em "Bloquear". Dá para liberar a qualquer momento.</p><label for="bloqMsg">Mensagem para o restaurante (opcional)</label><textarea id="bloqMsg" rows="2" maxlength="200" placeholder="Ex.: Acesso suspenso por mensalidade em aberto. Fale comigo pelo WhatsApp."></textarea><button class="mini perigo" onclick="rvBloquear(true)">⛔ Bloquear acesso</button>') + '</div>');
+      : '<p class="mudo pequeno">' + ((S.aj.bloqueio_auto || {}).ligado !== false ? '🤖 O bloqueio automático está ligado: bloqueia ' + ((S.aj.bloqueio_auto || {}).dias || 1) + ' dia(s) depois do vencimento se houver mensalidade em aberto (só com mensalidade preenchida). ' : 'O bloqueio automático está desligado em Mais > Meus dados: só vale o botão Bloquear. ') + 'Dá para bloquear ou liberar na mão a qualquer momento.</p>' + togHtml_('bloqueio_auto', 'Bloquear este restaurante automaticamente se atrasar', r) + '<label for="bloqMsg">Mensagem para o restaurante (opcional)</label><textarea id="bloqMsg" rows="2" maxlength="200" placeholder="Ex.: Acesso suspenso por mensalidade em aberto. Fale comigo pelo WhatsApp."></textarea><button class="mini perigo" onclick="rvBloquear(true)">⛔ Bloquear acesso</button>') + '</div>');
 }
 window.rvCobRest = async tipo => {
   const r = S.rest, v = tipo === 'implantacao' ? r.taxa_implantacao : r.valor_mensal; if(!v) return erro('Defina o valor na aba Cadastro e salve antes.');
@@ -1260,11 +1265,13 @@ async function rvCompartilhar(){ const u = rvLinkPainel(); try{ if(navigator.sha
 function vMais(){
   const it = [['assistente','✨','Assistente (IA)','Chaves das IAs, teste e leitura dos restaurantes'],['conectores','🔌','Conectores','Ligar o painel ao GitHub e ao Supabase de cada restaurante'],['usuarios','👤','Usuários do painel','Seus dados de acesso e quem mais pode entrar'],['vendas','🤝','Vendas e propostas','Restaurantes com quem você está conversando'],['guia','📘','Como criar um restaurante','O caminho completo, explicado do começo'],['ajustes','⚙️','Meus dados, Pix e planos','Seus dados nos termos, chave Pix, mensagem de cobrança, planos e meta']];
   T('<h1>Mais</h1>' + it.map(x => '<button class="alerta n0" onclick="rvIr(\'' + x[0] + '\')"><span class="ic">' + x[1] + '</span><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span><span class="seta">›</span></button>').join('')
+   + '<div class="card" id="painelSaude"><h2>🩺 Saúde do painel</h2><small class="mudo">Conferindo o uso do plano grátis…</small></div>'
    + '<div class="card"><h2>🔗 Link do painel</h2><p class="mudo pequeno">Este é o endereço do painel. Para entrar é preciso ter login, então só quem você cadastrar consegue usar.</p><p><code id="rvLink" style="word-break:break-all;">' + esc(rvLinkPainel()) + '</code></p><p><button class="principal" onclick="rvCompartilhar()">📤 Compartilhar</button> <button class="mini" onclick="rvCopiarLink()">Copiar link</button></p></div>'
    + '<div class="card"><small class="mudo">Versão do painel: ' + ((document.querySelector('script[src*="revenda.js"]') || {}).src || '').replace(/^.*[?]v=/, '') + ' · Conectado como ' + esc((S.sess && S.sess.email) || '') + '</small><p><button onclick="rvSair()">Sair do painel</button></p></div>');
+  carregarSaudePainel_();
 }
 function vAjustes(){
-  const a = S.aj, t = S.termos || {}, planos = a.planos || [];
+  const a = S.aj, t = S.termos || {}, planos = a.planos || [], ba = a.bloqueio_auto || {}, au = a.atualizar_auto || {};
   T('<div class="topo"><button class="mini" onclick="rvIr(\'mais\')">← Mais</button></div><h1>Meus dados, Pix e planos</h1>'
    + '<div class="card"><h2>👤 Seus dados nos termos de uso</h2><p class="mudo pequeno">Aparecem no contrato que o cliente aceita (valem para todos os restaurantes).</p>'
    + '<label for="tNome">Seu nome ou razão social</label><input id="tNome" value="' + esc(t.fornecedor_nome || '') + '" maxlength="120"><label for="tDoc">Seu CPF ou CNPJ</label><input id="tDoc" value="' + esc(t.fornecedor_doc || '') + '" maxlength="30">'
@@ -1275,9 +1282,98 @@ function vAjustes(){
    + '<label for="aMeta">Meta de recebimento por mês (R$)</label><input id="aMeta" inputmode="decimal" value="' + esc(a.meta || '') + '">'
    + '<label for="aMsg">Mensagem de cobrança (WhatsApp)</label><textarea id="aMsg" rows="5" placeholder="Deixe em branco para usar a mensagem padrão">' + esc(a.msg_cobranca || '') + '</textarea><small class="mudo">Pode usar: {contato} {restaurante} {tipo} {valor} {vencimento} {pix}</small>'
    + '<p><button class="principal" onclick="rvSalvarAj()">💾 Salvar</button></p></div>'
+   + '<div class="card"><h2>🤖 Automáticos</h2><p class="mudo pequeno">O painel trabalha sozinho no servidor, com o painel fechado. Cada restaurante ainda pode ser tirado do automático na tela dele.</p>'
+   + '<label for="baOn"><b>🔒 Bloqueio automático por falta de pagamento</b></label><select id="baOn"><option value="1"' + (ba.ligado !== false ? ' selected' : '') + '>Ligado</option><option value="0"' + (ba.ligado === false ? ' selected' : '') + '>Desligado (só bloqueio manual)</option></select>'
+   + '<div class="cols"><div><label for="baDias">Bloquear depois de quantos dias do vencimento</label><input id="baDias" type="number" min="1" max="60" value="' + esc(ba.dias || 1) + '"></div>'
+   + '<div><label for="baProm">1ª promessa de pagamento</label><select id="baProm"><option value="1"' + (ba.promessa_auto !== false ? ' selected' : '') + '>Libera na hora (1 vez por restaurante)</option><option value="0"' + (ba.promessa_auto === false ? ' selected' : '') + '>Sempre espera eu aprovar</option></select></div></div>'
+   + '<label for="baPrazo">Promessa de pagamento: até quantos dias à frente o cliente pode escolher (1 a 15)</label><input id="baPrazo" type="number" min="1" max="15" value="' + esc(ba.promessa_dias || 15) + '">'
+   + '<label for="baMsg">Mensagem que a equipe vê quando bloqueia sozinho (opcional)</label><textarea id="baMsg" rows="2" maxlength="200" placeholder="Acesso suspenso por mensalidade em aberto. Fale com o fornecedor do sistema.">' + esc(ba.mensagem || '') + '</textarea>'
+   + '<small class="mudo">Só vale para restaurante com mensalidade preenchida e fora de implantação. Se você liberar na mão, o automático não bloqueia de novo a mesma mensalidade. Ao registrar o pagamento de uma mensalidade, o restaurante bloqueado (automático ou manual) é liberado na hora, se não restar outra mensalidade vencida.</small>'
+   + '<label for="auOn" style="margin-top:12px"><b>🔄 Atualização automática (banco, funções e site)</b></label><select id="auOn"><option value="1"' + (au.ligado !== false ? ' selected' : '') + '>Ligada</option><option value="0"' + (au.ligado === false ? ' selected' : '') + '>Desligada (eu atualizo à mão)</option></select>'
+   + '<small class="mudo">De 30 em 30 minutos. Nunca mexe no que é do restaurante (chaves, Google, Drive, planilhas, dados). Se algo não subir, aparece nos Alertas e chega aviso no celular.</small>'
+   + '<p><button class="principal" onclick="rvSalvarAuto()">💾 Salvar</button> <button class="mini" onclick="rvAtualizarAgora()">▶ Atualizar agora</button></p></div>'
    + '<div class="card"><div class="linha"><h2>📦 Planos e preços</h2><button class="mini principal" onclick="rvPlano()">＋ Plano</button></div><p class="mudo pequeno">Escolha com um toque ao criar restaurante ou proposta.</p>'
    + (planos.length ? planos.map((p, i) => '<div class="cob"><div class="cob-i"><b>' + esc(p.nome) + '</b><small>' + MODULOS.filter(m => (p.modulos || {})[m.id]).map(m => m.nome).join(', ') + '</small></div><b class="cob-v">' + BRL(p.valor) + '</b><div class="cob-a"><button class="mini" onclick="rvPlano(' + i + ')">✏️</button><button class="mini" onclick="rvPlanoApagar(' + i + ')">🗑️</button></div></div>').join('') : '<p class="mudo">Nenhum plano ainda.</p>') + '</div>');
 }
+
+window.rvSalvarAuto = async () => {
+  const dias = Math.min(60, Math.max(1, parseInt(jv('baDias'), 10) || 1));
+  await salvarAjustes({ bloqueio_auto:{ ligado:jv('baOn') !== '0', dias, promessa_auto:jv('baProm') !== '0', promessa_dias:Math.min(15, Math.max(1, parseInt(jv('baPrazo'), 10) || 15)), mensagem:jv('baMsg') }, atualizar_auto:{ ligado:jv('auOn') !== '0' } }, 'Automáticos salvos.');
+};
+async function chamarAtualizador_(corpo){
+  if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 140000);
+  try{ const r = await fetch(URL_ + '/functions/v1/atualizador', { method:'POST', signal:c.signal, headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo || {}) });
+    if(r.status === 404) throw new Error('A função "atualizador" ainda não foi publicada no servidor do painel.');
+    const j = await r.json().catch(() => null); if(!j || !j.ok) throw new Error((j && j.erro) || 'O atualizador não respondeu.'); return j;
+  } finally { clearTimeout(t); }
+}
+window.rvAtualizarAgora = async () => {
+  aviso('Atualizando… pode levar uns minutos.', 'ok');
+  try{ const j = await chamarAtualizador_({ forcar:true }); S.atz = await tenta(() => rest('atualizador_estado?select=*'), []);
+    const ruins = (j.restaurantes || []).filter(x => [x.banco, x.site, x.funcoes].some(v => v === 'erro' || v === 'revisao')).length;
+    aviso(j.desligado ? 'A atualização automática está desligada.' : ruins ? ruins + ' restaurante(s) com atualização que não subiu (veja os Alertas).' : 'Tudo em dia.', ruins ? 'erro' : 'ok');
+  }catch(e){ erro(e.message); }
+  desenhar();
+};
+window.rvAtzTentar = async id => {
+  const r = S.lista.find(x => x.id === id) || {};
+  if(!confirm('Tentar atualizar "' + (r.nome || '') + '" de novo agora?\n\nSe continuar falhando, o motivo aparece nos Alertas e dá para fazer à mão em Conectores.')) return;
+  aviso('Tentando…', 'ok');
+  try{ await chamarAtualizador_({ restaurante_id:id }); S.atz = await tenta(() => rest('atualizador_estado?select=*'), []); const ainda = S.atz.filter(x => x.restaurante_id === id).length; aviso(ainda ? 'Ainda não subiu. Veja o motivo nos Alertas.' : 'Atualizado ✓', ainda ? 'erro' : 'ok'); }catch(e){ erro(e.message); }
+  desenhar();
+};
+/* chave por restaurante: entra ou sai do bloqueio automático / da atualização automática */
+window.rvTogRest = async (campo, on, id) => {
+  const r = S.lista.find(z => z.id === (id || (S.rest || {}).id)); if(!r) return;
+  try{ await rest('restaurantes?id=eq.' + r.id, 'PATCH', { [campo]:on }); r[campo] = on; const x = S.lista.find(z => z.id === r.id); if(x) x[campo] = on;
+    await hist(r.id, (campo === 'bloqueio_auto' ? 'Bloqueio automático ' : 'Atualização automática ') + (on ? 'LIGADO' : 'DESLIGADO') + ' neste restaurante', ''); aviso(on ? 'Ligado.' : 'Desligado.', 'ok'); }catch(e){ erro(e.message); }
+  desenhar();
+};
+const togHtml_ = (campo, titulo, r) => '<label class="check"><input type="checkbox" ' + (r[campo] !== false ? 'checked ' : '') + 'onchange="rvTogRest(\'' + campo + '\',this.checked,\'' + r.id + '\')"><span>' + titulo + '</span></label>';
+/* SINCRONIA COM O SERVIDOR: leva para o banco do painel o código das atualizações numeradas e o carregador oficial, para o atualizador trabalhar sozinho com o painel fechado.
+   Guarda também o hash do carregador anterior como "antigo" (é assim que o servidor sabe que pode trocá-lo sem pisar em algo personalizado). */
+async function sincronizarServidor_(){
+  if(typeof window.cdObter !== 'function') return;
+  try{
+    const ja = new Set((await rest('atualizacoes_sql?select=id') || []).map(x => x.id));
+    for(const u of UPDS){ if(ja.has(u[0])) continue; try{ const sql = await window.cdObter(u[0]); await rest('atualizacoes_sql', 'POST', { id:u[0], rotulo:u[1], sql, revisada:true }, { Prefer:'resolution=merge-duplicates,return=minimal' }); }catch(e){ /* tenta na próxima abertura */ } }
+    for(const n of ['index.html']){
+      const x = await fetch('leve/' + n + '?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) continue;
+      const txt = await x.text(), hNovo = await sha256_(Array.from(new TextEncoder().encode(txt), c => String.fromCharCode(c)).join(''));
+      const at = (await rest('site_modelo?caminho=eq.' + n + '&select=conteudo,antigos') || [])[0];
+      let antigos = at ? (at.antigos || []).slice() : LOADER_ANTIGOS.slice();
+      if(at){ const hAt = await sha256_(Array.from(new TextEncoder().encode(at.conteudo), c => String.fromCharCode(c)).join('')); if(hAt === hNovo) continue; if(!antigos.includes(hAt)) antigos.push(hAt); }
+      await rest('site_modelo', 'POST', { caminho:n, conteudo:txt, antigos, atualizado_em:new Date().toISOString() }, { Prefer:'resolution=merge-duplicates,return=minimal' });
+    }
+  }catch(e){ /* sem a tabela ainda ou sem rede: o servidor continua com o que já tem */ }
+}
+
+/* SAÚDE DO PRÓPRIO PAINEL: uso do plano grátis do Supabase do painel + arquivamento mensal do que é antigo (vai para o Storage antes de sair do banco) */
+async function carregarSaudePainel_(){
+  const box = $('painelSaude'); if(!box) return;
+  try{
+    const d = await rpc('painel_saude'); if(!d || d.banco_bytes == null) throw new Error('sem dados');
+    const pct = (a, b) => Math.round(a / b * 1000) / 10, ua = d.ultimo_arquivo;
+    box.innerHTML = '<h2>🩺 Saúde do painel</h2>'
+     + barraUso({ tit:'Banco do painel', uso:fmtBytes_(d.banco_bytes), lim:'500 MB', pct:pct(d.banco_bytes, d.banco_limite) })
+     + barraUso({ tit:'Arquivo (Storage)', uso:fmtBytes_(d.storage_bytes), lim:'1 GB', pct:pct(d.storage_bytes, d.storage_limite) })
+     + (d.cron_falhas ? conLinha(false, d.cron_falhas + ' tarefa(s) agendada(s) falharam nas últimas 24 h') : conLinha(true, 'Tarefas agendadas em dia'))
+     + (d.saida_erros >= 5 ? conLinha(false, d.saida_erros + ' chamadas a outros serviços com erro nas últimas 24 h') : '')
+     + '<small class="mudo">Conferido de 6 em 6 horas; chega aviso no celular acima de 70%. O que é antigo (histórico, registro do conector e erros resolvidos) vai sozinho para o Storage 1 vez por mês' + (ua ? ' · último: ' + esc(new Date(ua.em).toLocaleDateString('pt-BR')) + ' (' + esc(ua.tabela) + ', ' + ua.linhas + ' linhas)' : '') + '. Cobranças e contratos nunca são arquivados.</small>'
+     + '<p><button class="mini" onclick="rvArquivarPainel()">🗄️ Arquivar agora</button></p>';
+  }catch(e){ box.innerHTML = '<h2>🩺 Saúde do painel</h2>' + conLinha(false, 'Não consegui ler (' + esc(e.message) + '). Falta aplicar o código 025 no banco do painel.'); }
+}
+window.rvArquivarPainel = async () => {
+  aviso('Arquivando…', 'ok');
+  try{ if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+    const r = await fetch(URL_ + '/functions/v1/arquivar-painel', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:'{}' });
+    const j = await r.json().catch(() => null); if(!j) throw new Error('A função "arquivar-painel" não respondeu.');
+    if(!j.ok) throw new Error(j.erro || 'Não arquivou.');
+    const n = (j.tabelas || []).reduce((t, x) => t + x.arquivadas, 0); aviso(n ? n + ' registro(s) antigo(s) foram para o Storage.' : 'Nada antigo para arquivar ainda.', 'ok');
+  }catch(e){ erro(e.message); }
+  carregarSaudePainel_();
+};
 window.rvSalvarTermos = async () => {
   const d = { fornecedor_nome:jv('tNome'), fornecedor_doc:jv('tDoc'), foro:jv('tForo'), contato:jv('tCont'), atualizado_em:new Date().toISOString() };
   try{ await rest('termos_uso?id=eq.true', 'PATCH', d); Object.assign(S.termos = S.termos || {}, d); aviso('Dados salvos.', 'ok'); }catch(e){ erro(e.message); }
@@ -1429,7 +1525,7 @@ async function vConectores(){
    + '<li>Pronto. Agora é só ligar cada restaurante abaixo. Os dois arquivos estão na pasta <i>1-PAINEL-DE-REVENDA</i> do Sistemas.zip.</li></ol></details></div>'
    + (L.some(r => temSb(r)) ? '<div class="card"><div class="linha"><b>⬆️ Atualizar todos os restaurantes</b><button class="principal mini" onclick="rvConAtualizarTodos()">Atualizar todos</button></div><small class="mudo">Aplica só o que falta das atualizações do banco (' + updFaixa() + ') em todos que têm o Supabase ligado, um por vez.</small><div id="con_todos"></div></div>' : '')
    + L.map(r => '<div class="card"><button class="alerta n0" onclick="rvConAbrir(\'' + r.id + '\')"><span class="ic">' + (temGh(r) && temSb(r) ? '✅' : (temGh(r) || temSb(r) ? '🟡' : '⬜')) + '</span><span><b>' + esc(r.nome) + '</b><small>' + (temSb(r) ? 'Supabase ✓' : 'Supabase: falta') + ' · ' + (temGh(r) ? 'GitHub ✓' : 'GitHub: falta') + '</small></span><span class="seta">' + (aberto === r.id ? '⌃' : '›') + '</span></button>'
-      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (' + UPDS[0][1].slice(0, 3) + '–' + UPDS[UPDS.length - 1][1].slice(0, 3) + ')</button></div>' : '') + '</div>').join('')
+      + (aberto === r.id ? conectorHtml(r) + '<div class="linha" style="margin-top:10px;"><button class="mini principal" onclick="rvConAtualizar(\'' + r.id + '\')"' + (temSb(r) ? '' : ' disabled') + '>⬆️ Atualizar banco (' + UPDS[0][1].slice(0, 3) + '–' + UPDS[UPDS.length - 1][1].slice(0, 3) + ')</button></div>' + togHtml_('atualizar_auto', 'Atualizar este restaurante automaticamente (banco, funções e site)', r) : '') + '</div>').join('')
    + '<div class="card"><h2>📒 Registro</h2><div id="conLog"><small class="mudo">Carregando…</small></div></div>');
   try{ const X = await rest('conector_log?select=*&order=em.desc&limit=20') || []; const b = $('conLog'); const nm = id => (S.lista.find(r => r.id === id) || {}).nome || '—';
     if(b) b.innerHTML = X.length ? X.map(l => '<div class="hist"><small class="mudo">' + esc(new Date(l.em).toLocaleString('pt-BR')) + ' · ' + esc(nm(l.restaurante_id)) + ' · ' + esc(l.alvo) + ' · ' + esc(l.acao) + '</small><b class="' + (l.ok ? 'txt-ok' : 'txt-erro') + '">' + (l.ok ? '✓ ' : '✗ ') + esc(l.ok ? (l.detalhe || 'ok') : (l.erro || 'erro')) + '</b></div>').join('') : '<small class="mudo">Nada feito ainda.</small>'; }catch(e){ const b = $('conLog'); if(b) b.innerHTML = '<small class="mudo">Rode o arquivo 015-conector.sql no banco do painel.</small>'; }
