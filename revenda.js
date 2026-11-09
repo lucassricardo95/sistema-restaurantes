@@ -2046,6 +2046,9 @@ window.rvAjIaTestar = async prov => {
   const r = S.rest, nomes = {}; IA_REST.forEach(x => { nomes[x[0]] = x[1]; });
   const alvo = prov === 'todas' ? $('aj_ia_res') : $('aj_ia_t_' + prov); if(alvo) alvo.innerHTML = '<small class="mudo">⏳ Testando… pode levar uns segundos</small>';
   try{ const a = await chamarConector({ acao:'sb_ia_testar', restaurante_id:r.id, provedor:prov }); if(!a.ok) throw new Error(a.erro || 'Não consegui testar.');
+    /* NVIDIA: o teste de verdade é uma pergunta mínima (gasta um tiquinho da cota, só quando você clica em Testar) */
+    const iN = (a.resultados || []).findIndex(y => y.provedor === 'nvidia' && y.funcionando === null);
+    if(iN >= 0){ try{ const n = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'ia_nvidia' } }, 'conector-integ'); if(n && n.ok && n.resultado) a.resultados[iN] = n.resultado; }catch(e){ /* fica o aviso de formato */ } }
     const linha = y => (y.funcionando === true ? conLinha(true, '<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: funcionando' + (y.ms ? ' (' + (Math.round(y.ms / 100) / 10).toString().replace('.', ',') + ' s)' : '') + (y.motivo ? '. ' + esc(y.motivo) : ''))
       : y.funcionando === null ? amarela('<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: ' + esc(y.motivo))
       : (y.tem ? conLinha(false, '<b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: ' + esc(y.motivo)) : '<div class="res"><small class="mudo">➖ <b>' + esc(nomes[y.provedor] || y.provedor) + '</b>: sem chave</small></div>'));
