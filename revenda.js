@@ -1476,7 +1476,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado'],['upd154','154 · integrações pelo painel']];
 async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1918,8 +1918,60 @@ async function abaIntegracoes(){
    + IF_MODS.map(m => { const x = M[m[0]] || {}; const st = x.liberado ? (x.status && x.status !== 200 && x.ultimoErroEm && (!x.ultimoOk || x.ultimoErroEm > x.ultimoOk) ? '⚠️ liberado, mas o iFood respondeu ' + esc(x.status) : x.ultimoOk ? '✅ funcionando' : '⏳ liberado, aguardando a primeira consulta') : '⏸️ aguardando liberação do iFood';
       return '<div class="cob"><div class="cob-i"><b>' + m[1] + '</b><small>' + esc(m[2]) + ' · ' + st + '</small></div><div class="cob-a"><button class="mini' + (x.liberado ? '' : ' principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar' : 'Liberar') + '</button></div></div>'; }).join('')
    + '<div id="integ_res"></div>' + manual + '</div>'
-   + '<div class="card"><h2>📋 Em breve aqui</h2><p class="mudo pequeno">Chaves e credenciais, nota fiscal, Mercado Pago e InfinityPay passam a ser configurados aqui também, só por você.</p></div>');
+   + (a.integracoes ? IG_PROVS.map(p => igCard(p, (a.integracoes || []).find(x => x.provedor === p.id) || {})).join('') : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>')
+   + '<div class="card"><h2>📋 Em breve aqui</h2><p class="mudo pequeno">Dados fiscais da empresa, perfis fiscais e planilha do contador (nota fiscal) também passam a ser configurados aqui.</p></div>');
 }
+/* ---------- INTEGRAÇÕES: chaves, ligar/desligar e ajustes técnicos (SQL 154) ---------- */
+const IG_PROVS = [
+ { id:'ifood', nome:'🛒 iFood', modos:false, seg:[['ifood_client_id','Client ID'],['ifood_client_secret','Client Secret'],['ifood_merchant_id','Merchant ID (loja)'],['ifood_bi_client_id','BI · Client ID (indicadores)'],['ifood_bi_client_secret','BI · Client Secret']],
+   bools:[['modoHomologacao','Modo homologação (testes do iFood)'],['biHomologacao','Indicadores em homologação'],['homMerchant','Homologação: Loja'],['homAvaliacoes','Homologação: Avaliações'],['homFinanceiro','Homologação: Financeiro'],['homCatalogo','Homologação: Cardápio'],['homEntregador','Homologação: Entregador'],['homAnalytics','Homologação: Indicadores']] },
+ { id:'nfce', nome:'🧾 Nota fiscal (NFC-e)', modos:true, seg:[['nfce_token_homologacao','Token Focus NFe · homologação'],['nfce_token_producao','Token Focus NFe · produção'],['nfce_csc','CSC (código de segurança)']], bools:[] },
+ { id:'mercadopago', nome:'💳 Mercado Pago', modos:true, seg:[['mp_public_key_teste','Public Key · teste'],['mp_access_token_teste','Access Token · teste'],['mp_public_key_producao','Public Key · produção'],['mp_access_token_producao','Access Token · produção'],['mp_webhook_secret','Chave secreta do aviso (webhook)']],
+   bools:[['testeNoCardapio','Mostrar o modo teste no cardápio']], num:[['pixValidadeMin','Validade do Pix (min, 5–120)']], emails:[['emailPagadorTeste','E-mail do comprador de teste',1],['emailsTeste','E-mails liberados para teste (separe por vírgula)',0]] },
+ { id:'infinitepay', nome:'💳 InfinityPay', modos:true, seg:[['ip_handle','InfiniteTag (handle)'],['ip_chave_checkout','Chave do checkout']], ipSeg:true,
+   bools:[['producaoSoTeste','Produção só para e-mails de teste'],['testeNoCardapio','Mostrar o modo teste no cardápio']], num:[['linkValidadeMin','Validade do link (min, 10–120)']], emails:[['emailsTeste','E-mails liberados para teste (separe por vírgula)',0]] }
+];
+function igCard(p, d){
+  const cfg = d.config || {}, sg = d.segredos || {}, lig = !!d.ligado;
+  const inp = (id, v, ph) => '<input id="' + id + '" value="' + esc(v || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off" style="width:100%">';
+  const segs = p.seg.map(k => { const x = sg[k[0]]; return '<div class="linha mapa-l"><span><b>' + esc(k[1]) + '</b><br><small class="mudo">' + (x ? '✅ guardado (termina em ' + esc(x.final || '…') + ')' : '⚪ falta preencher') + '</small></span></div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:8px"><input id="ig_' + k[0] + '" type="password" autocomplete="new-password" placeholder="' + (x ? 'Colar para trocar' : 'Colar aqui') + '" style="flex:1;min-width:0"><button class="mini" onclick="rvIgSeg(\'' + k[0] + '\')">Salvar</button></div>'; }).join('');
+  const ip = p.ipSeg ? '<div class="linha mapa-l"><span><b>Segredo do aviso (webhook)</b><br><small class="mudo">' + (sg.ip_webhook_segredo ? '✅ gerado' : '⚪ ainda não gerado') + '</small></span><button class="mini" onclick="rvIgIpSeg()">' + (sg.ip_webhook_segredo ? 'Gerar outro' : 'Gerar') + '</button></div>' : '';
+  const chk = (d.checklist || []).map(c => '<label class="linha" style="gap:8px"><input type="checkbox" ' + (c.feito ? 'checked ' : '') + (c.auto ? 'disabled ' : 'onchange="rvIgMarcar(\'' + p.id + '\',\'' + esc(c.id) + '\',this.checked)" ') + '> <span>' + esc(c.titulo) + (c.auto ? ' <small class="mudo">(automático)</small>' : '') + '</span></label>').join('');
+  const bools = (p.bools || []).map(b => '<label class="linha" style="gap:8px"><input type="checkbox" id="igc_' + b[0] + '" ' + (cfg[b[0]] ? 'checked' : '') + '> <span>' + esc(b[1]) + '</span></label>').join('');
+  const nums = (p.num || []).map(n => '<label class="mudo pequeno">' + esc(n[1]) + '</label>' + inp('igc_' + n[0], cfg[n[0]] != null ? cfg[n[0]] : '')).join('');
+  const ems = (p.emails || []).map(n => '<label class="mudo pequeno">' + esc(n[1]) + '</label>' + inp('igc_' + n[0], n[2] ? cfg[n[0]] : (cfg[n[0]] || []).join(', '))).join('');
+  const temCfg = bools || nums || ems;
+  const modo = p.modos ? '<label class="mudo pequeno">Ambiente ao ligar</label><select id="ig_modo_' + p.id + '"><option value="homologacao"' + (d.modo === 'homologacao' ? ' selected' : '') + '>Teste (homologação)</option><option value="producao"' + (d.modo === 'producao' ? ' selected' : '') + '>Produção (valendo)</option></select>' : '';
+  const pend = (d.pendencias || []).length ? '<div class="res aviso"><b>Ainda falta para ligar:</b><br>• ' + d.pendencias.map(esc).join('<br>• ') + '</div>' : '<div class="res ok">Tudo pronto para ligar ✓</div>';
+  return '<div class="card"><h2>' + p.nome + '</h2><div class="linha mapa-l"><span>' + (lig ? '🟢 Ligado' + (d.modo ? ' · ' + (d.modo === 'producao' ? 'produção' : 'teste') : '') : '⚪ Desligado') + '</span></div>'
+   + '<details><summary><b>🔑 Chaves e códigos</b></summary>' + segs + ip + '</details>'
+   + '<details><summary><b>📋 Lista de conferência</b></summary>' + chk + '</details>'
+   + (temCfg ? '<details><summary><b>⚙️ Ajustes técnicos</b></summary>' + bools + nums + ems + '<button class="mini" onclick="rvIgCfg(\'' + p.id + '\')">Salvar ajustes</button></details>' : '')
+   + pend + modo
+   + '<div style="margin-top:8px">' + (lig ? '<button class="mini" onclick="rvIgLigar(\'' + p.id + '\',false)">Desligar</button>' : '<button class="principal" onclick="rvIgLigar(\'' + p.id + '\',true)"' + (d.pendencias && d.pendencias.length ? ' disabled' : '') + '>Ligar</button>') + '</div></div>';
+}
+async function igCall(p, ok){
+  const r = S.rest; if(!r) return;
+  try{ const a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p }, 'conector-integ'); if(!a.ok) throw new Error(a.erro || 'Não salvou.');
+    await hist(r.id, 'Integração: ' + p.acao + ' ' + (p.provedor || p.chave || ''), ''); aviso(ok || a.message || 'Feito ✓', 'ok'); abaIntegracoes();
+  }catch(e){ erro(e.message); }
+}
+window.rvIgSeg = k => { const v = ($('ig_' + k) || {}).value || ''; if(!v.trim()) return erro('Cole o valor primeiro.'); igCall({ acao:'segredo', chave:k, valor:v }, 'Guardado ✓'); };
+window.rvIgIpSeg = () => { if(confirm('Gerar um segredo novo? O aviso configurado na InfinityPay precisará ser atualizado.')) igCall({ acao:'ip_segredo' }); };
+window.rvIgMarcar = (prov, item, feito) => igCall({ acao:'marcar', provedor:prov, item, feito });
+window.rvIgLigar = (prov, on) => {
+  const m = ($('ig_modo_' + prov) || {}).value;
+  if(on && !confirm('Ligar esta integração' + (m ? ' em ' + (m === 'producao' ? 'PRODUÇÃO' : 'TESTE') : '') + '?')) return;
+  igCall(on ? { acao:'ligar', provedor:prov, modo:m } : { acao:'desligar', provedor:prov });
+};
+window.rvIgCfg = prov => {
+  const p = IG_PROVS.find(x => x.id === prov), c = {};
+  (p.bools || []).forEach(b => { c[b[0]] = !!($('igc_' + b[0]) || {}).checked; });
+  (p.num || []).forEach(n => { const v = ($('igc_' + n[0]) || {}).value; if(v !== '' && v != null) c[n[0]] = Number(v); });
+  (p.emails || []).forEach(n => { const v = (($('igc_' + n[0]) || {}).value || '').trim(); c[n[0]] = n[2] ? v : v.split(/[,;\s]+/).filter(Boolean); });
+  igCall({ acao:'config', provedor:prov, config:c }, 'Ajustes salvos ✓');
+};
 window.rvIntegMod = async (mod, on) => {
   const r = S.rest; if(!r) return;
   if(on && !confirm('Marcar este módulo como LIBERADO pelo iFood? A partir de agora o sistema passa a consultá-lo e a avisar se o iFood recusar.')) return;
