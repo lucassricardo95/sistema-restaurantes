@@ -1476,7 +1476,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado'],['upd154','154 · integrações pelo painel']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado'],['upd154','154 · integrações pelo painel'],['upd155','155 · nota fiscal pelo painel']];
 async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1919,7 +1919,7 @@ async function abaIntegracoes(){
       return '<div class="cob"><div class="cob-i"><b>' + m[1] + '</b><small>' + esc(m[2]) + ' · ' + st + '</small></div><div class="cob-a"><button class="mini' + (x.liberado ? '' : ' principal') + '" onclick="rvIntegMod(\'' + m[0] + '\',' + (x.liberado ? 'false' : 'true') + ')">' + (x.liberado ? 'Desligar' : 'Liberar') + '</button></div></div>'; }).join('')
    + '<div id="integ_res"></div>' + manual + '</div>'
    + (a.integracoes ? IG_PROVS.map(p => igCard(p, (a.integracoes || []).find(x => x.provedor === p.id) || {})).join('') : '<div class="card"><h2>🔗 Chaves e ligar/desligar</h2><div class="res aviso">Este restaurante ainda não tem a atualização 154. Aplique em Conectores → Atualizar banco (ou espere o atualizador automático) e volte aqui.</div></div>')
-   + '<div class="card"><h2>📋 Em breve aqui</h2><p class="mudo pequeno">Dados fiscais da empresa, perfis fiscais e planilha do contador (nota fiscal) também passam a ser configurados aqui.</p></div>');
+   + (a.integracoes ? igFiscalCard() : ''));
 }
 /* ---------- INTEGRAÇÕES: chaves, ligar/desligar e ajustes técnicos (SQL 154) ---------- */
 const IG_PROVS = [
@@ -1971,6 +1971,104 @@ window.rvIgCfg = prov => {
   (p.num || []).forEach(n => { const v = ($('igc_' + n[0]) || {}).value; if(v !== '' && v != null) c[n[0]] = Number(v); });
   (p.emails || []).forEach(n => { const v = (($('igc_' + n[0]) || {}).value || '').trim(); c[n[0]] = n[2] ? v : v.split(/[,;\s]+/).filter(Boolean); });
   igCall({ acao:'config', provedor:prov, config:c }, 'Ajustes salvos ✓');
+};
+/* ---------- NOTA FISCAL: dados da empresa, perfis fiscais e planilha do contador (SQL 155) ---------- */
+const IGF_CAMPOS = [['razaoSocial','razao_social','Razão social'],['nomeFantasia','nome_fantasia','Nome fantasia'],['cnpj','cnpj','CNPJ (só números)'],['inscricaoEstadual','inscricao_estadual','Inscrição estadual'],['cep','cep','CEP'],['logradouro','logradouro','Rua / avenida'],['numero','numero','Número'],['complemento','complemento','Complemento'],['bairro','bairro','Bairro'],['municipio','municipio','Cidade'],['codigoMunicipio','codigo_municipio','Código do município (7 números, o contador informa)'],['uf','uf','Estado (ex.: SP)'],['telefone','telefone','Telefone'],['cscId','csc_id','Número do CSC (identificador, não o código secreto)'],['serie','serie','Série das notas (normalmente 1)'],['aliquotaSimples','aliquota_simples','Alíquota padrão do imposto em %']];
+const IGF_COLS = ['tipo','id','nome','categoria','perfil','ncm','cest','cfop','csosn','cstIcms','origem','unidade'];
+let IGF_PERFIS = null;
+function igFiscalCard(){
+  return '<div class="card"><h2>🧾 Nota fiscal · cadastro fiscal</h2><p class="mudo pequeno">O contador define; você cadastra aqui, antes de ligar a nota fiscal. O dono do restaurante não mexe nisso.</p>'
+   + '<div class="btnrow"><button class="mini" onclick="rvIgfEmpresa()">Dados fiscais da empresa</button><button class="mini" onclick="rvIgfPerfis()">Perfis fiscais</button><button class="mini" onclick="rvIgfSem()">Itens sem perfil</button><button class="mini" onclick="rvIgfBaixar()">Baixar planilha do contador</button><button class="mini" onclick="$(\'igf_arq\').click()">Enviar planilha preenchida</button></div>'
+   + '<input type="file" id="igf_arq" accept=".csv,text/csv,text/plain" style="display:none" onchange="rvIgfEnviar(this)"><div id="igf_res"></div></div>';
+}
+async function igfCall(fn, dados){
+  const r = S.rest; const a = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:{ acao:'fiscal', fn, dados:dados || {} } }, 'conector-integ');
+  if(!a || a.ok === false) throw new Error((a && (a.message || a.erro)) || 'Não deu certo.'); return a;
+}
+const igfV = id => (($(id) || {}).value || '').trim();
+window.rvIgfEmpresa = async () => {
+  const box = $('igf_res'); box.innerHTML = '<small class="mudo">Carregando…</small>';
+  try{ const r = await igfCall('empresa_ler'), e = r.empresa || {};
+    box.innerHTML = '<div class="cob"><b>Dados fiscais da empresa</b> ' + (r.completa ? '✅ completos' : '⬜ incompletos') + (r.temCsc ? '' : ' · falta o CSC secreto (em Chaves e códigos, acima)') + '</div>'
+      + '<label class="mudo pequeno">Regime</label><select id="igf_regime"><option value="simples"' + (e.regime === 'simples' ? ' selected' : '') + '>Simples Nacional</option><option value="mei"' + (e.regime === 'mei' ? ' selected' : '') + '>MEI</option><option value="normal"' + (e.regime === 'normal' ? ' selected' : '') + '>Regime normal</option></select>'
+      + IGF_CAMPOS.map(c => '<label class="mudo pequeno">' + esc(c[2]) + '</label><input id="igf_' + c[0] + '" maxlength="120" value="' + esc(e[c[1]] == null ? '' : e[c[1]]) + '" style="width:100%">').join('')
+      + '<div style="margin-top:8px"><button class="principal" onclick="rvIgfEmpresaSalvar()">Salvar dados fiscais</button></div><div id="igf_msg"></div>';
+  }catch(e){ box.innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvIgfEmpresaSalvar = async () => {
+  const d = { regime: igfV('igf_regime') }; IGF_CAMPOS.forEach(c => { d[c[0]] = igfV('igf_' + c[0]); });
+  try{ const r = await igfCall('empresa_salvar', d); $('igf_msg').innerHTML = conLinha(true, esc(r.message || 'Salvo.')); hist(S.rest.id, 'Dados fiscais salvos pelo painel', ''); }catch(e){ $('igf_msg').innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvIgfPerfis = async (editar) => {
+  const box = $('igf_res'); if(!editar && !IGF_PERFIS) box.innerHTML = '<small class="mudo">Carregando…</small>';
+  try{ if(!IGF_PERFIS || !editar) IGF_PERFIS = await igfCall('perfis'); igfRenderPerfis(editar); }catch(e){ box.innerHTML = conLinha(false, esc(e.message)); }
+};
+function igfRenderPerfis(ed){
+  const r = IGF_PERFIS, ps = r.perfis || [], e = ed || {}, g = (k, d) => esc(e[k] == null ? (d || '') : e[k]);
+  const opts = sel => '<option value="">(herdar / nenhum)</option>' + ps.filter(x => x.ativo).map(x => '<option value="' + x.id + '"' + (sel === x.id ? ' selected' : '') + '>' + esc(x.nome) + '</option>').join('');
+  $('igf_res').innerHTML = '<div class="cob"><b>Perfis fiscais</b> · ' + (r.semPerfil > 0 ? '⚠️ ' + r.semPerfil + ' item(ns) sem perfil' : '✅ todos os itens têm perfil') + '</div>'
+   + (ps.map(x => '<div class="linha mapa-l"><span>' + (x.id === r.padraoId ? '⭐ ' : '') + '<b>' + esc(x.nome) + '</b><br><small class="mudo">NCM ' + esc(x.ncm) + ' · CFOP ' + esc(x.cfop) + ' · ' + (x.csosn ? 'CSOSN ' + esc(x.csosn) : 'CST ' + esc(x.cstIcms || '')) + ' · ' + x.usos + ' uso(s)' + (x.ativo ? '' : ' · desativado') + '</small></span>'
+      + '<span><button class="mini" onclick="rvIgfEditar(\'' + x.id + '\')">Editar</button> <button class="mini" onclick="rvIgfAtribuir(\'padrao\',null,\'' + x.id + '\')">Padrão</button> <button class="mini" onclick="rvIgfExcluir(\'' + x.id + '\')">Excluir</button></span></div>').join('') || '<p class="mudo pequeno">Nenhum perfil ainda. Crie abaixo (o contador informa NCM e CSOSN).</p>')
+   + (r.padraoId ? '<button class="mini" onclick="rvIgfAtribuir(\'padrao\',null,\'\')">Tirar o perfil padrão</button>' : '')
+   + '<h3>Perfis por categoria</h3>' + ((r.categorias || []).map(c => '<div class="linha mapa-l"><span>' + esc(c.nome) + '</span><select onchange="rvIgfAtribuir(\'categoria\',\'' + c.id + '\',this.value)">' + opts(c.perfilId) + '</select></div>').join('') || '<p class="mudo pequeno">Sem categorias.</p>')
+   + '<h3>' + (e.id ? 'Editar perfil' : 'Novo perfil') + '</h3><input type="hidden" id="igp_id" value="' + g('id') + '">'
+   + [['nome','Nome (ex.: Lanches)',60,g('nome')],['ncm','NCM (8 números)',12,g('ncm')],['cest','CEST (7 números, se o contador pedir)',9,g('cest')],['cfop','CFOP',4,g('cfop','5102')],['csosn','CSOSN (Simples/MEI, ex.: 102)',4,g('csosn')],['cst','CST do ICMS (só regime normal)',2,g('cstIcms')],['origem','Origem (0 = nacional)',1,g('origem','0')],['un','Unidade',6,g('unidade','UN')]].map(f => '<label class="mudo pequeno">' + f[1] + '</label><input id="igp_' + f[0] + '" maxlength="' + f[2] + '" value="' + f[3] + '" style="width:100%">').join('')
+   + '<label class="linha" style="gap:8px"><input type="checkbox" id="igp_ativo"' + (e.id && e.ativo === false ? '' : ' checked') + '> <span>Perfil ativo</span></label>'
+   + '<div style="margin-top:8px"><button class="principal" onclick="rvIgfPerfilSalvar()">Salvar perfil</button>' + (e.id ? ' <button class="mini" onclick="rvIgfPerfis()">Cancelar</button>' : '') + '</div><div id="igf_msg"></div>';
+}
+window.rvIgfEditar = id => { const x = ((IGF_PERFIS || {}).perfis || []).find(p => p.id === id); if(x) igfRenderPerfis(x); };
+window.rvIgfPerfilSalvar = async () => {
+  const d = { id:igfV('igp_id') || null, nome:igfV('igp_nome'), ncm:igfV('igp_ncm'), cest:igfV('igp_cest'), cfop:igfV('igp_cfop'), csosn:igfV('igp_csosn'), cstIcms:igfV('igp_cst'), origem:igfV('igp_origem'), unidade:igfV('igp_un'), ativo:!!$('igp_ativo').checked };
+  try{ IGF_PERFIS = await igfCall('perfil_salvar', d); igfRenderPerfis(); $('igf_msg').innerHTML = conLinha(true, esc(IGF_PERFIS.message || 'Salvo.')); hist(S.rest.id, 'Perfil fiscal salvo pelo painel', d.nome); }catch(e){ $('igf_msg').innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvIgfExcluir = async id => {
+  if(!confirm('Excluir este perfil fiscal?')) return;
+  try{ IGF_PERFIS = await igfCall('perfil_excluir', { id }); igfRenderPerfis(); }catch(e){ erro(e.message); }
+};
+window.rvIgfAtribuir = async (alvo, id, perfilId) => {
+  try{ IGF_PERFIS = await igfCall('atribuir', { alvo, id, perfilId: perfilId || null }); igfRenderPerfis(); }catch(e){ erro(e.message); }
+};
+let IGF_SEM = [];
+window.rvIgfSem = async () => {
+  const box = $('igf_res'); box.innerHTML = '<small class="mudo">Carregando…</small>';
+  try{ const [a, b] = await Promise.all([igfCall('sem_perfil'), igfCall('perfis')]); IGF_PERFIS = b; IGF_SEM = a.itens || [];
+    if(!IGF_SEM.length){ box.innerHTML = conLinha(true, 'Todos os produtos e combos têm perfil fiscal.'); return; }
+    const opt = '<option value="">Escolher perfil…</option>' + (b.perfis || []).filter(x => x.ativo).map(x => '<option value="' + x.id + '">' + esc(x.nome) + '</option>').join('');
+    box.innerHTML = '<div class="cob"><b>' + IGF_SEM.length + ' item(ns) sem perfil fiscal</b></div><div class="linha mapa-l"><span>Aplicar a todos</span><span><select id="igf_todos">' + opt + '</select> <button class="mini" onclick="rvIgfTodos()">Aplicar</button></span></div>'
+      + IGF_SEM.map(x => '<div class="linha mapa-l"><span>' + (x.tipo === 'combo' ? '🍱 ' : '🍔 ') + esc(x.nome) + '<br><small class="mudo">' + esc(x.categoria || '') + '</small></span><select onchange="rvIgfUm(\'' + x.tipo + '\',\'' + x.id + '\',this.value)">' + opt + '</select></div>').join('');
+  }catch(e){ box.innerHTML = conLinha(false, esc(e.message)); }
+};
+window.rvIgfUm = async (tipo, id, pid) => { if(!pid) return; try{ await igfCall('atribuir', { alvo:tipo, id, perfilId:pid }); aviso('Aplicado ✓', 'ok'); }catch(e){ erro(e.message); } };
+window.rvIgfTodos = async () => {
+  const pid = igfV('igf_todos'); if(!pid) return erro('Escolha o perfil.'); if(!confirm('Aplicar este perfil a todos os itens da lista?')) return;
+  try{ await igfCall('atribuir', { alvo:'lote', perfilId:pid, ids:IGF_SEM.map(x => ({ tipo:x.tipo, id:x.id })) }); rvIgfSem(); }catch(e){ erro(e.message); }
+};
+const igfCel = v => { v = v == null ? '' : String(v); return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+window.rvIgfBaixar = async () => {
+  try{ const r = await igfCall('exportar'); const txt = '﻿' + [IGF_COLS].concat((r.linhas || []).map(l => IGF_COLS.map(c => l[c] == null ? '' : l[c]))).map(l => l.map(igfCel).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type:'text/csv;charset=utf-8' })); a.download = 'planilha-fiscal.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }catch(e){ erro(e.message); }
+};
+function igfCsv(txt){
+  txt = String(txt || '').replace(/^﻿/, ''); const l1 = txt.split('\n')[0], sep = (l1.match(/;/g) || []).length >= (l1.match(/,/g) || []).length ? ';' : ',';
+  const out = []; let l = [], c = '', q = false;
+  for(let i = 0; i < txt.length; i++){ const ch = txt[i];
+    if(q){ if(ch === '"'){ if(txt[i + 1] === '"'){ c += '"'; i++; } else q = false; } else c += ch; }
+    else if(ch === '"') q = true; else if(ch === sep){ l.push(c); c = ''; }
+    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && txt[i + 1] === '\n') i++; l.push(c); c = ''; if(l.some(x => x !== '')) out.push(l); l = []; }
+    else c += ch; }
+  l.push(c); if(l.some(x => x !== '')) out.push(l); return out;
+}
+window.rvIgfEnviar = async inp => {
+  const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
+  try{ const L = igfCsv(await f.text()); if(L.length < 2) return erro('Planilha vazia.');
+    const cab = L[0].map(x => x.trim().toLowerCase().replace(/[^a-z]/g, '')), ix = n => cab.indexOf(n.toLowerCase());
+    const col = { tipo:ix('tipo'), id:ix('id'), nome:ix('nome'), perfil:ix('perfil'), ncm:ix('ncm'), cest:ix('cest'), cfop:ix('cfop'), csosn:ix('csosn'), cstIcms:ix('csticms'), origem:ix('origem'), unidade:ix('unidade') };
+    if(col.perfil < 0 || col.ncm < 0) return erro('Não achei as colunas "perfil" e "ncm". Use a planilha baixada aqui.');
+    const dados = L.slice(1).map(l => { const o = {}; Object.keys(col).forEach(k => { o[k] = col[k] >= 0 ? (l[col[k]] || '').trim() : ''; }); return o; });
+    if(!confirm('Aplicar ' + dados.length + ' linha(s) da planilha? Isso cria/atualiza perfis e liga os itens a eles.')) return;
+    const r = await igfCall('importar', { linhas:dados }); IGF_PERFIS = r; aviso(r.message || 'Aplicado ✓', 'ok'); hist(S.rest.id, 'Planilha fiscal importada pelo painel', ''); rvIgfPerfis(true);
+  }catch(e){ erro(e.message); }
 };
 window.rvIntegMod = async (mod, on) => {
   const r = S.rest; if(!r) return;

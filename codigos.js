@@ -3,7 +3,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est1",
-   "titulo": "Estrutura · parte 1 de 30",
+   "titulo": "Estrutura · parte 1 de 31",
    "arq": "banco-restaurante/1-estrutura-01.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -15,7 +15,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est2",
-   "titulo": "Estrutura · parte 2 de 30",
+   "titulo": "Estrutura · parte 2 de 31",
    "arq": "banco-restaurante/1-estrutura-02.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -27,7 +27,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est3",
-   "titulo": "Estrutura · parte 3 de 30",
+   "titulo": "Estrutura · parte 3 de 31",
    "arq": "banco-restaurante/1-estrutura-03.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -39,31 +39,31 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est4",
-   "titulo": "Estrutura · parte 4 de 30",
+   "titulo": "Estrutura · parte 4 de 31",
    "arq": "banco-restaurante/1-estrutura-04.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 65
   },
   {
    "etapa": "banco",
    "id": "est5",
-   "titulo": "Estrutura · parte 5 de 30",
+   "titulo": "Estrutura · parte 5 de 31",
    "arq": "banco-restaurante/1-estrutura-05.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
+   "kb": 61
   },
   {
    "etapa": "banco",
    "id": "est6",
-   "titulo": "Estrutura · parte 6 de 30",
+   "titulo": "Estrutura · parte 6 de 31",
    "arq": "banco-restaurante/1-estrutura-06.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -75,56 +75,8 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est7",
-   "titulo": "Estrutura · parte 7 de 30",
+   "titulo": "Estrutura · parte 7 de 31",
    "arq": "banco-restaurante/1-estrutura-07.sql",
-   "subRef": true,
-   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
-   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 63
-  },
-  {
-   "etapa": "banco",
-   "id": "est8",
-   "titulo": "Estrutura · parte 8 de 30",
-   "arq": "banco-restaurante/1-estrutura-08.sql",
-   "subRef": true,
-   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
-   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
-  },
-  {
-   "etapa": "banco",
-   "id": "est9",
-   "titulo": "Estrutura · parte 9 de 30",
-   "arq": "banco-restaurante/1-estrutura-09.sql",
-   "subRef": true,
-   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
-   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
-  },
-  {
-   "etapa": "banco",
-   "id": "est10",
-   "titulo": "Estrutura · parte 10 de 30",
-   "arq": "banco-restaurante/1-estrutura-10.sql",
-   "subRef": true,
-   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
-   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 60
-  },
-  {
-   "etapa": "banco",
-   "id": "est11",
-   "titulo": "Estrutura · parte 11 de 30",
-   "arq": "banco-restaurante/1-estrutura-11.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
@@ -134,9 +86,9 @@ window.CODIGOS = {
   },
   {
    "etapa": "banco",
-   "id": "est12",
-   "titulo": "Estrutura · parte 12 de 30",
-   "arq": "banco-restaurante/1-estrutura-12.sql",
+   "id": "est8",
+   "titulo": "Estrutura · parte 8 de 31",
+   "arq": "banco-restaurante/1-estrutura-08.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
@@ -146,9 +98,33 @@ window.CODIGOS = {
   },
   {
    "etapa": "banco",
-   "id": "est13",
-   "titulo": "Estrutura · parte 13 de 30",
-   "arq": "banco-restaurante/1-estrutura-13.sql",
+   "id": "est9",
+   "titulo": "Estrutura · parte 9 de 31",
+   "arq": "banco-restaurante/1-estrutura-09.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 59
+  },
+  {
+   "etapa": "banco",
+   "id": "est10",
+   "titulo": "Estrutura · parte 10 de 31",
+   "arq": "banco-restaurante/1-estrutura-10.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 61
+  },
+  {
+   "etapa": "banco",
+   "id": "est11",
+   "titulo": "Estrutura · parte 11 de 31",
+   "arq": "banco-restaurante/1-estrutura-11.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
@@ -158,9 +134,21 @@ window.CODIGOS = {
   },
   {
    "etapa": "banco",
-   "id": "est14",
-   "titulo": "Estrutura · parte 14 de 30",
-   "arq": "banco-restaurante/1-estrutura-14.sql",
+   "id": "est12",
+   "titulo": "Estrutura · parte 12 de 31",
+   "arq": "banco-restaurante/1-estrutura-12.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 60
+  },
+  {
+   "etapa": "banco",
+   "id": "est13",
+   "titulo": "Estrutura · parte 13 de 31",
+   "arq": "banco-restaurante/1-estrutura-13.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
@@ -170,20 +158,32 @@ window.CODIGOS = {
   },
   {
    "etapa": "banco",
+   "id": "est14",
+   "titulo": "Estrutura · parte 14 de 31",
+   "arq": "banco-restaurante/1-estrutura-14.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 60
+  },
+  {
+   "etapa": "banco",
    "id": "est15",
-   "titulo": "Estrutura · parte 15 de 30",
+   "titulo": "Estrutura · parte 15 de 31",
    "arq": "banco-restaurante/1-estrutura-15.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 67
+   "kb": 60
   },
   {
    "etapa": "banco",
    "id": "est16",
-   "titulo": "Estrutura · parte 16 de 30",
+   "titulo": "Estrutura · parte 16 de 31",
    "arq": "banco-restaurante/1-estrutura-16.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -195,7 +195,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est17",
-   "titulo": "Estrutura · parte 17 de 30",
+   "titulo": "Estrutura · parte 17 de 31",
    "arq": "banco-restaurante/1-estrutura-17.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -207,20 +207,8 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est18",
-   "titulo": "Estrutura · parte 18 de 30",
+   "titulo": "Estrutura · parte 18 de 31",
    "arq": "banco-restaurante/1-estrutura-18.sql",
-   "subRef": true,
-   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
-   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
-   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 62
-  },
-  {
-   "etapa": "banco",
-   "id": "est19",
-   "titulo": "Estrutura · parte 19 de 30",
-   "arq": "banco-restaurante/1-estrutura-19.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
@@ -230,44 +218,56 @@ window.CODIGOS = {
   },
   {
    "etapa": "banco",
+   "id": "est19",
+   "titulo": "Estrutura · parte 19 de 31",
+   "arq": "banco-restaurante/1-estrutura-19.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 62
+  },
+  {
+   "etapa": "banco",
    "id": "est20",
-   "titulo": "Estrutura · parte 20 de 30",
+   "titulo": "Estrutura · parte 20 de 31",
    "arq": "banco-restaurante/1-estrutura-20.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 63
+   "kb": 60
   },
   {
    "etapa": "banco",
    "id": "est21",
-   "titulo": "Estrutura · parte 21 de 30",
+   "titulo": "Estrutura · parte 21 de 31",
    "arq": "banco-restaurante/1-estrutura-21.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 60
   },
   {
    "etapa": "banco",
    "id": "est22",
-   "titulo": "Estrutura · parte 22 de 30",
+   "titulo": "Estrutura · parte 22 de 31",
    "arq": "banco-restaurante/1-estrutura-22.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 59
+   "kb": 61
   },
   {
    "etapa": "banco",
    "id": "est23",
-   "titulo": "Estrutura · parte 23 de 30",
+   "titulo": "Estrutura · parte 23 de 31",
    "arq": "banco-restaurante/1-estrutura-23.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -279,7 +279,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est24",
-   "titulo": "Estrutura · parte 24 de 30",
+   "titulo": "Estrutura · parte 24 de 31",
    "arq": "banco-restaurante/1-estrutura-24.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -291,7 +291,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est25",
-   "titulo": "Estrutura · parte 25 de 30",
+   "titulo": "Estrutura · parte 25 de 31",
    "arq": "banco-restaurante/1-estrutura-25.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -303,7 +303,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est26",
-   "titulo": "Estrutura · parte 26 de 30",
+   "titulo": "Estrutura · parte 26 de 31",
    "arq": "banco-restaurante/1-estrutura-26.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -315,7 +315,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est27",
-   "titulo": "Estrutura · parte 27 de 30",
+   "titulo": "Estrutura · parte 27 de 31",
    "arq": "banco-restaurante/1-estrutura-27.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -327,7 +327,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est28",
-   "titulo": "Estrutura · parte 28 de 30",
+   "titulo": "Estrutura · parte 28 de 31",
    "arq": "banco-restaurante/1-estrutura-28.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -339,7 +339,7 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est29",
-   "titulo": "Estrutura · parte 29 de 30",
+   "titulo": "Estrutura · parte 29 de 31",
    "arq": "banco-restaurante/1-estrutura-29.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
@@ -351,14 +351,26 @@ window.CODIGOS = {
   {
    "etapa": "banco",
    "id": "est30",
-   "titulo": "Estrutura · parte 30 de 30",
+   "titulo": "Estrutura · parte 30 de 31",
    "arq": "banco-restaurante/1-estrutura-30.sql",
    "subRef": true,
    "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 58
+   "kb": 59
+  },
+  {
+   "etapa": "banco",
+   "id": "est31",
+   "titulo": "Estrutura · parte 31 de 31",
+   "arq": "banco-restaurante/1-estrutura-31.sql",
+   "subRef": true,
+   "desc": "Cria as tabelas, funções, regras de acesso e gatilhos do restaurante. É um pedaço do banco inteiro, cortado em partes de até 60 mil letras para caber no celular.",
+   "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
+   "kb": 17
   },
   {
    "etapa": "banco",
@@ -536,7 +548,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 3
   },
   {
@@ -547,7 +559,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 5
   },
   {
@@ -558,7 +570,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -569,7 +581,7 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 11
   },
   {
@@ -580,7 +592,7 @@ window.CODIGOS = {
    "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -591,7 +603,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante, a comanda e a senha de um usuário (aba Ajustes do restaurante). O nome do restaurante passa a ser um só.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 11
   },
   {
@@ -602,7 +614,7 @@ window.CODIGOS = {
    "desc": "O Administrador recebe um aviso no celular (no máximo 1 por dia) quando o Google recusa o acesso ao Drive, antes de o backup falhar.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 2
   },
   {
@@ -613,7 +625,7 @@ window.CODIGOS = {
    "desc": "Suprimento (reforço de troco), limite de sobra/falta com motivo e aviso no celular, Leitura X, passar o caixa entre operadores, fundo sugerido e resumo por operador.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 25
   },
   {
@@ -624,7 +636,7 @@ window.CODIGOS = {
    "desc": "O aviso amarelo do iFood só acende quando há algo a fazer agora; item sem ligação aparece escrito, sem cor.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 1
   },
   {
@@ -635,7 +647,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel criar, trocar a senha e desativar os seus logins de Desenvolvedor neste restaurante (aba Ajustes do restaurante).",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -646,7 +658,7 @@ window.CODIGOS = {
    "desc": "Ping a cada 2 dias (evita o Supabase pausar), instaladores do Administrador e do Desenvolvedor. Só cria o que falta.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -657,7 +669,7 @@ window.CODIGOS = {
    "desc": "Prepara o iFood para o aplicativo compartilhado (tipo Distribuído): guarda da autorização do dono e botão Autorizar o iFood. Quem usa o aplicativo próprio não muda nada.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 8
   },
   {
@@ -668,7 +680,7 @@ window.CODIGOS = {
    "desc": "Tira os avisos de desempenho \"Multiple Permissive Policies\" do Supabase. Ninguém perde nem ganha acesso: só junta regras de leitura repetidas.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -679,7 +691,7 @@ window.CODIGOS = {
    "desc": "Passa para o modelo três melhorias que só existiam no Texas (endereços, cardápio de hoje e rota de entrega). Pode rodar de novo sem erro.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 3
   },
   {
@@ -690,7 +702,7 @@ window.CODIGOS = {
    "desc": "Com a confirmação automática ligada, o pedido do iFood já entra aceito (em preparo), sem botão Aceitar. Se o iFood recusar a confirmação, volta a aguardar aceite e avisa no celular. Pode rodar de novo sem erro.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 10
   },
   {
@@ -701,7 +713,7 @@ window.CODIGOS = {
    "desc": "Avisa no celular do Administrador (só ele) quando a mensalidade do sistema está para vencer (1 aviso por dia, até 3 dias antes) e manda todo dia às 23h o resumo do dia: faturamento, pedidos, cancelados e o item mais vendido.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 4
   },
   {
@@ -712,7 +724,7 @@ window.CODIGOS = {
    "desc": "Troca o comando que o Supabase bloqueia em banco novo (session_replication_role) por uma chave interna da trava do Desenvolvedor. Quem já tem Desenvolvedor não muda nada.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 2
   },
   {
@@ -723,7 +735,7 @@ window.CODIGOS = {
    "desc": "O banco tinha dois avisos para não pausar o projeto por inatividade; remove o antigo e mantém o novo (menos chamadas no plano grátis).",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 1
   },
   {
@@ -734,7 +746,7 @@ window.CODIGOS = {
    "desc": "Cada módulo do iFood só é consultado (e só avisa o dono) depois que o Desenvolvedor marca \"Liberado pelo iFood\" no painel. Módulo que já funciona fica liberado sozinho. Nasce tudo desligado em restaurante novo.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 7
   },
   {
@@ -745,8 +757,19 @@ window.CODIGOS = {
    "desc": "O Desenvolvedor guarda chaves, liga/desliga e ajusta iFood, nota fiscal, Mercado Pago e InfinityPay pelo painel de revenda. Funções internas novas; nada muda no que já funciona.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 154.",
+   "cuidado": "Rode na ordem 135 a 155.",
    "kb": 14
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd155",
+   "titulo": "Atualização 155 · Nota fiscal pelo painel",
+   "arq": "banco-restaurante/155-fiscal-pelo-painel.sql",
+   "desc": "Dados fiscais da empresa, perfis fiscais e planilha do contador passam a ser feitos pelo painel de revenda. Função interna nova; nada muda no que já funciona.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 155.",
+   "kb": 2
   }
  ]
 };
