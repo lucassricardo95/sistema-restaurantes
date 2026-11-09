@@ -390,69 +390,9 @@ async function chamarCompat(url: string, chave: string, modelo: string, usr: str
   const j = await r.json();
   return { txt: j?.choices?.[0]?.message?.content || "", tin: j?.usage?.prompt_tokens || 0, tout: j?.usage?.completion_tokens || 0 };
 }
-
-// ---------- IA de reserva que se adapta a chave (posicao "nvidia"): descobre sozinha o provedor pela chave e escolhe um modelo que funcione ----------
-// Serve para qualquer provedor compativel com o formato OpenAI (NVIDIA, Groq, OpenRouter, OpenAI, xAI, DeepSeek, Mistral, Together). Troque a chave quando quiser: nada de codigo.
-const RES_BASES: { nome: string; base: string; pref: RegExp }[] = [
-  { nome: "nvidia", base: "https://integrate.api.nvidia.com/v1", pref: /nemotron.*(super|ultra)|llama-3\.3-70b|llama-3\.1-70b|llama-3\.1-nemotron|mistral-large|qwen.*(72|32)/i },
-  { nome: "groq", base: "https://api.groq.com/openai/v1", pref: /llama-3\.3-70b|llama-3\.1-70b|llama-3\.1-8b|gpt-oss/i },
-  { nome: "openrouter", base: "https://openrouter.ai/api/v1", pref: /llama-3\.3-70b.*free|:free|gpt-4o-mini|llama-3\.3-70b/i },
-  { nome: "openai", base: "https://api.openai.com/v1", pref: /gpt-4\.1-mini|gpt-4o-mini|gpt-4\.1|gpt-4o/i },
-  { nome: "xai", base: "https://api.x.ai/v1", pref: /grok.*mini|grok/i },
-  { nome: "deepseek", base: "https://api.deepseek.com/v1", pref: /deepseek-chat/i },
-  { nome: "mistral", base: "https://api.mistral.ai/v1", pref: /mistral-small|mistral-large/i },
-  { nome: "together", base: "https://api.together.xyz/v1", pref: /llama-3\.3-70b|llama-3\.1-70b/i },
-];
-const RES_NAO_CHAT = /embed|rerank|guard|moderat|whisper|tts|speech|audio|image|vision|vlm|clip|ocr|parse|safety|reward|sdxl|diffusion|stable|dall|transcri|translate|retriev|nv-/i;
-const _resCache = new Map<string, { base: string; modelos: string[]; em: number }>();
-function resPrefixo(k: string): string[] {
-  if (/^nvapi-/.test(k)) return ["nvidia"]; if (/^gsk_/.test(k)) return ["groq"]; if (/^sk-or-/.test(k)) return ["openrouter"];
-  if (/^xai-/.test(k)) return ["xai"]; if (/^sk-/.test(k)) return ["openai", "deepseek"];
-  return RES_BASES.map((b) => b.nome);
-}
-async function resDescobrir(chave: string, cfg: any, forcar = false): Promise<{ base: string; modelos: string[] }> {
-  const id = chave.length + ":" + chave.slice(-10); const c = _resCache.get(id);
-  if (!forcar && c && Date.now() - c.em < 6 * 3600_000) return c;
-  for (const nome of resPrefixo(chave)) {
-    const b = RES_BASES.find((x) => x.nome === nome)!;
-    try {
-      const r = await comTimeout(b.base + "/models", { headers: { Authorization: "Bearer " + chave } }, 6000);
-      if (!r.ok) continue;
-      const j = await r.json();
-      const ids: string[] = (Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : []).map((m: any) => String(m?.id || "")).filter((s: string) => s && !RES_NAO_CHAT.test(s));
-      if (!ids.length) continue;
-      const pref = ids.filter((s) => b.pref.test(s)); const resto = ids.filter((s) => !b.pref.test(s));
-      const manual = String(cfg?.modelo_nvidia || "").trim();
-      const modelos = [...(manual ? [manual] : []), ...pref, ...resto].filter((s, i, a) => a.indexOf(s) === i).slice(0, 6);
-      const v = { base: b.base, modelos, em: Date.now() }; _resCache.set(id, v); return v;
-    } catch { /* tenta o proximo provedor */ }
-  }
-  throw new Falha("http_401");
-}
-async function chamarReserva(chave: string, cfg: any, usr: string, sys: string, maxTok: number) {
-  let ctx = await resDescobrir(chave, cfg); let ultimo = "http_404";
-  for (let rodada = 0; rodada < 2; rodada++) {
-    for (const modelo of ctx.modelos.slice(0, 3)) {
-      try {
-        const r = await comTimeout(ctx.base + "/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + chave },
-          body: JSON.stringify({ model: modelo, temperature: 0.3, max_tokens: maxTok, messages: [{ role: "system", content: sys }, { role: "user", content: usr }] }) }, 14000);
-        if (r.ok) {
-          const j = await r.json(); const txt = j?.choices?.[0]?.message?.content || "";
-          if (!txt) { ultimo = "http_204"; continue; }
-          const c = _resCache.get(chave.length + ":" + chave.slice(-10)); if (c) c.modelos = [modelo, ...c.modelos.filter((m) => m !== modelo)];
-          return { txt, tin: j?.usage?.prompt_tokens || 0, tout: j?.usage?.completion_tokens || 0 };
-        }
-        ultimo = "http_" + r.status;
-        if (r.status === 401 || r.status === 403 || r.status === 429 || r.status >= 500) throw new Falha(ultimo);   // chave/cota/servidor: trocar de modelo nao resolve
-      } catch (e) { if (e instanceof Falha) throw e; ultimo = "rede_ou_timeout"; }
-    }
-    if (rodada === 0) ctx = await resDescobrir(chave, cfg, true);   // modelos mudaram? atualiza a lista e tenta de novo
-  }
-  throw new Falha(ultimo);
-}
 async function chamarProv(prov: string, seg: Record<string, string>, cfg: any, usr: string, sys: string): Promise<{ txt: string; tin: number; tout: number }> {
   if (prov === "gemini" || prov === "gemini_2") return await chamarGemini(seg[prov], prov === "gemini_2" ? (cfg.modelo_gemini_2 || cfg.modelo_gemini || "gemini-3.8-flash") : (cfg.modelo_gemini || "gemini-3.8-flash"), usr, sys);
-  if (prov === "nvidia") return await chamarReserva(seg.nvidia, cfg, usr, sys, 1500);   // reserva adaptavel: qualquer chave compativel (ver chamarReserva)
+  if (prov === "nvidia") return await chamarCompat("https://integrate.api.nvidia.com/v1/chat/completions", seg.nvidia, cfg.modelo_nvidia || "nvidia/nemotron-3.5-bolt-e4b", usr, sys, 1500);
   if (prov === "cloudflare") {
     if (!/^[0-9a-f]{32}$/.test(seg.cloudflare_conta || "")) throw new Falha("sem_chave");
     return await chamarCompat(`https://api.cloudflare.com/client/v4/accounts/${seg.cloudflare_conta}/ai/v1/chat/completions`, seg.cloudflare, cfg.modelo_cloudflare || "@cf/meta/llama-3.3-70b-instruct-fp8-fast", usr, sys, 1500);
