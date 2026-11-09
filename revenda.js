@@ -352,7 +352,7 @@ window.rvAbrir = async (id, aba) => {
   await carregarRest(); desenhar();
 };
 async function carregarRest(){ try{ S.cobR = await rest('cobrancas?restaurante_id=eq.' + S.rest.id + '&select=*&order=vencimento.desc.nullslast'); S.hist = await rest('historico?restaurante_id=eq.' + S.rest.id + '&select=*&order=em.desc&limit=60'); S.aceite = (await tenta(() => rest('aceites_termos?restaurante_id=eq.' + S.rest.id + '&select=*&order=aceito_em.desc&limit=1'), []))[0] || null; S.dono_link = (await tenta(() => rest('dono_links?restaurante_id=eq.' + S.rest.id + '&select=*'), []))[0] || null; }catch(e){ erro(e.message); } }
-const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['integ','🔗 Integrações'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
+const ABAS = [['passo','🛠️ Passo a passo'],['saude','🩺 Saúde'],['ajustes','⚙️ Ajustes'],['integ','🔗 Integrações'],['arm','💾 Armazenamento'],['dados','📋 Cadastro'],['marca','🎨 Marca'],['dinheiro','💰 Cobrança'],['contrato','📄 Contrato']];
 function vRest(){
   const r = S.rest, n = nEtapas(r), sd = saudeDe(r.slug), sb = refDe(r);
   T('<div class="topo"><button class="mini" onclick="rvIr(\'restaurantes\')">← Restaurantes</button><span class="selo ' + esc(r.situacao) + '">' + esc(SIT[r.situacao] || r.situacao) + '</span></div>'
@@ -361,7 +361,7 @@ function vRest(){
      + (sb ? '<a class="btn mini" href="https://supabase.com/dashboard/project/' + esc(sb) + '" target="_blank" rel="noopener">🗄️ Supabase</a>' : '') + (r.github_url ? '<a class="btn mini" href="' + esc(r.github_url) + '" target="_blank" rel="noopener">🐙 GitHub</a>' : '') + '</div>'
    + '<div class="atalhos"><button class="btn mini" onclick="rvOutraLoja(\'' + r.id + '\')">＋ Adicionar outra loja deste cliente</button></div>'
    + '<div class="abas">' + ABAS.map(a => '<button class="' + (S.aba === a[0] ? 'on' : '') + '" onclick="rvAba(\'' + a[0] + '\')">' + a[1] + '</button>').join('') + '</div><div id="corpo"></div>');
-  ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, integ:abaIntegracoes, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
+  ({ passo:abaPasso, saude:abaSaude, ajustes:abaAjustesRest, integ:abaIntegracoes, arm:abaArmazenamento, dados:abaDados, marca:abaMarcaTudo, dinheiro:abaCobranca, contrato:abaContrato })[S.aba]();
 }
 window.rvAba = a => { S.aba = a; vRest(); };
 const C = h => { $('corpo').innerHTML = h; };
@@ -1476,7 +1476,7 @@ window.rvSalvarIA = async (k, volta) => { const v = jv('k_' + k); if(!v) return 
 window.rvApagarIA = async (k, volta) => { if(!confirm('Apagar do cofre?')) return; try{ await rpc('revenda_segredo_salvar', { p_nome:k, p_valor:'' }); S.segs = await rpc('revenda_segredos_status'); volta === 'conectores' ? vConectores() : vAssistente(); }catch(e){ erro(e.message); } };
 
 /* ---------- CONECTORES: cada restaurante tem os SEUS dois tokens (GitHub e Supabase) no cofre; função "conector" (SQL 015) ---------- */
-const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado'],['upd154','154 · integrações pelo painel'],['upd155','155 · nota fiscal pelo painel'],['upd156','156 · iFood: liberado liga o homologado'],['upd157','157 · config. técnica só para o Desenvolvedor']];
+const UPDS = [['upd135','135 · iFood: falso alarme'],['upd136','136 · avisos equipe × clientes'],['upd137','137 · comanda editável'],['upd138','138 · ponto: pedidos e atestados'],['upd139','139 · economia no plano grátis'],['upd140','140 · ajustes pelo painel'],['upd141','141 · aviso do Drive'],['upd142','142 · caixa profissional'],['upd143','143 · iFood sem alarme falso'],['upd144','144 · Desenvolvedores pelo painel'],['upd145','145 · completar instalação'],['upd146','146 · iFood compartilhado'],['upd147','147 · desempenho (regras duplicadas)'],['upd148','148 · igualar funções'],['upd149','149 · iFood nasce aceito'],['upd150','150 · avisos no celular do Administrador'],['upd151','151 · login de Desenvolvedor sem comando bloqueado'],['upd152','152 · tira um aviso anti-pausa duplicado'],['upd153','153 · iFood: módulo só vale depois de liberado'],['upd154','154 · integrações pelo painel'],['upd155','155 · nota fiscal pelo painel'],['upd156','156 · iFood: liberado liga o homologado'],['upd157','157 · config. técnica só para o Desenvolvedor'],['upd158','158 · armazenamento pelo painel']];
 async function chamarConector(corpo, fn){
   if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
   const c = new AbortController(), t = setTimeout(() => c.abort(), 150000);
@@ -1948,6 +1948,48 @@ window.rvIgTestar = async prov => {
     hist(S.rest.id, 'Teste de conexão: ' + prov, r.geral || '');
   }catch(e){ box.innerHTML = '<div class="ig-falta"><b>❌ ' + esc(e.message) + '</b></div>'; }
   finally{ if(btn){ btn.disabled = false; btn.textContent = '🧪 Testar conexão'; } }
+};
+/* ---------- ARMAZENAMENTO E BACKUP pelo painel (SQL 158): só o Desenvolvedor mexe; o dono só vê o uso e faz "backup agora" ---------- */
+let ARM_A = null;
+async function armCall(a, extra){
+  const r = S.rest; const x = await chamarConector({ acao:'sb_integ', restaurante_id:r.id, p:Object.assign({ acao:'arm', a }, extra || {}) }, 'conector-integ');
+  if(!x || x.ok === false) throw new Error((x && (x.erro || x.message)) || 'Não deu certo.'); return x;
+}
+async function abaArmazenamento(){
+  const C = h => { const b = $('corpo'); if(b) b.innerHTML = h; }; const r = S.rest;
+  if(!temSb(r)){ C('<div class="card"><h2>💾 Armazenamento e backup</h2><div class="res aviso">Ligue antes o conector do Supabase deste restaurante.</div><button class="principal" onclick="rvIr(\'conectores\')">🔌 Ligar o conector</button></div>'); return; }
+  C('<div class="card"><small class="mudo">Carregando…</small></div>');
+  let a; try{ a = await armCall('ler'); }catch(e){ if(S.view !== 'rest' || S.aba !== 'arm') return; C('<div class="card"><h2>💾 Armazenamento e backup</h2>' + conLinha(false, esc(e.message)) + '<button class="mini" onclick="rvAba(\'arm\')">↻ Tentar de novo</button></div>'); return; }
+  if(S.view !== 'rest' || S.aba !== 'arm' || S.rest.id !== r.id) return;
+  ARM_A = a; armRender();
+}
+function armRender(){
+  const a = ARM_A, b = a.backup || {}, q = a.arquivo || {}, pl = a.plano || {}, C = h => { const x = $('corpo'); if(x) x.innerHTML = h; };
+  const hrs = Array.from({ length:24 }, (_, i) => '<option value="' + i + '"' + (Number(b.hora) === i ? ' selected' : '') + '>' + String(i).padStart(2, '0') + ':00</option>').join('');
+  const rets = [3, 7, 14, 30].map(d => '<option value="' + d + '"' + (Number(b.retDias) === d ? ' selected' : '') + '>' + d + ' dias</option>').join('');
+  const lista = (a.backups || []).map(x => '<div class="ig-res"><span>' + (x.status === 'Sucesso' ? '✅' : '⚠️') + '</span><div><b>' + new Date(x.em).toLocaleString('pt-BR') + ' · ' + esc(x.tipo) + '</b><small>' + (x.kb || 0) + ' KB · ' + (x.drive ? 'cópia no Drive' : 'sem cópia no Drive') + (x.erro ? ' · ' + esc(x.erro) : '') + '</small></div></div>').join('') || '<p class="ig-ajuda">Nenhum backup ainda.</p>';
+  C('<div class="card ig"><div class="ig-cab"><h2>💾 Armazenamento e backup</h2></div><p class="ig-ajuda">Só você mexe aqui. O dono vê o uso do espaço e faz "backup agora". O backup diário, o arquivamento e a limpeza do Drive continuam rodando sozinhos.</p></div>'
+   + '<div class="card ig"><div class="ig-cab"><h2>🔔 Testar avisos</h2></div><p class="ig-ajuda">Manda um aviso de teste só para os seus aparelhos, para saber se os avisos deste restaurante funcionam. Você não recebe os avisos do dia a dia.</p><div class="ig-teste"><button id="arm_ta" onclick="rvArmAviso()">🔔 Enviar aviso de teste</button><div id="arm_ta_r"></div></div></div>'
+   + '<div class="card ig"><div class="ig-cab"><h2>🔁 Backup automático</h2><span class="ig-pill ' + (b.auto ? 'ok' : 'aviso') + '">' + (b.auto ? '🟢 Ligado' : '⚠️ Desligado') + '</span></div>'
+   + '<label class="ig-opt"><input type="checkbox" id="arm_auto" ' + (b.auto ? 'checked' : '') + '><span>Fazer um backup por dia</span></label>'
+   + '<div class="ig-campo"><b>Horário (Brasília)</b><select id="arm_hora">' + hrs + '</select></div><div class="ig-campo"><b>Guardar por</b><select id="arm_ret">' + rets + '</select></div>'
+   + '<button class="mini principal" onclick="rvArmBackup()">Salvar</button>'
+   + '<details class="ig-sec" style="margin-top:12px"><summary><span>Últimos backups</span><small>' + (a.backups || []).length + '</small></summary><div class="ig-corpo">' + lista + '<p class="ig-ajuda">Restaurar e excluir backup ainda são feitos pelo sistema do restaurante, no seu perfil (Backup e espaço).</p></div></details></div>'
+   + '<div class="card ig"><div class="ig-cab"><h2>🗄️ Arquivamento</h2></div><label class="ig-opt"><input type="checkbox" id="arm_arq_on" ' + (q.ativo !== false ? 'checked' : '') + '><span>Arquivar sozinho, de madrugada</span></label>'
+   + '<div class="ig-campo"><b>Arquivar o que tem mais de (dias, mínimo 30)</b><input id="arm_arq_dias" inputmode="numeric" value="' + esc(q.dias || 90) + '"></div><button class="mini principal" onclick="rvArmArq()">Salvar</button></div>'
+   + '<div class="card ig"><div class="ig-cab"><h2>📏 Limites do plano</h2></div><div class="ig-campo"><b>Banco do Supabase (MB). Grátis: 500, Pro: 8192</b><input id="arm_pl" inputmode="numeric" value="' + esc(pl.bancoMb || 500) + '"></div><button class="mini principal" onclick="rvArmPlano()">Salvar</button>'
+   + '<div class="ig-campo"><b>Storage (MB)</b><input id="arm_st" inputmode="numeric" value="' + esc(pl.storageMb || '') + '" placeholder="ex.: 1024"></div><button class="mini principal" onclick="rvArmStorage()">Salvar</button></div>');
+}
+async function armSalvar(a, extra, ok){ try{ const x = await armCall(a, extra); await hist(S.rest.id, 'Armazenamento: ' + a, ''); aviso(x.message || ok || 'Salvo ✓', 'ok'); await abaArmazenamento(); }catch(e){ erro(e.message); } }
+window.rvArmBackup = () => armSalvar('backup_cfg', { auto:!!$('arm_auto').checked, hora:Number($('arm_hora').value), retDias:Number($('arm_ret').value) });
+window.rvArmArq = () => armSalvar('arq_cfg', { ativo:!!$('arm_arq_on').checked, dias:Number($('arm_arq_dias').value) });
+window.rvArmPlano = () => { const v = Number($('arm_pl').value); if(v > 500 && !confirm('Você confirmou no Supabase que o banco tem mesmo ' + v + ' MB? Se for mais do que o plano tem, a proteção age tarde demais.')) return; armSalvar('plano', { limiteMb:v }); };
+window.rvArmStorage = () => armSalvar('storage', { limiteMb:Number($('arm_st').value) });
+window.rvArmAviso = async () => {
+  const btn = $('arm_ta'), box = $('arm_ta_r'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try{ const x = await armCall('testar_aviso'); box.innerHTML = x.enviado ? '<div class="ig-pronto">✅ ' + esc(x.message) + ' Veja se chegou no celular (' + x.equipe + ' aparelho(s) da equipe seguem recebendo os avisos normais).</div>' : '<div class="ig-falta"><b>⚠️ ' + esc(x.message) + '</b></div>'; hist(S.rest.id, 'Teste de avisos', x.enviado ? 'enviado' : 'sem aparelho'); }
+  catch(e){ box.innerHTML = '<div class="ig-falta"><b>❌ ' + esc(e.message) + '</b></div>'; }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '🔔 Enviar aviso de teste'; } }
 };
 /* ---------- INTEGRAÇÕES: chaves, ligar/desligar e ajustes técnicos (SQL 154) ---------- */
 const IG_PROVS = [
