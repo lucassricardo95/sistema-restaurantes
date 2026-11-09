@@ -78,6 +78,7 @@ async function carregarSaude(){
   const er = await tenta(() => rest('erros_app?select=*&resolvido=eq.false&order=ultimo_em.desc&limit=300'), null);
   if(er) S.erros = er; else if(!S.erros) S.erros = [];
   const vg = await tenta(() => rest('vigia_estado?select=*'), null); if(vg){ S.vigia = {}; vg.forEach(x => { S.vigia[x.slug] = x; }); }
+  const ac = await tenta(() => rest('vigia_acoes?select=*&order=criado_em.desc&limit=60'), null); if(ac) S.acoes = ac;
   const vgG = await tenta(() => rest('vigia_geral?select=*'), null); if(vgG && vgG[0]) S.vigiaG = vgG[0];
   const sa = await tenta(() => rest('saude_app?select=*'), null);   // se a leitura falhar, mantém o que já tinha (não vira "sem sinal" por engano)
   if(sa){ S.saude = {}; sa.forEach(x => { S.saude[x.slug] = x; }); S.saudeEm = Date.now(); }
@@ -213,6 +214,8 @@ function alertas(){
     const px = proxEtapa(r); if(px && ['implantacao','teste'].includes(r.situacao)) L.push([1, '🛠️', r.nome + ': próximo passo', px.titulo, "rvAbrir('" + r.id + "','passo')"]);
   });
   (S.atz || []).forEach(a => { const r = S.lista.find(x => x.id === a.restaurante_id); if(r) L.push([3, '⚠️', r.nome + ': atualização ' + ({ banco:'do banco', site:'do site', funcoes:'das funções', revisao:'do banco (precisa de você)' }[a.tipo] || a.tipo) + ' não subiu', (a.erro || '') + (a.detalhe ? ' — ' + a.detalhe : '') + ' Toque para tentar de novo.', "rvAtzTentar('" + r.id + "')"]); });
+  const acP = (S.acoes || []).filter(x => x.nivel === 2 && x.estado === 'pendente'); if(acP.length) L.push([3, '🛠️', acP.length + (acP.length === 1 ? ' correção esperando' : ' correções esperando') + ' sua aprovação', 'O vigia propôs. Veja em Saúde e aprove ou recuse.', "rvIr('saude')"]);
+  const acS = (S.acoes || []).filter(x => x.nivel === 3 && x.estado === 'pendente'); if(acS.length) L.push([1, '💡', acS.length + (acS.length === 1 ? ' sugestão de melhoria' : ' sugestões de melhoria') + ' do vigia', 'Veja em Saúde e mande ao Claude.', "rvIr('saude')"]);
   ((S.painelAl || {}).problemas || []).forEach(p => L.push([p.nivel === 'alto' ? 3 : 2, '🩺', 'Painel: ' + p.texto, 'Veja em Mais > Saúde do painel.', "rvIr('mais')"]));
   const atr = atrasadas(); if(atr.length) L.push([3, '💸', atr.length + (atr.length === 1 ? ' cobrança atrasada' : ' cobranças atrasadas') + ' · ' + BRL(atr.reduce((s, c) => s + (Number(c.valor) || 0), 0)), 'Toque para cobrar pelo WhatsApp.', "rvIr('dinheiro')"]);
   const vence = S.cob.filter(c => !c.pago_em && c.vencimento >= h && c.vencimento <= em3); if(vence.length) L.push([2, '📅', vence.length + ' vence(m) nos próximos 3 dias', vence.map(c => nomeRest(c.restaurante_id)).join(', '), "rvIr('dinheiro')"]);
@@ -816,16 +819,49 @@ function triagemHtml(e){ const t = e.triagem; if(!t || !t.resumo) return '<small
   const k = TRI_ROTULO[t.classe] || TRI_ROTULO.outro;
   return '<div class="tri"><b>' + k[0] + ' ' + k[1] + '</b><br><small>' + esc(t.resumo) + (t.causa ? ' <span class="mudo">Causa provável: ' + esc(t.causa) + '</span>' : '') + (t.acao ? ' <b>O que fazer:</b> ' + esc(t.acao) : '') + '</small>' + (t.solucao ? '<br><small>🛠️ <b>Solução proposta:</b> ' + esc(t.solucao) + '</small>' : '') + (t.pedido ? '<br><button class="mini" onclick="rvCopiarPedido(this)" data-t="' + esc(t.pedido) + '">📋 Copiar pedido pronto para o Claude</button>' : '') + '</div>'; }
 window.rvCopiarPedido = b => { const t = b.getAttribute('data-t') || ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => aviso('Copiado. Cole numa conversa com o Claude.', 'ok'), () => prompt('Copie o texto:', t)); };
+
+function acoesCard(){
+  const A = S.acoes || [];
+  const pend = A.filter(a => a.nivel === 2 && a.estado === 'pendente'), sug = A.filter(a => a.nivel === 3 && a.estado === 'pendente');
+  const auto = A.filter(a => a.nivel === 1).slice(0, 5), fei = A.filter(a => a.nivel === 2 && ['aplicada','falhou','desfeita','recusada'].includes(a.estado)).slice(0, 4);
+  if(!pend.length && !sug.length && !auto.length && !fei.length) return '<div class="card"><b>🛠️ Correções do vigia</b><br><small class="mudo">Nada por enquanto. Erro pequeno o vigia resolve sozinho (fica registrado aqui); correção de banco espera a sua aprovação; melhoria maior chega como sugestão para você mandar ao Claude.</small></div>';
+  const de = a => a.slug ? esc(nomeSlug(a.slug)) + ' · ' : '';
+  return '<div class="card"><b>🛠️ Correções do vigia</b>'
+   + pend.map(a => '<div class="erro-item"><b>⏳ ' + de(a) + esc(a.titulo) + '</b><br><small>' + esc(a.problema || '') + '</small><br><small>🛠️ <b>Correção proposta:</b> ' + esc(a.solucao || '') + '</small>'
+      + '<details><summary class="mudo pequeno">Ver o código SQL que será aplicado</summary><small class="mudo pre">' + esc(a.sql || '') + '</small></details>'
+      + '<div class="linha" style="justify-content:flex-start"><button class="principal mini" onclick="rvAcao(\'' + a.id + '\',\'aprovar\')">✅ Testar e aplicar em todos</button><button class="mini" onclick="rvAcao(\'' + a.id + '\',\'recusar\')">Recusar</button></div></div>').join('')
+   + sug.map(a => '<div class="erro-item"><b>💡 ' + esc(a.titulo) + '</b><br><small>' + esc(a.problema || '') + '</small><br><small>🛠️ <b>Sugestão:</b> ' + esc(a.solucao || '') + '</small>'
+      + '<div class="linha" style="justify-content:flex-start"><button class="mini" data-t="' + esc(a.pedido || a.titulo) + '" onclick="rvCopiarPedido(this)">🤖 Copiar para o Claude</button><button class="mini" onclick="rvSugestao(\'' + a.id + '\',\'dispensada\')">Dispensar</button></div></div>').join('')
+   + fei.map(a => '<div class="erro-item"><small><b>' + ({ aplicada:'✅ Aplicada', falhou:'❌ Não aplicada', desfeita:'↩️ Desfeita', recusada:'🚫 Recusada' }[a.estado]) + ':</b> ' + de(a) + esc(a.titulo) + '<br><span class="mudo">' + esc(a.resultado || '') + '</span></small>'
+      + (a.estado === 'aplicada' && a.desfazer ? '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvAcao(\'' + a.id + '\',\'desfazer\')">↩️ Desfazer em todos</button></div>' : '') + '</div>').join('')
+   + (auto.length ? '<small class="mudo" style="display:block;margin-top:8px"><b>🤖 Feito sozinho (recente):</b></small>' + auto.map(a => '<small class="mudo" style="display:block">• ' + haTempo(Math.round((Date.now() - new Date(a.criado_em).getTime()) / 60000)) + ' · ' + esc(a.titulo) + '</small>').join('') : '')
+   + '</div>';
+}
+async function recarregarAcoes(){ const ac = await tenta(() => rest('vigia_acoes?select=*&order=criado_em.desc&limit=60'), null); if(ac) S.acoes = ac; }
+async function acaoCall(corpo){
+  if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+  const r = await fetch(URL_ + '/functions/v1/vigia-acao', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify(corpo) });
+  if(r.status === 404) throw new Error('A função "vigia-acao" ainda não foi publicada no servidor do painel.');
+  const j = await r.json().catch(() => null); if(!j) throw new Error('O painel não respondeu.'); return j;
+}
+window.rvAcao = async (id, acao) => {
+  if(acao === 'aprovar' && !confirm('Aprovar esta correção?\n\nO painel testa primeiro no restaurante de teste, SEM gravar. Se passar, publica e aplica em TODOS os restaurantes. Se falhar, nada é alterado.')) return;
+  if(acao === 'desfazer' && !confirm('Desfazer esta correção em todos os restaurantes?')) return;
+  aviso(acao === 'aprovar' ? 'Testando e aplicando…' : 'Enviando…', 'ok');
+  try{ const j = await acaoCall({ acao, id }); if(!j.ok) throw new Error(j.erro || 'Não deu certo.'); aviso(j.mensagem, 'ok'); }catch(e){ erro(e.message); }
+  await recarregarAcoes(); desenhar();
+};
+window.rvSugestao = async (id, estado) => { try{ await rest('vigia_acoes?id=eq.' + id, 'PATCH', { estado, resolvido_em:new Date().toISOString() }); }catch(e){ erro(e.message); } await recarregarAcoes(); desenhar(); };
 function vigiaCard(){
   const G = S.vigiaG || {}, V = S.vigia || {}, L = S.lista.filter(r => ['ativo','teste'].includes(r.situacao));
   const quando = G.executou_em ? haTempo(Math.round((Date.now() - new Date(G.executou_em).getTime()) / 60000)) : 'ainda não rodou';
   const usos = G.ia_dia === hoje() ? Number(G.ia_usos) || 0 : 0;
   return '<div class="card"><div class="linha"><b>🛡️ Vigia</b><button class="principal mini" onclick="rvVigiaRodar()">Rodar agora</button></div>'
-   + '<small class="mudo">Confere sozinho, de 6 em 6 horas, só os restaurantes ativos: projeto no ar, atualizações do banco que faltam, tarefas que falharam, fila da planilha e tamanho do banco. Só lê, nunca muda nada. Avisa no celular quando algo muda. Última conferência: ' + quando + '.</small>'
+   + '<small class="mudo">Confere sozinho, de 6 em 6 horas, só os restaurantes ativos: projeto no ar, atualizações do banco que faltam, tarefas que falharam, fila da planilha e tamanho do banco. Nos restaurantes só lê; corrige sozinho só erros pequenos (e fica registrado abaixo). Correções de banco esperam a sua aprovação. Avisa no celular quando algo muda. Última conferência: ' + quando + '.</small>'
    + '<div class="linha"><small class="mudo">Uso da IA hoje</small><small>' + usos + ' de 10 · só gasta com problema novo</small></div><div class="barra"><i style="width:' + Math.min(100, usos * 10) + '%"></i></div>'
    + L.map(r => { const v = V[r.slug] || {}, lig = v.ligado !== false && !(r.slug === 'texas-burger' && !V[r.slug]); const P = v.problemas || [];
       return '<div class="linha vg-l"><div><b>' + esc(r.nome) + '</b><br><small class="mudo">' + (!lig ? 'Desligado: o vigia não se conecta ao banco dele.' : !v.verificado_em ? 'Ainda não conferido.' : P.length ? esc(v.resumo || P.map(p => p.texto).join(' ')) + P.filter(p => p.solucao).map(p => '<br>🛠️ ' + esc(p.solucao)).join('') : '✅ Tudo em ordem.') + '</small></div>'
-        + '<label class="mini-sw"><input type="checkbox" ' + (lig ? 'checked ' : '') + 'onchange="rvVigiaLigar(\'' + esc(r.slug) + '\', this.checked)"> ligado</label></div>'; }).join('')
+        + (v.ia ? '<br><small class="mudo">🤖 IA: cota ' + v.ia.cota + '/dia · pico ' + v.ia.pico + ' · hoje ' + v.ia.hoje + ' · ' + v.ia.chaves + ' chaves</small>' : '') + '<label class="mini-sw"><input type="checkbox" ' + (lig ? 'checked ' : '') + 'onchange="rvVigiaLigar(\'' + esc(r.slug) + '\', this.checked)"> ligado</label></div>'; }).join('')
    + '</div>';
 }
 window.rvVigiaLigar = async (slug, on) => {
@@ -949,7 +985,7 @@ function vSaude(){
   const ordem = { problema:0, atencao:1, sem:2, ok:3, impl:4 }, Ls = L.slice().sort((a, b) => ordem[saudeDe(a.slug).geral] - ordem[saudeDe(b.slug).geral] || errosDe(b.slug).length - errosDe(a.slug).length);
   T('<div class="topo"><h1>Saúde</h1><small class="mudo">atualiza sozinho · ' + haTempo(Math.round((Date.now() - (S.saudeEm || Date.now())) / 60000)) + '</small></div>'
    + dica('Cada restaurante manda um resumo a cada 15 minutos. Erros que aparecem nas telas deles chegam aqui; toque em "Copiar para o Claude" para pedir a correção.') + '<div class="kpis quatro">' + kpi('🟢 Tudo certo', cont.ok, 'ok') + kpi('🟡 Atenção', cont.atencao, cont.atencao ? 'aviso' : '') + kpi('🔴 Problema', cont.problema, cont.problema ? 'erro' : '') + kpi('⚪ Sem sinal', cont.sem, '') + '</div>'
-   + vigiaCard()
+   + acoesCard() + vigiaCard()
    + (L.some(temSb) ? '<div class="card"><div class="linha"><b>📡 Conferir todos agora</b><button class="principal mini" onclick="rvConferirTodos()">Conferir</button></div><small class="mudo">Mede ao vivo, pelo conector, todos os restaurantes ligados e junta aqui só o que precisa de atenção.</small><div id="avTodos"></div></div>' : '')
    + Ls.map(r => { const sd = saudeDe(r.slug), er = errosDe(r.slug), uso = usoDe(sd.h), pior = uso.slice().sort((a, b) => b.pct - a.pct)[0], ruins = sd.h && sd.geral !== 'impl' ? (sd.h.itens || []).filter(i => i.nivel !== 'ok' && !/^Plano grátis:/i.test(i.titulo || '')) : [];
       return '<div class="card saude-r"><div class="linha"><b>' + ponto(SAUDE_COR[sd.geral]) + esc(r.nome) + '</b><small class="mudo">' + (sd.h ? haTempo(sd.min) : 'sem sinal') + '</small></div>'
