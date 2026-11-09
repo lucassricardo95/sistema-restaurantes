@@ -160,6 +160,7 @@ async function donoVerificar(){
     if(!S.dono){ const tem = await rpc('revenda_tem_dono'); if(!tem){ const r = await rpc('revenda_primeiro_acesso'); S.dono = !!(r && r.ok); } }
     if(S.dono) await carregar();
     tela();
+    if(S.dono) setTimeout(() => { carregadorAuto_().catch(() => {}); }, 4000);   // em segundo plano: mantém o carregador dos restaurantes em dia
   }catch(e){ erro(e.message); $('app').innerHTML = '<div class="login card"><p>Não foi possível abrir o painel.</p><button onclick="location.reload()">Tentar de novo</button> <button onclick="rvSair()">Sair</button></div>'; }
 }
 function telaSemDono(){ $('app').innerHTML = '<div class="login card"><h2>Acesso negado</h2><p>Este painel já tem um dono e a sua conta não é essa.</p><button onclick="rvSair()">Sair</button></div>'; }
@@ -1748,6 +1749,33 @@ async function autoSite_(antes){
   }
   if(feitos.length){ hist(r.id, 'Site atualizado no GitHub automaticamente', feitos.join(', ')); aviso('Salvo e já enviado ao GitHub: ' + feitos.join(', ') + '. O site atualiza em 1 a 2 minutos.', 'ok'); }
   if(parados.length) aviso('Salvo, mas NÃO enviei ao GitHub: ' + parados.join(', ') + ' (foi mudado fora do painel ou deu erro). Use "Gravar no GitHub" na etapa Colocar o site no ar.', 'erro');
+}
+/* CARREGADOR AUTOMÁTICO: o index.html de cada restaurante (a "porta" que abre o sistema) é o do painel (leve/index.html).
+   Quando o painel muda o carregador (ex.: buscar o sistema sem cache), ele troca sozinho no GitHub de cada restaurante.
+   Só troca se o arquivo lá for um carregador oficial ANTIGO (conferido pelo SHA-256); se for outro (mudado à mão), não mexe e avisa. Confere no máximo 1 vez por dia por restaurante. */
+const LOADER_ANTIGOS = ['e4949dde3c168d93335ef35f49ed3b385eadc8990c11218aed086d1ade449ae9'];
+async function sha256_(bin){ const b = Uint8Array.from(String(bin), c => c.charCodeAt(0) & 255); const h = await crypto.subtle.digest('SHA-256', b); return Array.from(new Uint8Array(h)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function carregadorAuto_(){
+  if(!S.lista || !S.lista.length || !(window.crypto && crypto.subtle)) return;
+  const x = await fetch('leve/index.html?t=' + Date.now(), { cache:'no-store' }); if(!x.ok) return;
+  const novoTxt = await x.text(), novo = await sha256_(Array.from(new TextEncoder().encode(novoTxt), c => String.fromCharCode(c)).join(''));
+  const hoje_ = new Date().toISOString().slice(0, 10), feitos = [], parados = [];
+  for(const r of S.lista){
+    if(!temGh(r) || !r.github_url || !r.site_url) continue;   // sem conector ou site ainda não publicado
+    const k = 'rvLoaderOk_' + r.id; let v = null; try{ v = localStorage.getItem(k); }catch(e){}
+    if(v === hoje_ + novo.slice(0, 8)) continue;
+    try{
+      const l = await chamarConector({ acao:'gh_ler', restaurante_id:r.id, caminho:'index.html' });
+      if(!l.ok || !l.existe) continue;
+      const atual = await sha256_(l.conteudo || '');
+      if(atual === novo){ try{ localStorage.setItem(k, hoje_ + novo.slice(0, 8)); }catch(e){} continue; }
+      if(LOADER_ANTIGOS.indexOf(atual) === -1){ parados.push(r.nome); try{ localStorage.setItem(k, hoje_ + novo.slice(0, 8)); }catch(e){} continue; }   // não é o carregador oficial: não mexe
+      const a = await chamarConector({ acao:'gh_publicar', restaurante_id:r.id, arquivos:[{ caminho:'index.html', conteudo:novoTxt }], mensagem:'Carregador atualizado pelo Painel de Revenda' });
+      if(a.ok){ feitos.push(r.nome); hist(r.id, 'Carregador do site atualizado no GitHub automaticamente', 'index.html'); try{ localStorage.setItem(k, hoje_ + novo.slice(0, 8)); }catch(e){} }
+    }catch(e){ /* tenta de novo na próxima abertura */ }
+  }
+  if(feitos.length) aviso('Atualizei sozinho o carregador do site de: ' + feitos.join(', ') + '. Vale em 1 a 2 minutos.', 'ok');
+  if(parados.length) aviso('O index.html de ' + parados.join(', ') + ' foi mudado fora do painel; não troquei o carregador. Se quiser o novo, use "Gravar no GitHub" na etapa Colocar o site no ar.', 'aviso');
 }
 async function gravarSite_(r){
   const arqs = [{ caminho:'config-restaurante.js', conteudo:configTexto(r) }, { caminho:'manifest.webmanifest', conteudo:manifestTexto(r) }];
