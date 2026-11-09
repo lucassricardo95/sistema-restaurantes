@@ -34,7 +34,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 61
+   "kb": 60
   },
   {
    "etapa": "banco",
@@ -46,7 +46,7 @@ window.CODIGOS = {
    "quando": "Restaurante NOVO, banco vazio. Faça as partes na ordem 1, 2, 3… sem pular.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
    "cuidado": "Rode cada parte UMA vez. Se aparecer \"already exists\", essa parte já foi aplicada: siga para a próxima. Preencha o campo \"projeto\" lá em cima antes de copiar (a parte que usa o endereço do projeto troca sozinha).",
-   "kb": 67
+   "kb": 68
   },
   {
    "etapa": "banco",
@@ -548,7 +548,7 @@ window.CODIGOS = {
    "desc": "Corrige o alarme falso de \"iFood fora do ar\" quando o app fica sem uso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 3
   },
   {
@@ -559,7 +559,7 @@ window.CODIGOS = {
    "desc": "Quem sai do sistema deixa de receber avisos e aparelho de cliente nunca recebe aviso da equipe.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 5
   },
   {
@@ -570,7 +570,7 @@ window.CODIGOS = {
    "desc": "Cria a tela Administrador → Sistema → Comanda.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -581,7 +581,7 @@ window.CODIGOS = {
    "desc": "Cria as funções que faltavam no Churros e no Teste (erro \"api_ponto_pedidos_lista\"). O Texas já tem.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 11
   },
   {
@@ -592,7 +592,7 @@ window.CODIGOS = {
    "desc": "Gravar o mesmo valor não conta como mudança, a fila da planilha só funciona com planilha ligada e a Saúde não dá alarme falso.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -603,7 +603,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel mudar as chaves das IAs, os dados do restaurante, a comanda e a senha de um usuário (aba Ajustes do restaurante). O nome do restaurante passa a ser um só.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 11
   },
   {
@@ -614,7 +614,7 @@ window.CODIGOS = {
    "desc": "O Administrador recebe um aviso no celular (no máximo 1 por dia) quando o Google recusa o acesso ao Drive, antes de o backup falhar.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 2
   },
   {
@@ -625,7 +625,7 @@ window.CODIGOS = {
    "desc": "Suprimento (reforço de troco), limite de sobra/falta com motivo e aviso no celular, Leitura X, passar o caixa entre operadores, fundo sugerido e resumo por operador.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 25
   },
   {
@@ -636,7 +636,7 @@ window.CODIGOS = {
    "desc": "O aviso amarelo do iFood só acende quando há algo a fazer agora; item sem ligação aparece escrito, sem cor.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 1
   },
   {
@@ -647,7 +647,7 @@ window.CODIGOS = {
    "desc": "Deixa o painel criar, trocar a senha e desativar os seus logins de Desenvolvedor neste restaurante (aba Ajustes do restaurante).",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -658,7 +658,7 @@ window.CODIGOS = {
    "desc": "Ping a cada 2 dias (evita o Supabase pausar), instaladores do Administrador e do Desenvolvedor. Só cria o que falta.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -669,7 +669,7 @@ window.CODIGOS = {
    "desc": "Prepara o iFood para o aplicativo compartilhado (tipo Distribuído): guarda da autorização do dono e botão Autorizar o iFood. Quem usa o aplicativo próprio não muda nada.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 8
   },
   {
@@ -680,7 +680,7 @@ window.CODIGOS = {
    "desc": "Tira os avisos de desempenho \"Multiple Permissive Policies\" do Supabase. Ninguém perde nem ganha acesso: só junta regras de leitura repetidas.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -691,7 +691,7 @@ window.CODIGOS = {
    "desc": "Passa para o modelo três melhorias que só existiam no Texas (endereços, cardápio de hoje e rota de entrega). Pode rodar de novo sem erro.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 3
   },
   {
@@ -702,7 +702,7 @@ window.CODIGOS = {
    "desc": "Com a confirmação automática ligada, o pedido do iFood já entra aceito (em preparo), sem botão Aceitar. Se o iFood recusar a confirmação, volta a aguardar aceite e avisa no celular. Pode rodar de novo sem erro.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 10
   },
   {
@@ -713,7 +713,7 @@ window.CODIGOS = {
    "desc": "Avisa no celular do Administrador (só ele) quando a mensalidade do sistema está para vencer (1 aviso por dia, até 3 dias antes) e manda todo dia às 23h o resumo do dia: faturamento, pedidos, cancelados e o item mais vendido.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 4
   },
   {
@@ -724,7 +724,7 @@ window.CODIGOS = {
    "desc": "Troca o comando que o Supabase bloqueia em banco novo (session_replication_role) por uma chave interna da trava do Desenvolvedor. Quem já tem Desenvolvedor não muda nada.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 2
   },
   {
@@ -735,7 +735,7 @@ window.CODIGOS = {
    "desc": "O banco tinha dois avisos para não pausar o projeto por inatividade; remove o antigo e mantém o novo (menos chamadas no plano grátis).",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 1
   },
   {
@@ -746,7 +746,7 @@ window.CODIGOS = {
    "desc": "Cada módulo do iFood só é consultado (e só avisa o dono) depois que o Desenvolvedor marca \"Liberado pelo iFood\" no painel. Módulo que já funciona fica liberado sozinho. Nasce tudo desligado em restaurante novo.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 7
   },
   {
@@ -757,7 +757,7 @@ window.CODIGOS = {
    "desc": "O Desenvolvedor guarda chaves, liga/desliga e ajusta iFood, nota fiscal, Mercado Pago e InfinityPay pelo painel de revenda. Funções internas novas; nada muda no que já funciona.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 14
   },
   {
@@ -768,7 +768,7 @@ window.CODIGOS = {
    "desc": "Dados fiscais da empresa, perfis fiscais e planilha do contador passam a ser feitos pelo painel de revenda. Função interna nova; nada muda no que já funciona.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 2
   },
   {
@@ -779,7 +779,18 @@ window.CODIGOS = {
    "desc": "Ao liberar ou desligar um módulo do iFood no painel, a chave antiga de homologação do mesmo módulo acompanha sozinha. Só vale para liberações daqui para frente.",
    "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
    "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
-   "cuidado": "Rode na ordem 135 a 156.",
+   "cuidado": "Rode na ordem 135 a 157.",
+   "kb": 2
+  },
+  {
+   "etapa": "atualizacao",
+   "id": "upd157",
+   "titulo": "Atualização 157 · Chaves de IA, integrações e fiscal só para o Desenvolvedor",
+   "arq": "banco-restaurante/157-config-tecnica-so-desenvolvedor.sql",
+   "desc": "Também no servidor: quem não é Desenvolvedor não consegue salvar chaves de IA, ligar ou desligar integrações nem mexer no cadastro fiscal. Se o restaurante não tiver Desenvolvedor, o Administrador continua podendo.",
+   "quando": "Em restaurantes que já estão funcionando. Pode rodar de novo sem erro.",
+   "onde": "No Supabase do restaurante: abra o projeto > SQL Editor > New query > cole > Run.",
+   "cuidado": "Rode na ordem 135 a 157.",
    "kb": 2
   }
  ]
