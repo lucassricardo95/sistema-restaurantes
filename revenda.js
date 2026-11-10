@@ -812,12 +812,22 @@ function errosHtml(lista, comNome){
     + '<small class="mudo">Tela: ' + esc(e.tela || '—') + ' · versão ' + esc(e.versao || '—') + ' · último ' + esc(new Date(e.ultimo_em).toLocaleString('pt-BR')) + '</small>'
     + triagemHtml(e)
     + (e.detalhe || e.aparelho ? '<details><summary class="mudo pequeno">Detalhe técnico</summary><small class="mudo pre">' + esc((e.aparelho || '') + '\n' + (e.detalhe || '')) + '</small></details>' : '')
-    + '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvErroOk(' + e.id + ')">✓ Resolvido</button><button class="mini" onclick="rvErroClaude(' + e.id + ')">🤖 Copiar para o Claude</button></div></div>').join('');
+    + '<div class="linha" style="justify-content:flex-start"><button class="mini" onclick="rvErroOk(' + e.id + ')">✓ Resolvido</button><button class="mini" onclick="rvAnalisar(' + e.id + ',this)">🔎 ' + (e.triagem && e.triagem.resumo ? 'Analisar de novo' : 'Pedir ao vigia') + '</button><button class="mini" onclick="rvErroClaude(' + e.id + ')">🤖 Copiar para o Claude</button></div></div>').join('');
 }
 const TRI_ROTULO = { cache_antigo:['🟢','Provavelmente já corrigido (aparelho com versão antiga)'], conexao:['📶','Falha de conexão do aparelho'], falha_real:['🔴','Falha real do sistema'], outro:['🟡','Erro a investigar'] };
 function triagemHtml(e){ const t = e.triagem; if(!t || !t.resumo) return '<small class="mudo">🔎 Ainda sem explicação do vigia (ele analisa os erros novos a cada 6 horas).</small>';
   const k = TRI_ROTULO[t.classe] || TRI_ROTULO.outro;
   return '<div class="tri"><b>' + k[0] + ' ' + k[1] + '</b><br><small>' + esc(t.resumo) + (t.causa ? ' <span class="mudo">Causa provável: ' + esc(t.causa) + '</span>' : '') + (t.acao ? ' <b>O que fazer:</b> ' + esc(t.acao) : '') + '</small>' + (t.solucao ? '<br><small>🛠️ <b>Solução proposta:</b> ' + esc(t.solucao) + '</small>' : '') + (t.pedido ? '<br><button class="mini" onclick="rvCopiarPedido(this)" data-t="' + esc(t.pedido) + '">📋 Copiar pedido pronto para o Claude</button>' : '') + '</div>'; }
+window.rvAnalisar = async (id, btn) => {
+  if(btn){ btn.disabled = true; btn.textContent = '🔎 Analisando…'; } aviso('O vigia está analisando o erro…', 'ok');
+  try{ if(S.sess && Date.now() > S.sess.exp && !await renovar()) throw new Error('Sua sessão expirou. Entre de novo.');
+    const r = await fetch(URL_ + '/functions/v1/vigia', { method:'POST', headers:{ apikey:CHAVE_, Authorization:'Bearer ' + S.sess.access_token, 'Content-Type':'application/json' }, body:JSON.stringify({ acao:'analisar', erro_id:id }) });
+    const j = await r.json().catch(() => null); if(!j || !j.ok) throw new Error((j && j.erro) || 'O vigia não respondeu.');
+    const e = S.erros.find(x => x.id === id); if(e) e.triagem = j.triagem;
+    aviso(j.triagem && j.triagem.por === 'ia' ? 'Pronto: veja a explicação do vigia.' : 'O vigia só conseguiu uma explicação simples (a cota de IA do dia pode ter acabado).', 'ok');
+  }catch(e){ erro(e.message); }
+  S.view === 'rest' ? abaSaude() : desenhar();
+};
 window.rvCopiarPedido = b => { const t = b.getAttribute('data-t') || ''; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => aviso('Copiado. Cole numa conversa com o Claude.', 'ok'), () => prompt('Copie o texto:', t)); };
 
 function acoesCard(){
